@@ -26,7 +26,9 @@ class RoleRepository
 
     public function findByIds(array $ids): array
     {
-        return array_values(array_filter($this->all(), fn ($row) => in_array((int) ($row['id'] ?? 0), $ids, true)));
+        return config('integration.auth_rbac_source', 'mock') === 'real'
+            ? $this->findByIdsReal($ids)
+            : array_values(array_filter($this->allMock(), fn ($row) => in_array((int) ($row['id'] ?? 0), $ids, true)));
     }
 
     protected function allMock(): array
@@ -45,6 +47,18 @@ class RoleRepository
             return [];
         }
         $stmt = $pdo->query('SELECT id, name, code, sort, status, created_at, updated_at FROM roles WHERE status = 1');
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    protected function findByIdsReal(array $ids): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo || !$ids) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $pdo->prepare("SELECT id, name, code, sort, status, created_at, updated_at FROM roles WHERE id IN ($placeholders)");
+        $stmt->execute(array_values($ids));
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 }

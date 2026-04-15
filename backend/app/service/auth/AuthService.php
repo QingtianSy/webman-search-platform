@@ -25,6 +25,20 @@ class AuthService
             return [];
         }
 
+        return $this->buildAuthPayload($user);
+    }
+
+    public function profile(int $userId): array
+    {
+        $user = (new UserRepository())->findById($userId);
+        if (!$user) {
+            return [];
+        }
+        return $this->buildAuthPayload($user);
+    }
+
+    protected function buildAuthPayload(array $user): array
+    {
         $userId = (int) ($user['id'] ?? 0);
         $roleIds = (new UserRoleRepository())->roleIdsByUserId($userId);
         $roles = (new RoleRepository())->findByIds($roleIds);
@@ -33,40 +47,9 @@ class AuthService
             return in_array((string) ($row['permission_code'] ?? ''), $permissions, true);
         }));
 
-        unset($user['password']);
+        unset($user['password'], $user['password_hash']);
         return [
             'user' => $user,
-            'roles' => array_values(array_map(fn ($row) => (string) ($row['code'] ?? ''), $roles)),
-            'permissions' => $permissions,
-            'menus' => $menus,
-            'default_portal' => in_array('admin.access', $permissions, true) ? 'admin' : 'portal',
-        ];
-    }
-
-    public function profile(int $userId): array
-    {
-        $target = null;
-        foreach (['demo_user', 'admin'] as $username) {
-            $candidate = (new UserRepository())->findByUsername($username);
-            if ((int) ($candidate['id'] ?? 0) === $userId) {
-                $target = $candidate;
-                break;
-            }
-        }
-        if (!$target) {
-            return [];
-        }
-
-        unset($target['password']);
-        $roleIds = (new UserRoleRepository())->roleIdsByUserId($userId);
-        $roles = (new RoleRepository())->findByIds($roleIds);
-        $permissions = (new RolePermissionRepository())->permissionCodesByRoleIds($roleIds);
-        $menus = array_values(array_filter((new MenuRepository())->all(), function ($row) use ($permissions) {
-            return in_array((string) ($row['permission_code'] ?? ''), $permissions, true);
-        }));
-
-        return [
-            'user' => $target,
             'roles' => array_values(array_map(fn ($row) => (string) ($row['code'] ?? ''), $roles)),
             'permissions' => $permissions,
             'menus' => $menus,
