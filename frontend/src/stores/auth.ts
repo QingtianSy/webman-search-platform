@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import type { AppMenuItem } from '../types/menu';
 
 type UserInfo = Record<string, any> | null;
 
@@ -8,7 +9,7 @@ export const useAuthStore = defineStore('auth', {
     user: null as UserInfo,
     roles: [] as string[],
     permissions: [] as string[],
-    menus: [] as any[],
+    menus: [] as AppMenuItem[],
     defaultPortal: 'portal',
   }),
   actions: {
@@ -23,7 +24,7 @@ export const useAuthStore = defineStore('auth', {
         localStorage.setItem('token', this.token);
       }
     },
-    setMenus(menus: any[]) {
+    setMenus(menus: AppMenuItem[]) {
       this.menus = menus || [];
     },
     setPermissions(permissions: string[]) {
