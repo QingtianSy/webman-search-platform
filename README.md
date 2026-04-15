@@ -22,11 +22,13 @@
 - auth / rbac 可执行脚本链已落地
 - question / search real 分支骨架已落地
 - question / search 可执行脚本链已落地
+- user-center / docs / config / collect 外围已 real-ready
 - 前端统一登录、布局、认证状态、动态菜单预留
-- 前端工作台/题目列表/搜题日志/API Key/钱包套餐页面卡片表格化
-- 前端管理页已进入带基础操作按钮与表单交互的雏形阶段
+- 前端页面已具备卡片 / 表格 / 基础交互层
+- 搭建前关键阻塞项已检查并修复
 
-## 关键文档
+## 关键检查文档
+- [搭建前检查报告](./project-docs/36-pre-deployment-check-report.md)
+- [真接入执行总清单](./project-docs/25-real-integration-master-checklist.md)
 - [Auth/RBAC 真实接入执行脚本说明](./project-docs/30-auth-rbac-runbook.md)
 - [Question/Search 真实接入执行脚本说明](./project-docs/31-question-search-runbook.md)
-- [真接入执行总清单](./project-docs/25-real-integration-master-checklist.md)
