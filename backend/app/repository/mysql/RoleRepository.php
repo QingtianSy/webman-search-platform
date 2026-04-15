@@ -4,12 +4,6 @@ namespace app\repository\mysql;
 
 /**
  * RoleRepository
- *
- * 当前阶段：
- * - 从 storage/mock/roles.json 读取角色
- *
- * 真接入阶段：
- * - 替换为 MySQL roles 表查询
  */
 class RoleRepository
 {
@@ -22,6 +16,18 @@ class RoleRepository
 
     public function all(): array
     {
+        return config('integration.auth_rbac_source', 'mock') === 'real'
+            ? $this->allReal()
+            : $this->allMock();
+    }
+
+    public function findByIds(array $ids): array
+    {
+        return array_values(array_filter($this->all(), fn ($row) => in_array((int) ($row['id'] ?? 0), $ids, true)));
+    }
+
+    protected function allMock(): array
+    {
         if (!is_file($this->file)) {
             return [];
         }
@@ -29,8 +35,8 @@ class RoleRepository
         return is_array($rows) ? $rows : [];
     }
 
-    public function findByIds(array $ids): array
+    protected function allReal(): array
     {
-        return array_values(array_filter($this->all(), fn ($row) => in_array((int) ($row['id'] ?? 0), $ids, true)));
+        return [];
     }
 }

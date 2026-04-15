@@ -15,18 +15,11 @@ Webman 后端代码目录。
 - database/migrations/ 首批 auth/rbac SQL 草案
 - database/seeds/ 首批 auth/rbac seed 草案
 - PasswordService 已抽出
-- auth/rbac Repository 已补齐 real-ready 注释
+- auth/rbac Repository 已进入 mock/real 双模式准备
 - 其余业务骨架与真接入文档已齐备
 
 ## 当前状态
-当前代码已进入 **auth / rbac 代码替换准备阶段**：
-- 密码校验已从 AuthService 中抽离
-- Repository 边界已收稳
-- 下一步可以优先替换 users / roles / permissions / menus 的真实实现
-
-## 关键文档
-- `project-docs/17-auth-rbac-replacement-plan.md`
-- `project-docs/18-auth-rbac-schema-draft.md`
-- `project-docs/19-auth-rbac-field-mapping.md`
-- `project-docs/20-auth-rbac-execution-note.md`
-- `project-docs/21-auth-rbac-code-prep.md`
+当前代码已进入 **auth / rbac Repository 双模式切换准备阶段**：
+- 通过 `config/integration.php` 中的 `AUTH_RBAC_SOURCE` 控制 mock / real
+- Repository 对外方法签名保持不变
+- 下一步可逐个在 real 分支中接真实 SQL 查询

@@ -4,12 +4,6 @@ namespace app\repository\mysql;
 
 /**
  * UserRoleRepository
- *
- * 当前阶段：
- * - 从 storage/mock/user_roles.json 读取用户角色关联
- *
- * 真接入阶段：
- * - 替换为 MySQL user_role 表查询
  */
 class UserRoleRepository
 {
@@ -21,6 +15,13 @@ class UserRoleRepository
     }
 
     public function roleIdsByUserId(int $userId): array
+    {
+        return config('integration.auth_rbac_source', 'mock') === 'real'
+            ? $this->roleIdsByUserIdReal($userId)
+            : $this->roleIdsByUserIdMock($userId);
+    }
+
+    protected function roleIdsByUserIdMock(int $userId): array
     {
         if (!is_file($this->file)) {
             return [];
@@ -34,5 +35,10 @@ class UserRoleRepository
             }
         }
         return $ids;
+    }
+
+    protected function roleIdsByUserIdReal(int $userId): array
+    {
+        return [];
     }
 }

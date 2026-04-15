@@ -4,13 +4,6 @@ namespace app\repository\mysql;
 
 /**
  * RolePermissionRepository
- *
- * 当前阶段：
- * - 从 storage/mock/role_permissions.json 读取角色权限
- *
- * 真接入阶段：
- * - 替换为 MySQL role_permission + permissions 联表查询
- * - 当前 mock 返回 permission_code，未来可由 Repository 内部完成 code/id 映射
  */
 class RolePermissionRepository
 {
@@ -22,6 +15,13 @@ class RolePermissionRepository
     }
 
     public function permissionCodesByRoleIds(array $roleIds): array
+    {
+        return config('integration.auth_rbac_source', 'mock') === 'real'
+            ? $this->permissionCodesByRoleIdsReal($roleIds)
+            : $this->permissionCodesByRoleIdsMock($roleIds);
+    }
+
+    protected function permissionCodesByRoleIdsMock(array $roleIds): array
     {
         if (!is_file($this->file)) {
             return [];
@@ -35,5 +35,10 @@ class RolePermissionRepository
             }
         }
         return array_values(array_unique(array_filter($codes)));
+    }
+
+    protected function permissionCodesByRoleIdsReal(array $roleIds): array
+    {
+        return [];
     }
 }

@@ -6,11 +6,10 @@ namespace app\repository\mysql;
  * UserRepository
  *
  * 当前阶段：
- * - 从 storage/mock/users.json 读取用户
+ * - 默认从 storage/mock/users.json 读取用户
  *
  * 真接入阶段：
- * - 替换为 MySQL users 表查询
- * - 方法签名尽量保持不变，减少 AuthService 改动
+ * - 切换 AUTH_RBAC_SOURCE=real 后，改走真实 users 表查询
  */
 class UserRepository
 {
@@ -22,6 +21,14 @@ class UserRepository
     }
 
     public function findByUsername(string $username): array
+    {
+        $source = config('integration.auth_rbac_source', 'mock');
+        return $source === 'real'
+            ? $this->findByUsernameReal($username)
+            : $this->findByUsernameMock($username);
+    }
+
+    protected function findByUsernameMock(string $username): array
     {
         if (!is_file($this->file)) {
             return [];
@@ -36,5 +43,17 @@ class UserRepository
             }
         }
         return [];
+    }
+
+    protected function findByUsernameReal(string $username): array
+    {
+        return [
+            'id' => 0,
+            'username' => $username,
+            'password_hash' => '',
+            'nickname' => '',
+            'avatar' => '',
+            'status' => 1,
+        ];
     }
 }

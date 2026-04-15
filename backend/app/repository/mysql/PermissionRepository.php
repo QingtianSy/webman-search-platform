@@ -4,12 +4,6 @@ namespace app\repository\mysql;
 
 /**
  * PermissionRepository
- *
- * 当前阶段：
- * - 从 storage/mock/permissions.json 读取权限
- *
- * 真接入阶段：
- * - 替换为 MySQL permissions 表查询
  */
 class PermissionRepository
 {
@@ -22,10 +16,22 @@ class PermissionRepository
 
     public function all(): array
     {
+        return config('integration.auth_rbac_source', 'mock') === 'real'
+            ? $this->allReal()
+            : $this->allMock();
+    }
+
+    protected function allMock(): array
+    {
         if (!is_file($this->file)) {
             return [];
         }
         $rows = json_decode((string) file_get_contents($this->file), true);
         return is_array($rows) ? $rows : [];
+    }
+
+    protected function allReal(): array
+    {
+        return [];
     }
 }
