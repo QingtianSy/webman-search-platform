@@ -35,20 +35,30 @@ Webman 后端代码目录。
 - SearchQueryValidator
 - Repository 骨架与 API Key 仓储骨架
 - HealthService 健康检查服务
+- storage/mock 用户与题目数据源
+- storage/logs 本地日志落地占位
 
 ## 当前状态
-当前代码已进入 **生产级接入准备阶段**：
-- 已有启动入口和 bootstrap 结构
-- 已有 middleware 分组配置
-- 已有健康检查与 readiness 检查
-- 已有多存储适配层骨架
-- 已有宿主机部署脚本与生产环境变量模板
+当前代码已进入 **最小真实闭环阶段**：
+- 登录已接入 mock 用户数据源
+- 题目列表已接入 mock 题库数据源
+- 搜题接口可基于 mock 题库返回真实样本结果
+- 搜题日志会落到本地 jsonl 文件中
+- 健康检查与部署脚本仍保留生产级结构
+
+## 当前 mock 账号
+### 用户
+- username: `demo_user`
+- password: `123456`
+
+### 管理员
+- username: `admin`
+- password: `admin123`
 
 ## 下一步
-- 接入真实 Webman 官方框架文件
+- 接入真实 Webman 官方框架
 - 接入真实 JWT 实现
 - 接入 MySQL / MongoDB / ES / Redis 客户端
-- 替换 AuthService 的模拟登录逻辑
-- 替换 SearchService 的模拟搜题逻辑
+- 用数据库替换 mock 用户与题库数据源
 - 接入真实日志写入与额度扣减
 - 实现题目 CRUD 与搜索日志持久化

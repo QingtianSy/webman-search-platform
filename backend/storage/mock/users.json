@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "username": "demo_user",
+    "password": "123456",
+    "nickname": "测试用户",
+    "avatar": "",
+    "status": 1,
+    "type": "user"
+  },
+  {
+    "id": 2,
+    "username": "admin",
+    "password": "admin123",
+    "nickname": "超级管理员",
+    "avatar": "",
+    "status": 1,
+    "type": "admin"
+  }
+]

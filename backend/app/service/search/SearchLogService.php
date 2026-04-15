@@ -9,7 +9,7 @@ class SearchLogService
 {
     public function create(array $payload): array
     {
-        $logNo = 'SL' . date('YmdHis');
+        $logNo = 'SL' . date('YmdHis') . rand(10, 99);
         $mysql = new SearchLogRepository();
         $mongo = new SearchLogDetailRepository();
 
