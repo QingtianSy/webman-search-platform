@@ -5,9 +5,11 @@
 ## 当前脚本
 - `backup_mysql.sh`：MySQL 备份脚本
 - `backup_mongo.sh`：MongoDB 备份脚本
+- `deploy_backend.sh`：后端宿主机重启部署脚本
+- `health_check.sh`：健康检查脚本
 
 ## 建议后续补充
-- deploy_backend.sh
 - deploy_frontend.sh
-- health_check.sh
 - rotate_logs.sh
+- restore_mysql.sh
+- restore_mongo.sh

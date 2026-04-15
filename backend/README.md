@@ -4,22 +4,29 @@ Webman 后端代码目录。
 
 ## 当前已落地
 - composer.json 骨架
+- start.php 启动入口骨架
+- bootstrap/app.php
+- bootstrap/routes.php
 - config/app.php
 - config/routes.php
+- config/middleware.php
 - config/database.php
 - config/redis.php
 - config/mongodb.php
 - config/elasticsearch.php
 - config/jwt.php
+- .env.production.example
 - support/helpers.php
 - support/Request.php
 - support/ResponseCode.php
 - support/ApiResponse.php
 - support/ClientFactory.php
 - support/Pagination.php
+- support/adapter/* 适配层骨架
 - BusinessException
 - ExceptionHandler
 - RequestIdMiddleware
+- User/Admin/Open 鉴权中间件
 - DashboardController / DashboardService
 - 用户/管理端/开放平台控制器骨架与初版逻辑
 - AuthService / JwtService 初版
@@ -27,20 +34,18 @@ Webman 后端代码目录。
 - QuestionService 与 QuestionRepository 列表骨架
 - SearchQueryValidator
 - Repository 骨架与 API Key 仓储骨架
+- HealthService 健康检查服务
 
 ## 当前状态
-当前代码已进入 **第三批真实数据流骨架阶段**：
-- 用户登录可返回模拟 token
-- 管理员登录可返回模拟 token
-- 用户工作台已通过 Service 返回结构化数据
-- 搜题接口具备参数校验、额度检查、日志调用、服务调用骨架
-- 搜题日志服务已具备主表/明细双写骨架
-- 开放平台搜题接口已接入 API Key 鉴权骨架
-- 管理端题目列表接口已接入服务层与分页返回
-- 健康检查接口可直接使用
+当前代码已进入 **生产级接入准备阶段**：
+- 已有启动入口和 bootstrap 结构
+- 已有 middleware 分组配置
+- 已有健康检查与 readiness 检查
+- 已有多存储适配层骨架
+- 已有宿主机部署脚本与生产环境变量模板
 
 ## 下一步
-- 接入真实 Webman 框架
+- 接入真实 Webman 官方框架文件
 - 接入真实 JWT 实现
 - 接入 MySQL / MongoDB / ES / Redis 客户端
 - 替换 AuthService 的模拟登录逻辑
