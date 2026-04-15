@@ -34,32 +34,33 @@ Webman 后端代码目录。
 - DocController
 - CollectController
 - 管理端 User / Plan / Announcement / SearchLog 控制器
-- 管理端 Doc / Collect / ApiSource 控制器
+- 管理端 Doc / Collect / ApiSource / SystemConfig 控制器
 - 用户/管理端/开放平台控制器骨架与初版逻辑
 - AuthService / JwtService 初版
 - SearchService / SearchLogService / QuotaService / LogService 初版
 - QuestionService 与 QuestionRepository 列表骨架
 - WalletRepository / SubscriptionRepository / AnnouncementRepository
 - BalanceLogRepository / PaymentLogRepository / LoginLogRepository / OperateLogRepository
-- DocCategoryRepository / DocArticleRepository
-- CollectAccountRepository / CollectTaskRepository / ApiSourceRepository
+- DocCategoryRepository / DocArticleRepository / DocConfigRepository
+- CollectAccountRepository / CollectTaskRepository / CollectTaskDetailRepository / ApiSourceRepository
+- SystemConfigRepository
 - SearchQueryValidator
 - Repository 骨架与 API Key 仓储骨架
 - HealthService 健康检查服务
-- storage/mock 用户、题目、钱包、套餐、API Key、公告、日志、文档、采集、接口源数据源
+- storage/mock 用户、题目、钱包、套餐、API Key、公告、日志、文档、采集、接口源、系统配置数据源
 - storage/logs 本地日志落地占位
 
 ## 当前状态
-当前代码已进入 **文档中心 + 采集中心外围 + 题库配置主线补全阶段**：
+当前代码已进入 **系统配置 + API Key 细化 + 文档配置页 + 采集任务详情阶段**：
 - 登录已接入 mock 用户数据源
 - 工作台已接入 mock 钱包 / 套餐 / 公告数据
-- API Key 列表已接入 mock 数据源
+- API Key 已补齐列表 / 详情 / 模拟创建 / 模拟启停接口
 - 钱包详情 / 当前套餐接口已补齐
 - 用户日志中心已补齐余额 / 支付 / 登录 / 操作日志接口
-- 文档中心已补齐分类与文章详情接口
-- 采集中心外围已补齐采集账号列表与采集任务列表接口
+- 文档中心已补齐分类 / 文章详情 / 配置页接口
+- 采集中心外围已补齐采集账号列表 / 采集任务列表 / 采集任务详情接口
 - 管理端已补齐用户列表 / 套餐列表 / 公告列表 / 搜题日志列表
-- 管理端已补齐文档文章列表 / 采集任务列表 / 接口源列表与详情
+- 管理端已补齐文档文章列表 / 采集任务列表与详情 / 接口源列表与详情 / 系统配置列表
 - 题目列表已接入 mock 题库数据源
 - 搜题接口可基于 mock 题库返回真实样本结果
 - 搜题日志会落到本地 jsonl 文件中

@@ -25,4 +25,27 @@ class ApiKeyService
     {
         return (new ApiKeyRepository())->findByUserId($userId);
     }
+
+    public function detailById(int $userId, int $id): array
+    {
+        foreach ($this->listByUserId($userId) as $row) {
+            if ((int) ($row['id'] ?? 0) === $id) {
+                return $row;
+            }
+        }
+        return [];
+    }
+
+    public function mockCreate(int $userId, string $appName): array
+    {
+        return [
+            'id' => 999,
+            'user_id' => $userId,
+            'app_name' => $appName !== '' ? $appName : '新应用',
+            'api_key' => 'ak_mock_new',
+            'api_secret' => 'sk_mock_new',
+            'status' => 1,
+            'expire_at' => null,
+        ];
+    }
 }

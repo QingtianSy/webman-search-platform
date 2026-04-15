@@ -4,6 +4,7 @@ namespace app\controller\user;
 
 use app\repository\mysql\DocArticleRepository;
 use app\repository\mysql\DocCategoryRepository;
+use app\repository\mysql\DocConfigRepository;
 use support\ApiResponse;
 use support\Pagination;
 use support\Request;
@@ -21,5 +22,10 @@ class DocController
         $request ??= new Request();
         $slug = (string) $request->input('slug', '');
         return ApiResponse::success((new DocArticleRepository())->findBySlug($slug));
+    }
+
+    public function config(): array
+    {
+        return ApiResponse::success((new DocConfigRepository())->get());
     }
 }

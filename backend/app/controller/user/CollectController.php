@@ -3,9 +3,11 @@
 namespace app\controller\user;
 
 use app\repository\mysql\CollectAccountRepository;
+use app\repository\mysql\CollectTaskDetailRepository;
 use app\repository\mysql\CollectTaskRepository;
 use support\ApiResponse;
 use support\Pagination;
+use support\Request;
 
 class CollectController
 {
@@ -19,5 +21,12 @@ class CollectController
     {
         $list = (new CollectTaskRepository())->listByUserId(1);
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
+    }
+
+    public function detail(?Request $request = null): array
+    {
+        $request ??= new Request();
+        $taskNo = (string) $request->input('task_no', '');
+        return ApiResponse::success((new CollectTaskDetailRepository())->findByTaskNo($taskNo));
     }
 }
