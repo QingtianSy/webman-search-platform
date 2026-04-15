@@ -2,6 +2,9 @@
 
 namespace app\repository\mysql;
 
+use PDO;
+use support\adapter\MySqlClient;
+
 class AnnouncementRepository
 {
     protected string $file;
@@ -22,11 +25,16 @@ class AnnouncementRepository
 
     public function latest(): array
     {
-        return $this->allRows();
+        return config('integration.auth_rbac_source', 'mock') === 'real'
+            ? $this->latestReal()
+            : $this->allRows();
     }
 
     public function create(array $data): array
     {
+        if (config('integration.auth_rbac_source', 'mock') === 'real') {
+            return $this->createReal($data);
+        }
         $rows = $this->allRows();
         $data['id'] = count($rows) + 1;
         $rows[] = $data;
@@ -36,6 +44,9 @@ class AnnouncementRepository
 
     public function update(int $id, array $data): array
     {
+        if (config('integration.auth_rbac_source', 'mock') === 'real') {
+            return $this->updateReal($id, $data);
+        }
         $rows = $this->allRows();
         foreach ($rows as &$row) {
             if ((int) ($row['id'] ?? 0) === $id) {
@@ -45,5 +56,47 @@ class AnnouncementRepository
             }
         }
         return [];
+    }
+
+    protected function latestReal(): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return [];
+        }
+        $stmt = $pdo->query('SELECT id, title, content, type, status, publish_at, created_at, updated_at FROM announcements ORDER BY id DESC');
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    protected function createReal(array $data): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return [];
+        }
+        $stmt = $pdo->prepare('INSERT INTO announcements (title, content, type, status, publish_at, created_at, updated_at) VALUES (:title, :content, :type, :status, :publish_at, NOW(), NOW())');
+        $stmt->execute([
+            'title' => $data['title'] ?? '',
+            'content' => $data['content'] ?? '',
+            'type' => $data['type'] ?? 'notice',
+            'status' => $data['status'] ?? 1,
+            'publish_at' => $data['publish_at'] ?? null,
+        ]);
+        return ['id' => (int) $pdo->lastInsertId()] + $data;
+    }
+
+    protected function updateReal(int $id, array $data): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return [];
+        }
+        $stmt = $pdo->prepare('UPDATE announcements SET title = :title, content = :content, updated_at = NOW() WHERE id = :id');
+        $stmt->execute([
+            'id' => $id,
+            'title' => $data['title'] ?? '',
+            'content' => $data['content'] ?? '',
+        ]);
+        return ['id' => $id] + $data;
     }
 }

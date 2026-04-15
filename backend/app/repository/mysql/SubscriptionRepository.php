@@ -2,6 +2,9 @@
 
 namespace app\repository\mysql;
 
+use PDO;
+use support\adapter\MySqlClient;
+
 class SubscriptionRepository
 {
     protected string $file;
@@ -12,6 +15,13 @@ class SubscriptionRepository
     }
 
     public function findCurrentByUserId(int $userId): array
+    {
+        return config('integration.auth_rbac_source', 'mock') === 'real'
+            ? $this->findCurrentByUserIdReal($userId)
+            : $this->findCurrentByUserIdMock($userId);
+    }
+
+    protected function findCurrentByUserIdMock(int $userId): array
     {
         if (!is_file($this->file)) {
             return [];
@@ -26,5 +36,16 @@ class SubscriptionRepository
             }
         }
         return [];
+    }
+
+    protected function findCurrentByUserIdReal(int $userId): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return [];
+        }
+        $stmt = $pdo->prepare('SELECT id, user_id, name, is_unlimited, remain_quota, used_quota, expire_at, created_at, updated_at FROM user_subscriptions WHERE user_id = :user_id ORDER BY id DESC LIMIT 1');
+        $stmt->execute(['user_id' => $userId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
     }
 }

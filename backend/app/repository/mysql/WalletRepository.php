@@ -2,6 +2,9 @@
 
 namespace app\repository\mysql;
 
+use PDO;
+use support\adapter\MySqlClient;
+
 class WalletRepository
 {
     protected string $file;
@@ -12,6 +15,13 @@ class WalletRepository
     }
 
     public function findByUserId(int $userId): array
+    {
+        return config('integration.auth_rbac_source', 'mock') === 'real'
+            ? $this->findByUserIdReal($userId)
+            : $this->findByUserIdMock($userId);
+    }
+
+    protected function findByUserIdMock(int $userId): array
     {
         if (!is_file($this->file)) {
             return [];
@@ -26,5 +36,16 @@ class WalletRepository
             }
         }
         return [];
+    }
+
+    protected function findByUserIdReal(int $userId): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return [];
+        }
+        $stmt = $pdo->prepare('SELECT id, user_id, balance, frozen_balance, total_recharge, total_consume, created_at, updated_at FROM wallets WHERE user_id = :user_id LIMIT 1');
+        $stmt->execute(['user_id' => $userId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
     }
 }

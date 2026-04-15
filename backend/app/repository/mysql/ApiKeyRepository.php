@@ -2,6 +2,9 @@
 
 namespace app\repository\mysql;
 
+use PDO;
+use support\adapter\MySqlClient;
+
 class ApiKeyRepository
 {
     protected string $file;
@@ -27,6 +30,30 @@ class ApiKeyRepository
 
     public function findByApiKey(string $apiKey): array
     {
+        return config('integration.auth_rbac_source', 'mock') === 'real'
+            ? $this->findByApiKeyReal($apiKey)
+            : $this->findByApiKeyMock($apiKey);
+    }
+
+    public function findByUserId(int $userId): array
+    {
+        return config('integration.auth_rbac_source', 'mock') === 'real'
+            ? $this->findByUserIdReal($userId)
+            : array_values(array_filter($this->all(), fn ($row) => (int) ($row['user_id'] ?? 0) === $userId));
+    }
+
+    public function delete(int $id): bool
+    {
+        if (config('integration.auth_rbac_source', 'mock') === 'real') {
+            return $this->deleteReal($id);
+        }
+        $rows = array_values(array_filter($this->all(), fn ($row) => (int) ($row['id'] ?? 0) !== $id));
+        $this->saveAll($rows);
+        return true;
+    }
+
+    protected function findByApiKeyMock(string $apiKey): array
+    {
         foreach ($this->all() as $row) {
             if (($row['api_key'] ?? '') === $apiKey) {
                 return $row;
@@ -35,15 +62,35 @@ class ApiKeyRepository
         return [];
     }
 
-    public function findByUserId(int $userId): array
+    protected function findByApiKeyReal(string $apiKey): array
     {
-        return array_values(array_filter($this->all(), fn ($row) => (int) ($row['user_id'] ?? 0) === $userId));
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return [];
+        }
+        $stmt = $pdo->prepare('SELECT id, user_id, app_name, api_key, api_secret_hash, status, expire_at, created_at, updated_at FROM user_api_keys WHERE api_key = :api_key LIMIT 1');
+        $stmt->execute(['api_key' => $apiKey]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
     }
 
-    public function delete(int $id): bool
+    protected function findByUserIdReal(int $userId): array
     {
-        $rows = array_values(array_filter($this->all(), fn ($row) => (int) ($row['id'] ?? 0) !== $id));
-        $this->saveAll($rows);
-        return true;
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return [];
+        }
+        $stmt = $pdo->prepare('SELECT id, user_id, app_name, api_key, api_secret_hash, status, expire_at, created_at, updated_at FROM user_api_keys WHERE user_id = :user_id ORDER BY id DESC');
+        $stmt->execute(['user_id' => $userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    protected function deleteReal(int $id): bool
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return false;
+        }
+        $stmt = $pdo->prepare('DELETE FROM user_api_keys WHERE id = :id');
+        return $stmt->execute(['id' => $id]);
     }
 }
