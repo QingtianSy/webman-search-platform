@@ -48,4 +48,9 @@ class ApiKeyService
             'expire_at' => null,
         ];
     }
+
+    public function delete(int $id): bool
+    {
+        return (new ApiKeyRepository())->delete($id);
+    }
 }

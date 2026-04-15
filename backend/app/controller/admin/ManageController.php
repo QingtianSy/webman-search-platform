@@ -65,6 +65,13 @@ class AnnouncementController
         ]);
         return ApiResponse::success($updated, '公告更新骨架已创建');
     }
+
+    public function delete(?Request $request = null): array
+    {
+        $request ??= new Request();
+        $id = (int) $request->input('id', 0);
+        return ApiResponse::success(['deleted' => true, 'id' => $id], '公告删除骨架已创建');
+    }
 }
 
 class SearchLogController

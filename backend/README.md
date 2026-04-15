@@ -55,12 +55,14 @@ Webman 后端代码目录。
 - storage/logs 本地日志落地占位
 
 ## 当前状态
-当前代码已进入 **管理端操作型接口骨架第二轮阶段**：
-- 题目管理已补齐 update / delete 骨架
-- 公告管理已补齐 create / update 骨架
-- 文档文章管理已补齐 create / update 骨架
-- 系统配置已补齐 update 骨架
-- 接口源已补齐 test 骨架
+当前代码已进入 **管理端操作型接口骨架第三轮阶段**：
+- 题目管理已补齐 create / update / delete / detail / list
+- 公告管理已补齐 create / update / delete
+- 文档管理已补齐 create / update / delete
+- 系统配置已补齐 update
+- 接口源已补齐 test
+- 采集任务已补齐 stop / retry
+- 用户 API Key 已补齐 delete
 - 统一认证、题库管理、开放平台和用户中心结构继续保持统一
 
 ## 当前 mock 账号

@@ -44,6 +44,13 @@ class DocManageController
         ]);
         return ApiResponse::success($updated, '文档更新骨架已创建');
     }
+
+    public function delete(?Request $request = null): array
+    {
+        $request ??= new Request();
+        $id = (int) $request->input('id', 0);
+        return ApiResponse::success(['deleted' => true, 'id' => $id], '文档删除骨架已创建');
+    }
 }
 
 class CollectManageController
@@ -59,6 +66,20 @@ class CollectManageController
         $request ??= new Request();
         $taskNo = (string) $request->input('task_no', '');
         return ApiResponse::success((new CollectTaskDetailRepository())->findByTaskNo($taskNo));
+    }
+
+    public function stop(?Request $request = null): array
+    {
+        $request ??= new Request();
+        $taskNo = (string) $request->input('task_no', '');
+        return ApiResponse::success((new CollectTaskRepository())->updateStatus($taskNo, 4, '手动停止'), '任务停止骨架已创建');
+    }
+
+    public function retry(?Request $request = null): array
+    {
+        $request ??= new Request();
+        $taskNo = (string) $request->input('task_no', '');
+        return ApiResponse::success((new CollectTaskRepository())->updateStatus($taskNo, 1, ''), '任务重试骨架已创建');
     }
 }
 

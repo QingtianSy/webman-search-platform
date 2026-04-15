@@ -40,4 +40,11 @@ class ApiKeyController
         $id = (int) $request->input('id', 0);
         return ApiResponse::success(['id' => $id, 'status' => 0], '模拟切换成功');
     }
+
+    public function delete(?Request $request = null): array
+    {
+        $request ??= new Request();
+        $id = (int) $request->input('id', 0);
+        return ApiResponse::success(['deleted' => (new ApiKeyService())->delete($id)], '模拟删除成功');
+    }
 }
