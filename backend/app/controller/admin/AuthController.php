@@ -2,30 +2,45 @@
 
 namespace app\controller\admin;
 
+use app\service\auth\AuthService;
+use app\service\auth\JwtService;
 use support\ApiResponse;
+use support\Request;
 
 class AuthController
 {
-    public function login(): array
+    public function login(?Request $request = null): array
     {
+        $request ??= new Request();
+        $username = (string) $request->input('username', '');
+        $password = (string) $request->input('password', '');
+
+        $authService = new AuthService();
+        $jwtService = new JwtService();
+        $admin = $authService->adminLogin($username, $password);
+        if (!$admin) {
+            return ApiResponse::error(40002, '账号或密码错误');
+        }
+
+        $token = $jwtService->encode([
+            'uid' => $admin['id'],
+            'username' => $admin['username'],
+            'type' => 'admin',
+        ]);
+
         return ApiResponse::success([
-            'token' => 'todo_admin_jwt_token',
-            'expire_at' => 0,
-            'admin' => [
-                'id' => 0,
-                'username' => '',
-                'nickname' => '',
-                'avatar' => '',
-            ],
-        ], '管理员登录接口骨架已创建');
+            'token' => $token,
+            'expire_at' => time() + (int) env('JWT_EXPIRE', 604800),
+            'admin' => $admin,
+        ], '登录成功');
     }
 
     public function profile(): array
     {
         return ApiResponse::success([
-            'id' => 0,
-            'username' => '',
-            'nickname' => '',
+            'id' => 1,
+            'username' => 'admin',
+            'nickname' => '超级管理员',
             'avatar' => '',
             'status' => 1,
         ]);

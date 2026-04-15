@@ -6,11 +6,11 @@ class QuotaService
 {
     public function getUserQuota(int $userId): int
     {
-        return 0;
+        return 1000;
     }
 
     public function consume(int $userId, int $amount = 1): bool
     {
-        return true;
+        return $amount > 0;
     }
 }
