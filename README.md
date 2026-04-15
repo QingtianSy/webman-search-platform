@@ -23,9 +23,17 @@
 - 前端统一登录、布局、认证状态、动态菜单预留
 - 前端工作台/题目列表/搜题日志/API Key/钱包套餐页面卡片表格化
 - 前端管理页已进入带基础操作按钮与表单交互的雏形阶段
-- 前端更多用户/管理页面骨架已补齐
+- 项目最终收口清单已落地
 
-## 关键真接入文档
+## 推荐现在开始的真实执行顺序
+1. Phase 1：依赖准备
+2. Phase 2：auth / rbac 真接入
+3. Phase 3：question / search 真接入
+4. 再回头补用户中心、配置、采集等真实数据接入
+5. 最后统一部署搭建与联调
+
+## 关键文档
 - [真接入执行总清单](./project-docs/25-real-integration-master-checklist.md)
+- [项目最终收口清单](./project-docs/27-project-final-convergence-checklist.md)
 - [Auth/RBAC 真替换方案](./project-docs/17-auth-rbac-replacement-plan.md)
 - [Question/Search 真实替换方案](./project-docs/24-question-search-replacement-plan.md)
