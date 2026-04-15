@@ -1,0 +1,21 @@
+# 忽略规则
+
+## 通用
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+
+## PHP
+/vendor/
+/runtime/
+/.env
+
+## Node
+/node_modules/
+/dist/
+
+## IDE
+.idea/
+.vscode/
