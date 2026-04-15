@@ -3,7 +3,7 @@
 Webman 后端代码目录。
 
 ## 当前已落地
-- composer.json 骨架
+- composer.json 骨架（后续将替换为真实依赖清单）
 - start.php 启动入口骨架
 - bootstrap/app.php
 - bootstrap/routes.php
@@ -55,43 +55,13 @@ Webman 后端代码目录。
 - storage/logs 本地日志落地占位
 
 ## 当前状态
-当前代码已进入 **管理端操作型接口骨架第三轮阶段**：
-- 题目管理已补齐 create / update / delete / detail / list
-- 公告管理已补齐 create / update / delete
-- 文档管理已补齐 create / update / delete
-- 系统配置已补齐 update
-- 接口源已补齐 test
-- 采集任务已补齐 stop / retry
-- 用户 API Key 已补齐 delete
-- 统一认证、题库管理、开放平台和用户中心结构继续保持统一
-
-## 当前 mock 账号
-### 用户
-- username: `demo_user`
-- password: `123456`
-- roles: `user`
-
-### 管理员
-- username: `admin`
-- password: `admin123`
-- roles: `admin`
-
-### 开放平台 API Key
-- api_key: `ak_demo_001`
-- api_secret: `sk_demo_001`
-
-## 采集执行链说明
-当前采集模块只做到外围结构与任务数据模型，执行链保留为：
-- `runner_script`: `pending://collect-core-script`
-- `next_script`: `pending://post-collect-handler`
-
-等待你后续补充核心采集脚本后，再接真实采集执行流。
-
-## 下一步
-- 接入真实 Webman 官方框架
-- 接入真实 JWT 实现
-- 接入 MySQL / MongoDB / ES / Redis 客户端
-- 用数据库替换 mock 用户与角色权限题库数据源
-- 接入真实日志写入与额度扣减
-- 实现题目 CRUD、API Key 管理、套餐、采集任务与日志列表持久化
-- 等待补充采集核心脚本后接入真实采集执行链
+当前代码已进入 **真接入前收口阶段**：
+- 业务骨架、页面骨架、权限模型、操作接口已经比较完整
+- 下一步重点不是继续堆 mock，而是按既定顺序替换为真实依赖和真实存储
+- 关键参考文档：
+  - `project-docs/07-mock-to-real-plan.md`
+  - `project-docs/08-migration-plan.md`
+  - `project-docs/09-webman-integration-plan.md`
+  - `project-docs/10-backend-real-dependencies.md`
+  - `project-docs/11-integration-batches.md`
+  - `project-docs/12-first-real-targets.md`

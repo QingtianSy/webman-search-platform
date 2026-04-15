@@ -65,6 +65,9 @@ scripts/                 # 辅助脚本
 - [Mock 到真实替换路线](./project-docs/07-mock-to-real-plan.md)
 - [Migration 规划](./project-docs/08-migration-plan.md)
 - [Webman 真接入准备](./project-docs/09-webman-integration-plan.md)
+- [后端真实依赖清单](./project-docs/10-backend-real-dependencies.md)
+- [真接入执行批次](./project-docs/11-integration-batches.md)
+- [首批真实替换目标](./project-docs/12-first-real-targets.md)
 
 ## 当前阶段
 
@@ -84,6 +87,7 @@ scripts/                 # 辅助脚本
 - 前端统一登录、布局、认证状态、动态菜单预留
 - 前端工作台/题目列表/搜题日志/API Key/钱包套餐页面卡片表格化
 - 前端管理页已进入带基础操作按钮与表单交互的雏形阶段
+- 项目已进入真接入前收口阶段
 
 ## 开发原则
 
