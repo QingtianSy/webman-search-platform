@@ -13,4 +13,9 @@ class QuestionService
         $list = $repository->findList($filters);
         return Pagination::format($list, count($list), 1, 20);
     }
+
+    public function detail(int $questionId): array
+    {
+        return (new QuestionRepository())->findByQuestionId($questionId);
+    }
 }

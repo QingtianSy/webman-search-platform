@@ -53,4 +53,26 @@ class AuthController
         }
         return ApiResponse::success($payload);
     }
+
+    public function menus(?Request $request = null): array
+    {
+        $request ??= new Request();
+        $authorization = (string) $request->header('Authorization', '');
+        $token = trim(str_replace('Bearer', '', $authorization));
+        $decoded = (new JwtService())->decode($token);
+        $userId = (int) (($decoded['payload']['uid'] ?? 0));
+        $payload = (new AuthService())->profile($userId);
+        return ApiResponse::success($payload['menus'] ?? []);
+    }
+
+    public function permissions(?Request $request = null): array
+    {
+        $request ??= new Request();
+        $authorization = (string) $request->header('Authorization', '');
+        $token = trim(str_replace('Bearer', '', $authorization));
+        $decoded = (new JwtService())->decode($token);
+        $userId = (int) (($decoded['payload']['uid'] ?? 0));
+        $payload = (new AuthService())->profile($userId);
+        return ApiResponse::success($payload['permissions'] ?? []);
+    }
 }

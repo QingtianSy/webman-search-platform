@@ -3,6 +3,7 @@
 namespace app\controller\open;
 
 use app\service\open\ApiKeyService;
+use app\service\quota\QuotaService;
 use app\service\search\SearchService;
 use support\ApiResponse;
 use support\Request;
@@ -30,5 +31,13 @@ class SearchController
         $result = $searchService->query($keyword, $info, $split);
 
         return ApiResponse::success($result['list'][0]['answer_text'] ?? 'TODO_ANSWER', 'success');
+    }
+
+    public function quotaDetail(): array
+    {
+        return ApiResponse::success([
+            'remain_quota' => (new QuotaService())->getUserQuota(1),
+            'is_unlimited' => 0,
+        ]);
     }
 }

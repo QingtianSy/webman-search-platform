@@ -9,7 +9,11 @@ use app\controller\admin\DocManageController;
 use app\controller\admin\MenuController;
 use app\controller\admin\PermissionController;
 use app\controller\admin\PlanController;
+use app\controller\admin\QuestionCategoryController;
 use app\controller\admin\QuestionController;
+use app\controller\admin\QuestionSourceController;
+use app\controller\admin\QuestionTagController;
+use app\controller\admin\QuestionTypeController;
 use app\controller\admin\RoleController;
 use app\controller\admin\SearchLogController as AdminSearchLogController;
 use app\controller\admin\SystemConfigController;
@@ -32,6 +36,8 @@ return [
 
     ['POST', '/api/v1/auth/login', [UnifiedAuthController::class, 'login']],
     ['GET', '/api/v1/auth/profile', [UnifiedAuthController::class, 'profile']],
+    ['GET', '/api/v1/auth/menus', [UnifiedAuthController::class, 'menus']],
+    ['GET', '/api/v1/auth/permissions', [UnifiedAuthController::class, 'permissions']],
 
     ['POST', '/api/v1/user/auth/login', [UserAuthController::class, 'login']],
     ['GET', '/api/v1/user/auth/profile', [UserAuthController::class, 'profile']],
@@ -58,7 +64,12 @@ return [
     ['POST', '/api/v1/admin/auth/login', [AdminAuthController::class, 'login']],
     ['GET', '/api/v1/admin/auth/profile', [AdminAuthController::class, 'profile']],
     ['GET', '/api/v1/admin/question/list', [QuestionController::class, 'index']],
+    ['GET', '/api/v1/admin/question/detail', [QuestionController::class, 'detail']],
     ['POST', '/api/v1/admin/question/create', [QuestionController::class, 'create']],
+    ['GET', '/api/v1/admin/question-category/list', [QuestionCategoryController::class, 'index']],
+    ['GET', '/api/v1/admin/question-type/list', [QuestionTypeController::class, 'index']],
+    ['GET', '/api/v1/admin/question-source/list', [QuestionSourceController::class, 'index']],
+    ['GET', '/api/v1/admin/question-tag/list', [QuestionTagController::class, 'index']],
     ['GET', '/api/v1/admin/user/list', [UserController::class, 'index']],
     ['GET', '/api/v1/admin/role/list', [RoleController::class, 'index']],
     ['GET', '/api/v1/admin/permission/list', [PermissionController::class, 'index']],
@@ -74,5 +85,6 @@ return [
     ['GET', '/api/v1/admin/system-config/list', [SystemConfigController::class, 'index']],
 
     ['POST', '/open/v1/search/query', [OpenSearchController::class, 'query']],
+    ['GET', '/open/v1/quota/detail', [OpenSearchController::class, 'quotaDetail']],
     ['GET', '/open/v1/health', [OpenHealthController::class, 'index']],
 ];
