@@ -2,28 +2,15 @@
 
 Webman 后端代码目录。
 
-## 当前已落地
-- composer.json 已切换为真实依赖占位版
-- start.php 已收束为可替换启动占位层
-- bootstrap/app.php
-- bootstrap/routes.php
-- config/plugin/README.md
-- public/README.md
-- public/index.php 占位入口
-- support/Request.php 已收束为兼容请求占位层
-- support/ApiResponse.php 已收束为兼容响应占位层
-- database/migrations/ 首批 auth/rbac SQL 草案
-- database/seeds/ 首批 auth/rbac seed 草案
-- PasswordService 已抽出
-- auth/rbac Repository 已支持 mock/real 双模式占位
-- 其余业务骨架与真接入文档已齐备
-
 ## 当前状态
-当前代码已进入 **auth / rbac real 分支实现骨架阶段**：
-- `AUTH_RBAC_SOURCE` 已可切 mock / real
-- `*Real()` 分支已作为真实查询占位落点
-- 下一步只需要把 real 分支中的伪查询替换为真实 DB 查询即可
+当前代码已进入 **auth / rbac real 查询骨架阶段**：
+- `AUTH_RBAC_SOURCE` 可切 `mock | real`
+- `UserRepository` / `RoleRepository` / `PermissionRepository` / `UserRoleRepository` / `RolePermissionRepository` / `MenuRepository` 的 `*Real()` 已补为真实 PDO 查询骨架
+- `PasswordService` 已抽出，可后续平滑切换到 password_hash
+- 下一步只需要在宿主机环境可用后，真实执行 migration + seed + 打开 real 配置即可开始第一批认证主线替换验证
 
-## 关键文档
-- `project-docs/22-auth-rbac-repository-swap-plan.md`
-- `project-docs/23-auth-rbac-real-query-notes.md`
+## 当前建议验证顺序（真实接入后）
+1. `/api/v1/auth/login`
+2. `/api/v1/auth/profile`
+3. `/api/v1/auth/menus`
+4. `/api/v1/auth/permissions`

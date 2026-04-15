@@ -2,6 +2,7 @@
 
 namespace app\repository\mysql;
 
+use PDO;
 use support\adapter\MySqlClient;
 
 /**
@@ -49,18 +50,12 @@ class UserRepository
 
     protected function findByUsernameReal(string $username): array
     {
-        if (!MySqlClient::isConfigured()) {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
             return [];
         }
-
-        /**
-         * 未来真实查询示意：
-         * SELECT id, username, password_hash, nickname, avatar, mobile, email, status,
-         *        last_login_ip, last_login_at, created_at, updated_at
-         * FROM users
-         * WHERE username = :username
-         * LIMIT 1;
-         */
-        return [];
+        $stmt = $pdo->prepare('SELECT id, username, password_hash, nickname, avatar, mobile, email, status, last_login_ip, last_login_at, created_at, updated_at FROM users WHERE username = :username LIMIT 1');
+        $stmt->execute(['username' => $username]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
     }
 }

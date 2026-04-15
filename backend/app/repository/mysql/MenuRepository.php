@@ -2,6 +2,7 @@
 
 namespace app\repository\mysql;
 
+use PDO;
 use support\adapter\MySqlClient;
 
 /**
@@ -34,17 +35,11 @@ class MenuRepository
 
     protected function allReal(): array
     {
-        if (!MySqlClient::isConfigured()) {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
             return [];
         }
-
-        /**
-         * 未来真实查询示意：
-         * SELECT id, parent_id, name, path, permission_code, sort, status
-         * FROM menus
-         * WHERE status = 1
-         * ORDER BY sort ASC, id ASC;
-         */
-        return [];
+        $stmt = $pdo->query('SELECT id, parent_id, name, path, permission_code, sort, status, created_at, updated_at FROM menus WHERE status = 1 ORDER BY sort ASC, id ASC');
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 }

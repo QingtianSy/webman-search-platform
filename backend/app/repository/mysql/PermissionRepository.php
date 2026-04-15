@@ -2,6 +2,7 @@
 
 namespace app\repository\mysql;
 
+use PDO;
 use support\adapter\MySqlClient;
 
 /**
@@ -34,15 +35,11 @@ class PermissionRepository
 
     protected function allReal(): array
     {
-        if (!MySqlClient::isConfigured()) {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
             return [];
         }
-
-        /**
-         * 未来真实查询示意：
-         * SELECT id, name, code, type, created_at, updated_at
-         * FROM permissions;
-         */
-        return [];
+        $stmt = $pdo->query('SELECT id, name, code, type, created_at, updated_at FROM permissions');
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 }

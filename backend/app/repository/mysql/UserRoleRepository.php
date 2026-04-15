@@ -2,6 +2,7 @@
 
 namespace app\repository\mysql;
 
+use PDO;
 use support\adapter\MySqlClient;
 
 /**
@@ -41,14 +42,12 @@ class UserRoleRepository
 
     protected function roleIdsByUserIdReal(int $userId): array
     {
-        if (!MySqlClient::isConfigured()) {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
             return [];
         }
-
-        /**
-         * 未来真实查询示意：
-         * SELECT role_id FROM user_role WHERE user_id = :user_id;
-         */
-        return [];
+        $stmt = $pdo->prepare('SELECT role_id FROM user_role WHERE user_id = :user_id');
+        $stmt->execute(['user_id' => $userId]);
+        return array_map('intval', array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'role_id'));
     }
 }
