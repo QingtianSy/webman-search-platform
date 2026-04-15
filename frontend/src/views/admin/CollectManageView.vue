@@ -2,8 +2,7 @@
   <div class="page table-page">
     <h1>采集任务管理</h1>
     <div class="toolbar">
-      <button>刷新</button>
-      <button>重试任务</button>
+      <button class="secondary" @click="loadData">刷新</button>
     </div>
     <table>
       <thead>
@@ -14,6 +13,7 @@
           <th>题目数</th>
           <th>状态</th>
           <th>错误信息</th>
+          <th>操作</th>
         </tr>
       </thead>
       <tbody>
@@ -24,6 +24,10 @@
           <td>{{ item.question_count }}</td>
           <td>{{ item.status }}</td>
           <td>{{ item.error_message || '-' }}</td>
+          <td class="actions">
+            <button class="secondary" @click="handleRetry(item.task_no)">重试</button>
+            <button class="danger" @click="handleStop(item.task_no)">停止</button>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -32,16 +36,24 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { getCollectManageList } from '../../api/admin';
+import { getCollectManageList, retryCollectTask, stopCollectTask } from '../../api/admin';
 
 const list = ref<any[]>([]);
 
-onMounted(async () => {
-  try {
-    const { data } = await getCollectManageList();
-    list.value = data.data?.list || [];
-  } catch (error) {
-    console.error(error);
-  }
-});
+async function loadData() {
+  const { data } = await getCollectManageList();
+  list.value = data.data?.list || [];
+}
+
+async function handleRetry(taskNo: string) {
+  await retryCollectTask(taskNo);
+  await loadData();
+}
+
+async function handleStop(taskNo: string) {
+  await stopCollectTask(taskNo);
+  await loadData();
+}
+
+onMounted(loadData);
 </script>
