@@ -7,140 +7,55 @@ backend/
 ├── app/
 │   ├── controller/
 │   │   ├── admin/
-│   │   ├── user/
-│   │   └── open/
+│   │   ├── auth/
+│   │   ├── open/
+│   │   └── user/
 │   ├── service/
 │   │   ├── auth/
+│   │   ├── open/
 │   │   ├── question/
 │   │   ├── search/
 │   │   ├── quota/
-│   │   ├── billing/
-│   │   ├── collect/
-│   │   ├── document/
+│   │   ├── log/
+│   │   ├── user/
 │   │   └── system/
 │   ├── repository/
 │   │   ├── mysql/
 │   │   ├── mongo/
 │   │   ├── es/
 │   │   └── redis/
-│   ├── model/
-│   │   ├── mysql/
-│   │   └── mongo/
 │   ├── middleware/
 │   ├── validate/
 │   ├── exception/
-│   ├── process/
-│   ├── queue/
-│   └── common/
+│   ├── common/
+│   └── ...
+├── bootstrap/
 ├── config/
-├── public/
 ├── runtime/
+├── storage/
 ├── support/
-├── tests/
+├── ARCHITECTURE.md
+├── start.php
 └── composer.json
 ```
 
-## 二、前端目录
+## 二、当前阶段说明
+当前后端已经完成：
+- 统一用户体系收敛
+- 用户端 / 管理端 / 开放平台路由初步完整
+- mock 数据源覆盖主要业务模块
+- 管理端操作型接口已进入第三轮
+- 宿主机部署与运维脚本已补齐
 
-```bash
-frontend/
-├── src/
-│   ├── api/
-│   ├── views/
-│   │   ├── dashboard/
-│   │   ├── profile/
-│   │   ├── package/
-│   │   ├── question/
-│   │   ├── collect/
-│   │   ├── api-doc/
-│   │   ├── logs/
-│   │   └── system/
-│   ├── components/
-│   ├── stores/
-│   ├── router/
-│   ├── hooks/
-│   ├── utils/
-│   └── types/
-└── package.json
-```
+## 三、下一阶段目标
+下一阶段不再盲目扩展 mock 文件，而是按文档推进：
+- `07-mock-to-real-plan.md`
+- `08-migration-plan.md`
+- `09-webman-integration-plan.md`
 
-## 三、第一批控制器建议
-
-### 用户端
-- User\\AuthController
-- User\\DashboardController
-- User\\SearchController
-- User\\QuotaController
-- User\\ApiKeyController
-
-### 管理端
-- Admin\\AuthController
-- Admin\\QuestionController
-- Admin\\QuestionCategoryController
-- Admin\\QuestionTypeController
-- Admin\\QuestionSourceController
-- Admin\\SearchLogController
-
-### 开放平台
-- Open\\SearchController
-- Open\\HealthController
-
-## 四、第一批 Service 建议
-- AuthService
-- JwtService
-- QuestionService
-- QuestionIndexService
-- SearchService
-- QuotaService
-- SearchLogService
-- UserService
-
-## 五、第一批 Repository 建议
-### MySQL
-- UserRepository
-- AdminRepository
-- PlanRepository
-- SubscriptionRepository
-- SearchLogRepository
-
-### MongoDB
-- QuestionRepository
-- SearchLogDetailRepository
-
-### ES
-- QuestionIndexRepository
-
-### Redis
-- QuotaCacheRepository
-- TokenCacheRepository
-- RateLimitRepository
-
-## 六、开发顺序
-
-### 第 1 周
-- 建后端项目骨架
-- 接入 MySQL / MongoDB / ES / Redis
-- 统一返回结构
-- 全局异常处理
-- JWT 中间件
-- 健康检查接口
-
-### 第 2 周
-- 管理端登录
-- 用户端登录
-- 题目列表/新增/编辑
-- Mongo 入库
-- ES 同步
-
-### 第 3 周
-- 搜题接口
-- Redis 扣次
-- 搜题日志
-- 用户工作台
-- 搜题日志页
-
-### 第 4 周
-- API Key
-- 套餐/额度
-- 文档中心只读
-- 最小用户中心
+## 四、真接入优先顺序
+1. auth / rbac
+2. question / search
+3. logs / quota
+4. user-center
+5. collect / docs / config

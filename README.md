@@ -62,6 +62,9 @@ scripts/                 # 辅助脚本
 - [项目骨架与开发顺序](./project-docs/04-project-structure.md)
 - [宿主机部署方案](./project-docs/05-host-deployment.md)
 - [宿主机执行步骤](./project-docs/06-host-deployment-steps.md)
+- [Mock 到真实替换路线](./project-docs/07-mock-to-real-plan.md)
+- [Migration 规划](./project-docs/08-migration-plan.md)
+- [Webman 真接入准备](./project-docs/09-webman-integration-plan.md)
 
 ## 当前阶段
 
@@ -72,10 +75,12 @@ scripts/                 # 辅助脚本
 - 项目目录规划
 - 宿主机生产部署方案
 - 后端真实业务骨架
-- 启动入口与中间件配置骨架
-- 多存储适配层骨架
-- 宿主机部署模板与备份脚本
+- 统一用户体系与 RBAC 模型
+- 管理端操作型接口第三轮
+- 多存储 mock 数据源
 - Python 巡检与状态汇总脚本
+- Mock → Real 替换路线
+- Webman 真接入准备说明
 
 ## 开发原则
 
@@ -87,3 +92,4 @@ scripts/                 # 辅助脚本
 - 所有生产配置走 env
 - 宿主机部署统一用 Nginx + systemd
 - 简单运维脚本保留 shell，复杂巡检优先 Python
+- mock 数据只是过渡，最终以真实存储接管
