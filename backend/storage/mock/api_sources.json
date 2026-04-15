@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "name": "默认题库接口源",
+    "code": "default_source",
+    "method": "POST",
+    "url": "https://api.example.com/search",
+    "timeout": 10,
+    "retry_times": 2,
+    "status": 1,
+    "success_code_field": "code",
+    "success_code_value": "1",
+    "data_path": "data",
+    "remark": "示例接口源配置"
+  }
+]

@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "category_id": 1,
+    "slug": "search-api",
+    "title": "搜题接口文档",
+    "summary": "开放平台搜题接口说明",
+    "content_md": "# 搜题接口\n\n- 路径：`/open/v1/search/query`\n- 方法：POST\n- 鉴权：x-api-key / x-api-secret",
+    "status": 1
+  }
+]

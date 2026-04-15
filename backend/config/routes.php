@@ -2,7 +2,10 @@
 
 use app\controller\HealthController;
 use app\controller\admin\AnnouncementController;
+use app\controller\admin\ApiSourceManageController;
 use app\controller\admin\AuthController as AdminAuthController;
+use app\controller\admin\CollectManageController;
+use app\controller\admin\DocManageController;
 use app\controller\admin\PlanController;
 use app\controller\admin\QuestionController;
 use app\controller\admin\SearchLogController as AdminSearchLogController;
@@ -12,7 +15,9 @@ use app\controller\open\SearchController as OpenSearchController;
 use app\controller\user\ApiKeyController;
 use app\controller\user\AuthController as UserAuthController;
 use app\controller\user\BillingController;
+use app\controller\user\CollectController;
 use app\controller\user\DashboardController;
+use app\controller\user\DocController;
 use app\controller\user\LogController;
 use app\controller\user\SearchController as UserSearchController;
 
@@ -26,6 +31,10 @@ return [
     ['GET', '/api/v1/user/api-key/list', [ApiKeyController::class, 'index']],
     ['GET', '/api/v1/user/wallet/detail', [BillingController::class, 'wallet']],
     ['GET', '/api/v1/user/plan/current', [BillingController::class, 'currentPlan']],
+    ['GET', '/api/v1/user/doc/category/list', [DocController::class, 'categories']],
+    ['GET', '/api/v1/user/doc/article/detail', [DocController::class, 'detail']],
+    ['GET', '/api/v1/user/collect/account/list', [CollectController::class, 'accounts']],
+    ['GET', '/api/v1/user/collect/task/list', [CollectController::class, 'tasks']],
     ['GET', '/api/v1/user/log/balance', [LogController::class, 'balance']],
     ['GET', '/api/v1/user/log/payment', [LogController::class, 'payment']],
     ['GET', '/api/v1/user/log/login', [LogController::class, 'login']],
@@ -41,6 +50,10 @@ return [
     ['GET', '/api/v1/admin/plan/list', [PlanController::class, 'index']],
     ['GET', '/api/v1/admin/announcement/list', [AnnouncementController::class, 'index']],
     ['GET', '/api/v1/admin/log/search/list', [AdminSearchLogController::class, 'index']],
+    ['GET', '/api/v1/admin/doc/article/list', [DocManageController::class, 'articles']],
+    ['GET', '/api/v1/admin/collect/task/list', [CollectManageController::class, 'tasks']],
+    ['GET', '/api/v1/admin/api-source/list', [ApiSourceManageController::class, 'index']],
+    ['GET', '/api/v1/admin/api-source/detail', [ApiSourceManageController::class, 'detail']],
 
     ['POST', '/open/v1/search/query', [OpenSearchController::class, 'query']],
     ['GET', '/open/v1/health', [OpenHealthController::class, 'index']],
