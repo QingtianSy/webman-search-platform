@@ -1,14 +1,19 @@
 <?php
 
 use app\controller\HealthController;
+use app\controller\admin\AnnouncementController;
 use app\controller\admin\AuthController as AdminAuthController;
+use app\controller\admin\PlanController;
 use app\controller\admin\QuestionController;
+use app\controller\admin\SearchLogController as AdminSearchLogController;
+use app\controller\admin\UserController;
 use app\controller\open\HealthController as OpenHealthController;
 use app\controller\open\SearchController as OpenSearchController;
 use app\controller\user\ApiKeyController;
 use app\controller\user\AuthController as UserAuthController;
 use app\controller\user\BillingController;
 use app\controller\user\DashboardController;
+use app\controller\user\LogController;
 use app\controller\user\SearchController as UserSearchController;
 
 return [
@@ -21,6 +26,10 @@ return [
     ['GET', '/api/v1/user/api-key/list', [ApiKeyController::class, 'index']],
     ['GET', '/api/v1/user/wallet/detail', [BillingController::class, 'wallet']],
     ['GET', '/api/v1/user/plan/current', [BillingController::class, 'currentPlan']],
+    ['GET', '/api/v1/user/log/balance', [LogController::class, 'balance']],
+    ['GET', '/api/v1/user/log/payment', [LogController::class, 'payment']],
+    ['GET', '/api/v1/user/log/login', [LogController::class, 'login']],
+    ['GET', '/api/v1/user/log/operate', [LogController::class, 'operate']],
     ['POST', '/api/v1/user/search/query', [UserSearchController::class, 'query']],
     ['GET', '/api/v1/user/search/logs', [UserSearchController::class, 'logs']],
 
@@ -28,6 +37,10 @@ return [
     ['GET', '/api/v1/admin/auth/profile', [AdminAuthController::class, 'profile']],
     ['GET', '/api/v1/admin/question/list', [QuestionController::class, 'index']],
     ['POST', '/api/v1/admin/question/create', [QuestionController::class, 'create']],
+    ['GET', '/api/v1/admin/user/list', [UserController::class, 'index']],
+    ['GET', '/api/v1/admin/plan/list', [PlanController::class, 'index']],
+    ['GET', '/api/v1/admin/announcement/list', [AnnouncementController::class, 'index']],
+    ['GET', '/api/v1/admin/log/search/list', [AdminSearchLogController::class, 'index']],
 
     ['POST', '/open/v1/search/query', [OpenSearchController::class, 'query']],
     ['GET', '/open/v1/health', [OpenHealthController::class, 'index']],

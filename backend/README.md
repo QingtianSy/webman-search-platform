@@ -30,23 +30,28 @@ Webman 后端代码目录。
 - DashboardController / DashboardService
 - ApiKeyController / ApiKeyService
 - BillingController
+- LogController
+- 管理端 User / Plan / Announcement / SearchLog 控制器
 - 用户/管理端/开放平台控制器骨架与初版逻辑
 - AuthService / JwtService 初版
 - SearchService / SearchLogService / QuotaService / LogService 初版
 - QuestionService 与 QuestionRepository 列表骨架
 - WalletRepository / SubscriptionRepository / AnnouncementRepository
+- BalanceLogRepository / PaymentLogRepository / LoginLogRepository / OperateLogRepository
 - SearchQueryValidator
 - Repository 骨架与 API Key 仓储骨架
 - HealthService 健康检查服务
-- storage/mock 用户、题目、钱包、套餐、API Key、公告数据源
+- storage/mock 用户、题目、钱包、套餐、API Key、公告、日志数据源
 - storage/logs 本地日志落地占位
 
 ## 当前状态
-当前代码已进入 **用户中心主线补全阶段**：
+当前代码已进入 **日志中心 + 管理端主线补全阶段**：
 - 登录已接入 mock 用户数据源
 - 工作台已接入 mock 钱包 / 套餐 / 公告数据
 - API Key 列表已接入 mock 数据源
 - 钱包详情 / 当前套餐接口已补齐
+- 用户日志中心已补齐余额 / 支付 / 登录 / 操作日志接口
+- 管理端已补齐用户列表 / 套餐列表 / 公告列表 / 搜题日志列表
 - 题目列表已接入 mock 题库数据源
 - 搜题接口可基于 mock 题库返回真实样本结果
 - 搜题日志会落到本地 jsonl 文件中
@@ -71,4 +76,4 @@ Webman 后端代码目录。
 - 接入 MySQL / MongoDB / ES / Redis 客户端
 - 用数据库替换 mock 用户与题库数据源
 - 接入真实日志写入与额度扣减
-- 实现题目 CRUD、API Key 管理、套餐与日志列表持久化
+- 实现题目 CRUD、API Key 管理、套餐、采集任务与日志列表持久化
