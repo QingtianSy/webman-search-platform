@@ -6,13 +6,13 @@ use app\service\open\ApiKeyService;
 use app\service\quota\QuotaService;
 use app\service\search\SearchService;
 use support\ApiResponse;
-use support\Request;
+use support\InputRequest;
 
 class SearchController
 {
-    public function query(?Request $request = null): array
+    public function query(?InputRequest $request = null): array
     {
-        $request ??= new Request();
+        $request ??= new InputRequest();
         $apiKey = (string) $request->header('x-api-key', '');
         $apiSecret = (string) $request->header('x-api-secret', '');
         if (!(new ApiKeyService())->verify($apiKey, $apiSecret)) {

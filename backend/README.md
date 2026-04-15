@@ -3,11 +3,13 @@
 Webman 后端代码目录。
 
 ## 当前状态
-当前代码已进入 **Phase 1 真实依赖接入可执行阶段**：
-- `composer.json` 已修正为可解析的真实依赖声明
-- 当前环境已验证 `composer install --dry-run` 可通过
-- 当前环境已验证 `mongodb` 扩展可用
-- 下一步在宿主机上可直接执行依赖准备，再进入 auth/rbac 真接入
+当前代码已进入 **工程收束与真接入友好化阶段**：
+- admin 聚合控制器已拆分为一类一文件
+- `support/Request` 已重命名收敛为 `support/InputRequest`
+- 已消除继续真接入时最明显的自动加载与命名冲突风险
+- 后续接 Webman 原生 Request / autoload 会更顺
 
-## 关键文档
-- `project-docs/26-phase1-runtime-execution.md`
+## 本阶段成果
+- 一类一文件控制器结构
+- InputRequest 兼容层
+- 旧 Request 标记为 deprecated

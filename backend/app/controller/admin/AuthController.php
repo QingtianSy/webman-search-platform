@@ -5,13 +5,13 @@ namespace app\controller\admin;
 use app\service\auth\AuthService;
 use app\service\auth\JwtService;
 use support\ApiResponse;
-use support\Request;
+use support\InputRequest;
 
 class AuthController
 {
-    public function login(?Request $request = null): array
+    public function login(?InputRequest $request = null): array
     {
-        $request ??= new Request();
+        $request ??= new InputRequest();
         $username = (string) $request->input('username', '');
         $password = (string) $request->input('password', '');
 
