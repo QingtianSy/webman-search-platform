@@ -6,7 +6,7 @@
 
 ### 后续
 - 替换为真实 Webman 启动入口
-- 与 `webman/framework` 的官方结构对齐
+- 与 `workerman/webman-framework` 的官方结构对齐
 
 ### 说明
 当前 `start.php` 只是为了固定宿主机运行约定，不应长期保留为最终实现。

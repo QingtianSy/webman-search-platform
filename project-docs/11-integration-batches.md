@@ -1,7 +1,7 @@
 # 真接入执行批次清单
 
 ## 批次 1：框架与基础设施
-- 接入 webman/framework
+- 接入 workerman/webman-framework
 - 接入 workerman/workerman
 - 正式 Request / Response
 - 正式路由注册

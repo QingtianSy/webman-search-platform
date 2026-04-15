@@ -1,7 +1,7 @@
 # 后端真实依赖清单（计划）
 
 ## 一、核心框架
-- `webman/framework`
+- `workerman/webman-framework`
 - `workerman/workerman`
 
 ## 二、环境与工具

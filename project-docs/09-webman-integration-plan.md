@@ -3,14 +3,14 @@
 ## 一、当前阶段
 当前仓库已经从“纯文档准备”进入到“代码级替换准备”阶段：
 - `start.php` 已作为未来真实入口替换点
-- `support/Request.php` 已作为兼容层保留
+- `support/InputRequest.php` 已作为兼容层保留
 - `support/ApiResponse.php` 已作为兼容层保留
 - `bootstrap/*` 已标明未来接管边界
 - `public/index.php` 已预留
 
 ## 二、接入目标
 后续要完成：
-- 引入 `webman/framework`
+- 引入 `workerman/webman-framework`
 - 引入 `workerman/workerman`
 - 接入 Swoole 扩展
 - 使用真实 Webman 路由 / 中间件 / 配置加载方式
@@ -19,7 +19,7 @@
 ## 三、接入步骤建议
 
 ### 1. 安装框架依赖
-- webman/framework
+- workerman/webman-framework
 - 需要的中间件/ORM/Redis/Mongo/ES 客户端
 
 ### 2. 保留现有目录结构
@@ -27,7 +27,7 @@
 
 ### 3. 替换占位能力
 重点替换：
-- `support/Request.php`
+- `support/InputRequest.php`
 - `start.php`
 - `bootstrap/*`
 - middleware 注册方式
