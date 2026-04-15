@@ -44,33 +44,6 @@
 - 宿主机直装，不使用 Docker Compose
 - Shell + Python 混合运维脚本
 
-## 仓库结构
-
-```bash
-backend/                 # Webman 后端
-frontend/                # 统一前端项目骨架
-infra/                   # 宿主机部署脚本与配置模板
-project-docs/            # 产品、架构、数据库、接口设计文档
-scripts/                 # 辅助脚本
-```
-
-## 文档
-
-- [项目总方案](./project-docs/01-project-overview.md)
-- [数据库设计](./project-docs/02-database-design.md)
-- [API 设计](./project-docs/03-api-design.md)
-- [项目骨架与开发顺序](./project-docs/04-project-structure.md)
-- [宿主机部署方案](./project-docs/05-host-deployment.md)
-- [宿主机执行步骤](./project-docs/06-host-deployment-steps.md)
-- [Mock 到真实替换路线](./project-docs/07-mock-to-real-plan.md)
-- [Migration 规划](./project-docs/08-migration-plan.md)
-- [Webman 真接入准备](./project-docs/09-webman-integration-plan.md)
-- [后端真实依赖清单](./project-docs/10-backend-real-dependencies.md)
-- [真接入执行批次](./project-docs/11-integration-batches.md)
-- [首批真实替换目标](./project-docs/12-first-real-targets.md)
-- [第一批真接入执行清单](./project-docs/13-first-integration-execution-checklist.md)
-- [宿主机后端接入准备](./project-docs/14-host-backend-prep.md)
-
 ## 当前阶段
 
 当前仓库已推进到：
@@ -89,7 +62,16 @@ scripts/                 # 辅助脚本
 - 前端统一登录、布局、认证状态、动态菜单预留
 - 前端工作台/题目列表/搜题日志/API Key/钱包套餐页面卡片表格化
 - 前端管理页已进入带基础操作按钮与表单交互的雏形阶段
-- 第一批真接入执行准备已经开始
+- 批次 1 真接入文件准备已开始
+
+## 关键真接入文档
+- [后端真实依赖清单](./project-docs/10-backend-real-dependencies.md)
+- [真接入执行批次](./project-docs/11-integration-batches.md)
+- [首批真实替换目标](./project-docs/12-first-real-targets.md)
+- [第一批真接入执行清单](./project-docs/13-first-integration-execution-checklist.md)
+- [宿主机后端接入准备](./project-docs/14-host-backend-prep.md)
+- [占位文件替换映射表](./project-docs/15-placeholder-replacement-map.md)
+- [Webman 文件准备](./project-docs/16-webman-file-prep.md)
 
 ## 开发原则
 

@@ -5,32 +5,10 @@
 ```bash
 backend/
 ├── app/
-│   ├── controller/
-│   │   ├── admin/
-│   │   ├── auth/
-│   │   ├── open/
-│   │   └── user/
-│   ├── service/
-│   │   ├── auth/
-│   │   ├── open/
-│   │   ├── question/
-│   │   ├── search/
-│   │   ├── quota/
-│   │   ├── log/
-│   │   ├── user/
-│   │   └── system/
-│   ├── repository/
-│   │   ├── mysql/
-│   │   ├── mongo/
-│   │   ├── es/
-│   │   └── redis/
-│   ├── middleware/
-│   ├── validate/
-│   ├── exception/
-│   ├── common/
-│   └── ...
 ├── bootstrap/
 ├── config/
+│   ├── plugin/
+├── public/
 ├── runtime/
 ├── storage/
 ├── support/
@@ -40,22 +18,15 @@ backend/
 ```
 
 ## 二、当前阶段说明
-当前后端已经完成：
-- 统一用户体系收敛
-- 用户端 / 管理端 / 开放平台路由初步完整
-- mock 数据源覆盖主要业务模块
-- 管理端操作型接口已进入第三轮
-- 宿主机部署与运维脚本已补齐
+当前项目已从“功能骨架阶段”进入“真接入前收口与准备阶段”：
+- 后端 mock 结构已基本完整
+- 前端骨架已基本完整
+- 统一用户体系与 RBAC 已定型
+- 已明确 mock -> real 替换路线
+- 已准备 Webman 真接入所需目录占位
 
-## 三、下一阶段目标
-下一阶段不再盲目扩展 mock 文件，而是按文档推进：
-- `07-mock-to-real-plan.md`
-- `08-migration-plan.md`
-- `09-webman-integration-plan.md`
-
-## 四、真接入优先顺序
-1. auth / rbac
-2. question / search
-3. logs / quota
-4. user-center
-5. collect / docs / config
+## 三、后续重点
+1. 批次 1：框架与基础设施接入
+2. 批次 2：auth / rbac 真替换
+3. 批次 3：question / search 真替换
+4. 批次 4：logs / quota 真替换
