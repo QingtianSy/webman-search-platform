@@ -1,0 +1,6 @@
+[
+  {"id": 1, "name": "首页", "path": "/dashboard", "permission_code": "portal.access"},
+  {"id": 2, "name": "搜题日志", "path": "/log/search", "permission_code": "search.query"},
+  {"id": 3, "name": "题目管理", "path": "/admin/question", "permission_code": "question.manage"},
+  {"id": 4, "name": "系统配置", "path": "/admin/system-config", "permission_code": "system.config"}
+]

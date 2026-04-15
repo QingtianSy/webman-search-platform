@@ -1,0 +1,7 @@
+[
+  {"id": 1, "code": "portal.access", "name": "用户端访问"},
+  {"id": 2, "code": "search.query", "name": "搜题"},
+  {"id": 3, "code": "admin.access", "name": "管理端访问"},
+  {"id": 4, "code": "question.manage", "name": "题目管理"},
+  {"id": 5, "code": "system.config", "name": "系统配置"}
+]

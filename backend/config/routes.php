@@ -11,6 +11,7 @@ use app\controller\admin\QuestionController;
 use app\controller\admin\SearchLogController as AdminSearchLogController;
 use app\controller\admin\SystemConfigController;
 use app\controller\admin\UserController;
+use app\controller\auth\AuthController as UnifiedAuthController;
 use app\controller\open\HealthController as OpenHealthController;
 use app\controller\open\SearchController as OpenSearchController;
 use app\controller\user\ApiKeyController;
@@ -25,6 +26,9 @@ use app\controller\user\SearchController as UserSearchController;
 return [
     ['GET', '/health', [HealthController::class, 'health']],
     ['GET', '/ready', [HealthController::class, 'ready']],
+
+    ['POST', '/api/v1/auth/login', [UnifiedAuthController::class, 'login']],
+    ['GET', '/api/v1/auth/profile', [UnifiedAuthController::class, 'profile']],
 
     ['POST', '/api/v1/user/auth/login', [UserAuthController::class, 'login']],
     ['GET', '/api/v1/user/auth/profile', [UserAuthController::class, 'profile']],

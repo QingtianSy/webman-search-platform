@@ -1,6 +1,6 @@
 <?php
 
-namespace app\controller\admin;
+namespace app\controller\auth;
 
 use app\service\auth\AuthService;
 use app\service\auth\JwtService;
@@ -17,9 +17,9 @@ class AuthController
 
         $authService = new AuthService();
         $jwtService = new JwtService();
-        $payload = $authService->adminLogin($username, $password);
+        $payload = $authService->login($username, $password);
         if (!$payload) {
-            return ApiResponse::error(40003, '无管理端访问权限');
+            return ApiResponse::error(40002, '账号或密码错误');
         }
 
         $user = $payload['user'];
@@ -43,13 +43,13 @@ class AuthController
     public function profile(): array
     {
         return ApiResponse::success([
-            'id' => 2,
-            'username' => 'admin',
-            'nickname' => '超级管理员',
+            'id' => 1,
+            'username' => 'demo_user',
+            'nickname' => '测试用户',
             'avatar' => '',
             'status' => 1,
-            'roles' => ['admin'],
-            'permissions' => ['portal.access', 'search.query', 'admin.access', 'question.manage', 'system.config'],
+            'roles' => ['user'],
+            'permissions' => ['portal.access', 'search.query'],
         ]);
     }
 }

@@ -2,39 +2,54 @@
 
 namespace app\service\auth;
 
+use app\repository\mysql\MenuRepository;
+use app\repository\mysql\RolePermissionRepository;
+use app\repository\mysql\RoleRepository;
 use app\repository\mysql\UserRepository;
+use app\repository\mysql\UserRoleRepository;
 
 class AuthService
 {
-    public function userLogin(string $username, string $password): array
+    public function login(string $username, string $password): array
     {
         if ($username === '' || $password === '') {
             return [];
         }
         $user = (new UserRepository())->findByUsername($username);
-        if (!$user || ($user['type'] ?? '') !== 'user') {
+        if (!$user) {
             return [];
         }
         if (($user['password'] ?? '') !== $password || (int) ($user['status'] ?? 0) !== 1) {
             return [];
         }
+        $userId = (int) ($user['id'] ?? 0);
+        $roleIds = (new UserRoleRepository())->roleIdsByUserId($userId);
+        $roles = (new RoleRepository())->findByIds($roleIds);
+        $permissions = (new RolePermissionRepository())->permissionCodesByRoleIds($roleIds);
+        $menus = array_values(array_filter((new MenuRepository())->all(), function ($row) use ($permissions) {
+            return in_array((string) ($row['permission_code'] ?? ''), $permissions, true);
+        }));
         unset($user['password']);
-        return $user;
+        return [
+            'user' => $user,
+            'roles' => array_values(array_map(fn ($row) => (string) ($row['code'] ?? ''), $roles)),
+            'permissions' => $permissions,
+            'menus' => $menus,
+            'default_portal' => in_array('admin.access', $permissions, true) ? 'admin' : 'portal',
+        ];
+    }
+
+    public function userLogin(string $username, string $password): array
+    {
+        return $this->login($username, $password);
     }
 
     public function adminLogin(string $username, string $password): array
     {
-        if ($username === '' || $password === '') {
+        $payload = $this->login($username, $password);
+        if (!$payload || !in_array('admin.access', $payload['permissions'] ?? [], true)) {
             return [];
         }
-        $user = (new UserRepository())->findByUsername($username);
-        if (!$user || ($user['type'] ?? '') !== 'admin') {
-            return [];
-        }
-        if (($user['password'] ?? '') !== $password || (int) ($user['status'] ?? 0) !== 1) {
-            return [];
-        }
-        unset($user['password']);
-        return $user;
+        return $payload;
     }
 }
