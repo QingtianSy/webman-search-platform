@@ -11,6 +11,7 @@
 - `/var/www/search-platform/logs`
 - `/var/www/search-platform/storage`
 - `/var/www/search-platform/backups`
+- `/var/www/search-platform/scripts`
 
 ## 3. 安装服务
 - Nginx
@@ -29,12 +30,20 @@
 6. `systemctl enable webman-search-platform`
 7. `systemctl start webman-search-platform`
 
-## 5. 备份
-- 使用 `scripts/backup_mysql.sh`
-- 使用 `scripts/backup_mongo.sh`
-- 配合 crontab 做定时备份
+## 5. 备份与巡检
+### Shell
+- `scripts/backup_mysql.sh`
+- `scripts/backup_mongo.sh`
+- `scripts/deploy_backend.sh`
+- `scripts/health_check.sh`
+
+### Python
+- `scripts/check_health.py`
+- `scripts/check_services.py`
+- `scripts/report_status.py`
 
 ## 6. 生产要求
 - Redis/Mongo/ES 不直接暴露公网
 - 统一由 Nginx 反向代理入口
 - HTTPS 后续接入证书
+- 建议 crontab 定时执行备份与巡检
