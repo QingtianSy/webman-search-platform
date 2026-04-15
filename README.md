@@ -25,7 +25,7 @@
 - user-center / docs / config / collect 外围已 real-ready
 - 前端统一登录、布局、认证状态、动态菜单预留
 - 前端页面已具备卡片 / 表格 / 基础交互层
-- 代码侧 smoke test 已落地
+- 代码侧 smoke tests 已覆盖关键主线
 
 ## 关键文档
 - [代码侧自检说明](./project-docs/37-code-smoke-tests.md)

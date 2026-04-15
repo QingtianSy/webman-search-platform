@@ -11,10 +11,11 @@
 - auth mock smoke
 - search mock smoke
 - dashboard mock smoke
+- question detail mock smoke
+- api key mock smoke
+- doc config mock smoke
+- collect task detail mock smoke
 
 ## 后续扩展建议
-- question detail smoke
-- api key list smoke
-- doc config smoke
-- collect task detail smoke
 - auth/rbac real smoke（待真实数据库接入后）
+- search real smoke（待 Mongo / ES / Redis 接入后）
