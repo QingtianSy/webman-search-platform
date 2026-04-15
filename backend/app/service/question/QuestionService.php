@@ -18,4 +18,16 @@ class QuestionService
     {
         return (new QuestionRepository())->findByQuestionId($questionId);
     }
+
+    public function findManyByIds(array $ids): array
+    {
+        $list = [];
+        foreach ($ids as $id) {
+            $row = (new QuestionRepository())->findByQuestionId((int) $id);
+            if ($row) {
+                $list[] = $row;
+            }
+        }
+        return $list;
+    }
 }
