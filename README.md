@@ -22,7 +22,7 @@
 - 前端管理页已进入带基础操作按钮与表单交互的雏形阶段
 - 批次 1 真接入文件准备已开始
 - 批次 1 真接入代码级准备已开始
-- auth / rbac 真替换草案与 SQL 草案已落地
+- auth / rbac 真替换草案、字段映射、schema SQL、seed SQL 已落地
 
 ## 关键真接入文档
 - [后端真实依赖清单](./project-docs/10-backend-real-dependencies.md)
@@ -34,3 +34,5 @@
 - [Webman 文件准备](./project-docs/16-webman-file-prep.md)
 - [Auth/RBAC 真替换方案](./project-docs/17-auth-rbac-replacement-plan.md)
 - [Auth/RBAC 表结构草案](./project-docs/18-auth-rbac-schema-draft.md)
+- [Auth/RBAC 字段映射](./project-docs/19-auth-rbac-field-mapping.md)
+- [Auth/RBAC 执行补充说明](./project-docs/20-auth-rbac-execution-note.md)

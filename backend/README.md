@@ -12,17 +12,13 @@ Webman 后端代码目录。
 - public/index.php 占位入口
 - support/Request.php 已收束为兼容请求占位层
 - support/ApiResponse.php 已收束为兼容响应占位层
+- database/migrations/ 首批 auth/rbac SQL 草案
+- database/seeds/ 首批 auth/rbac seed 草案
 - 其余业务骨架与真接入文档已齐备
-- database/migrations/ 目录已预留
-- `0001_auth_rbac_schema.sql` 已提供首批 SQL 草案
 
 ## 当前状态
-当前代码已进入 **auth / rbac 真替换草案阶段**：
-- 统一认证与权限模型的真实替换顺序已明确
-- 首批 users / roles / permissions / menus SQL 草案已落地
-- 下一步可以在宿主机环境确认后进入真实表创建与 Repository 替换
-
-## 关键文档
-- `project-docs/17-auth-rbac-replacement-plan.md`
-- `project-docs/18-auth-rbac-schema-draft.md`
-- `backend/database/migrations/0001_auth_rbac_schema.sql`
+当前代码已进入 **auth / rbac 真替换准备加强阶段**：
+- 表结构草案已齐
+- seed 草案已齐
+- 字段映射文档已齐
+- 下一步可以进入 Repository 层真实替换准备
