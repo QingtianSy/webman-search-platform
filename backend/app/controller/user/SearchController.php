@@ -3,7 +3,9 @@
 namespace app\controller\user;
 
 use app\service\quota\QuotaService;
+use app\service\search\SearchLogService;
 use app\service\search\SearchService;
+use app\validate\SearchQueryValidator;
 use support\ApiResponse;
 use support\Request;
 
@@ -12,12 +14,15 @@ class SearchController
     public function query(?Request $request = null): array
     {
         $request ??= new Request();
-        $keyword = trim((string) $request->input('q', ''));
-        $info = (string) $request->input('info', '');
-        $split = (string) $request->input('split', '###');
+        $payload = [
+            'q' => (string) $request->input('q', ''),
+            'info' => (string) $request->input('info', ''),
+            'split' => (string) $request->input('split', '###'),
+        ];
 
-        if ($keyword === '' || mb_strlen($keyword) < 2) {
-            return ApiResponse::error(40001, '搜索关键词最少2个字符');
+        [$passed, $message] = (new SearchQueryValidator())->validate($payload);
+        if (!$passed) {
+            return ApiResponse::error(40001, $message);
         }
 
         $quotaService = new QuotaService();
@@ -27,8 +32,14 @@ class SearchController
         }
 
         $searchService = new SearchService();
-        $result = $searchService->query($keyword, $info, $split);
+        $result = $searchService->query($payload['q'], $payload['info'], $payload['split']);
         $quotaService->consume(1, 1);
+        $log = (new SearchLogService())->create([
+            'keyword' => $payload['q'],
+            'request' => $payload,
+            'result' => $result,
+        ]);
+        $result['log_no'] = $log['log_no'];
 
         return ApiResponse::success($result, 'success');
     }

@@ -2,6 +2,7 @@
 
 namespace app\controller\open;
 
+use app\service\open\ApiKeyService;
 use app\service\search\SearchService;
 use support\ApiResponse;
 use support\Request;
@@ -11,6 +12,12 @@ class SearchController
     public function query(?Request $request = null): array
     {
         $request ??= new Request();
+        $apiKey = (string) $request->header('x-api-key', '');
+        $apiSecret = (string) $request->header('x-api-secret', '');
+        if (!(new ApiKeyService())->verify($apiKey, $apiSecret)) {
+            return ApiResponse::error(40008, 'API Key 无效');
+        }
+
         $keyword = trim((string) $request->input('q', ''));
         $info = (string) $request->input('info', '');
         $split = (string) $request->input('split', '###');
