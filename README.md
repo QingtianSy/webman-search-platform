@@ -48,7 +48,7 @@
 
 ```bash
 backend/                 # Webman 后端
-frontend/                # Vben Admin 前端
+frontend/                # 统一前端项目骨架
 infra/                   # 宿主机部署脚本与配置模板
 project-docs/            # 产品、架构、数据库、接口设计文档
 scripts/                 # 辅助脚本
@@ -81,6 +81,7 @@ scripts/                 # 辅助脚本
 - Python 巡检与状态汇总脚本
 - Mock → Real 替换路线
 - Webman 真接入准备说明
+- 前端最小骨架（统一登录 / 工作台 / 题目列表 / 搜题日志）
 
 ## 开发原则
 

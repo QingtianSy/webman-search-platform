@@ -10,3 +10,4 @@
 - 收敛为统一用户体系（users + roles + permissions + menus）
 - 完成管理端操作型接口三轮骨架补齐
 - 新增 Mock → Real 替换路线、Migration 规划、Webman 真接入准备文档
+- 新增前端最小骨架（统一登录页、工作台、题目列表、搜题日志页）
