@@ -1,12 +1,41 @@
 <?php
+
+declare(strict_types=1);
+
 /**
- * 未来真实 Webman 公共入口预留文件。
+ * public/index.php
  *
- * 当前阶段：
- * - 仅作为 public 目录职责说明与后续替换锚点
- *
- * 后续阶段：
- * - 替换为真实 Webman 公开入口实现
+ * Phase 1 真实接入准备：
+ * - 如果 vendor/autoload.php 不存在，给出明确提示
+ * - 如果依赖已安装，加载 autoload 与基础 helper
+ * - 当前仍返回占位输出，后续由真实 Webman public 入口接管
  */
 
-echo 'public index placeholder';
+$autoload = __DIR__ . '/../vendor/autoload.php';
+
+if (!is_file($autoload)) {
+    http_response_code(503);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'code' => 503,
+        'msg' => 'Backend dependencies not installed. Run scripts/prepare_backend_dependencies.sh first.',
+        'data' => [
+            'phase' => 'phase-1-runtime-prep',
+        ],
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+require $autoload;
+require_once __DIR__ . '/../support/helpers.php';
+
+header('Content-Type: application/json; charset=utf-8');
+echo json_encode([
+    'code' => 1,
+    'msg' => 'public entry placeholder ready',
+    'data' => [
+        'app' => env('APP_NAME', 'webman-search-platform'),
+        'env' => env('APP_ENV', 'dev'),
+        'phase' => 'phase-1-runtime-prep',
+    ],
+], JSON_UNESCAPED_UNICODE);

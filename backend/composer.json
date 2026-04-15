@@ -12,6 +12,11 @@
     "mongodb/mongodb": "^1.19",
     "elasticsearch/elasticsearch": "^8.15"
   },
+  "suggest": {
+    "ext-swoole": "用于高性能运行时支持",
+    "ext-redis": "用于 Redis 扩展支持",
+    "ext-mongodb": "用于 MongoDB 扩展支持"
+  },
   "autoload": {
     "psr-4": {
       "app\\": "app/",
@@ -21,6 +26,8 @@
       "support/helpers.php"
     ]
   },
+  "minimum-stability": "stable",
+  "prefer-stable": true,
   "config": {
     "sort-packages": true,
     "optimize-autoloader": true

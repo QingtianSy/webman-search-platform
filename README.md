@@ -6,8 +6,8 @@
 
 当前仓库已推进到：
 - 项目总体设计
-- 数据库设计定稿
-- API 设计定稿
+- 数据库设计已收敛为统一用户体系（一个 users 表 + 角色权限）
+- API 设计已收敛为统一认证主入口（/api/v1/auth/*）
 - 项目目录规划
 - 宿主机生产部署方案
 - 后端真实业务骨架
@@ -17,16 +17,18 @@
 - Python 巡检与状态汇总脚本
 - Mock → Real 替换路线
 - Webman 真接入准备说明
+- 前端统一登录、布局、认证状态、动态菜单预留
+- 前端工作台/题目列表/搜题日志/API Key/钱包套餐页面卡片表格化
+- 前端管理页已进入带基础操作按钮与表单交互的雏形阶段
+- 批次 1 真接入文件准备已开始
+- 批次 1 真接入代码级准备已开始
 - auth / rbac 真替换草案、字段映射、schema SQL、seed SQL 已落地
 - auth / rbac real 查询骨架已落地
 - question / search real 分支骨架已落地
-- 真接入执行顺序总清单已落地
+- Phase 1 真实依赖接入执行文档已落地
 
-## 真接入关键文档
+## 关键文档
+- [Phase 1 真实依赖接入执行文档](./project-docs/26-phase1-runtime-execution.md)
 - [真接入执行总清单](./project-docs/25-real-integration-master-checklist.md)
 - [Auth/RBAC 真替换方案](./project-docs/17-auth-rbac-replacement-plan.md)
-- [Auth/RBAC 表结构草案](./project-docs/18-auth-rbac-schema-draft.md)
-- [Auth/RBAC 字段映射](./project-docs/19-auth-rbac-field-mapping.md)
-- [Auth/RBAC 执行补充说明](./project-docs/20-auth-rbac-execution-note.md)
-- [Auth/RBAC Repository 切换方案](./project-docs/22-auth-rbac-repository-swap-plan.md)
 - [Question/Search 真实替换方案](./project-docs/24-question-search-replacement-plan.md)

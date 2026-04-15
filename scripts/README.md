@@ -8,6 +8,7 @@
 - `deploy_backend.sh`：后端宿主机重启部署脚本
 - `health_check.sh`：基础健康检查脚本
 - `prepare_backend_dependencies.sh`：后端真实依赖准备脚本
+- `check_backend_runtime.sh`：后端运行时条件检查脚本
 
 ## 当前 Python 脚本
 - `check_health.py`：结构化健康检查，适合 CI / 巡检
