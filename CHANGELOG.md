@@ -16,3 +16,4 @@
 - 将核心前端页面细化为卡片/表格形态
 - 将前端管理页细化为带基础操作按钮与表单交互的后台页面雏形
 - 新增 auth / rbac 真替换方案、字段映射、schema SQL、seed SQL 草案
+- 新增 auth / rbac 与 question/search 的真接入执行总清单
