@@ -19,4 +19,4 @@
 - 新增 auth / rbac 与 question/search 真接入执行总清单
 - 完成搭建前关键阻塞项检查与修复
 - 新增代码侧 smoke tests 与执行入口
-- 在 Minis 中完成 backend composer install 并通过全部 smoke tests
+- 补充官方文档对齐审查、长驻进程安全清单、Vben 对齐计划

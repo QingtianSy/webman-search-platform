@@ -26,8 +26,12 @@
 - 前端统一登录、布局、认证状态、动态菜单预留
 - 前端页面已具备卡片 / 表格 / 基础交互层
 - 代码侧 smoke tests 已覆盖关键主线
+- 已根据官方 Webman / Workerman / Vben 文档做对齐审查与优化方向收口
 
 ## 关键文档
+- [官方文档对齐审查](./project-docs/39-official-doc-alignment-review.md)
+- [Workerman 长驻进程安全清单](./project-docs/40-workerman-memory-safety-checklist.md)
+- [Vben 对齐与前端收口计划](./project-docs/41-vben-alignment-plan.md)
 - [代码侧自检说明](./project-docs/37-code-smoke-tests.md)
 - [Auth/RBAC 真实接入执行脚本说明](./project-docs/30-auth-rbac-runbook.md)
 - [Question/Search 真实接入执行脚本说明](./project-docs/31-question-search-runbook.md)

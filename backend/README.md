@@ -3,18 +3,13 @@
 Webman 后端代码目录。
 
 ## 当前状态
-当前在 Minis 环境中已完成：
-- Composer 依赖安装
-- backend `composer smoke` 全量通过
+当前代码已进入 **代码侧健全性增强 + 官方文档对齐阶段**：
+- auth/rbac 主线已具备 real 查询骨架
+- question/search 主线已具备 real 分支骨架
+- 代码侧 smoke tests 已覆盖关键主线
+- 已新增 Workerman 长驻进程安全清单
+- 已新增 Webman / Workerman 官方文档对齐审查结论
 
-## 已验证通过的代码侧主线
-- 统一认证 mock smoke
-- 搜题主线 mock smoke
-- 工作台 mock smoke
-- 题目详情 mock smoke
-- API Key mock smoke
-- 文档配置 mock smoke
-- 采集任务详情 mock smoke
-
-## 说明
-这说明当前代码侧后端主线在 mock 模式下已具备基本可运行性。
+## 关键文档
+- `project-docs/39-official-doc-alignment-review.md`
+- `project-docs/40-workerman-memory-safety-checklist.md`
