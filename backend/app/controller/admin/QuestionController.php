@@ -34,6 +34,23 @@ class QuestionController
     {
         return ApiResponse::success([], '题目新增接口骨架已创建');
     }
+
+    public function update(?Request $request = null): array
+    {
+        $request ??= new Request();
+        $id = (int) $request->input('id', 0);
+        $stem = (string) $request->input('stem', '');
+        $updated = (new \app\repository\mongo\QuestionRepository())->update($id, ['stem' => $stem]);
+        return ApiResponse::success($updated, '题目更新骨架已创建');
+    }
+
+    public function delete(?Request $request = null): array
+    {
+        $request ??= new Request();
+        $id = (int) $request->input('id', 0);
+        $deleted = (new \app\repository\mongo\QuestionRepository())->delete($id);
+        return ApiResponse::success(['deleted' => $deleted], '题目删除骨架已创建');
+    }
 }
 
 class QuestionCategoryController

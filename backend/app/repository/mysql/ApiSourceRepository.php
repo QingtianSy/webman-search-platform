@@ -29,4 +29,18 @@ class ApiSourceRepository
         }
         return [];
     }
+
+    public function test(int $id): array
+    {
+        $row = $this->findById($id);
+        if (!$row) {
+            return [];
+        }
+        return [
+            'id' => $id,
+            'status' => 'success',
+            'message' => '模拟测试成功',
+            'tested_at' => date('Y-m-d H:i:s'),
+        ];
+    }
 }

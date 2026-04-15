@@ -40,7 +40,7 @@ Webman 后端代码目录。
 - 用户/管理端/开放平台控制器骨架与初版逻辑
 - AuthService / JwtService 初版（已收敛为统一用户体系）
 - SearchService / SearchLogService / QuotaService / LogService 初版
-- QuestionService 与 QuestionRepository 列表/详情骨架
+- QuestionService 与 QuestionRepository 列表/详情/更新/删除骨架
 - WalletRepository / SubscriptionRepository / AnnouncementRepository
 - BalanceLogRepository / PaymentLogRepository / LoginLogRepository / OperateLogRepository
 - DocCategoryRepository / DocArticleRepository / DocConfigRepository
@@ -55,15 +55,13 @@ Webman 后端代码目录。
 - storage/logs 本地日志落地占位
 
 ## 当前状态
-当前代码已进入 **题库管理接口细化 + 统一认证菜单权限接口 + 开放平台增强阶段**：
-- 采用一个 `users` 体系，通过角色和权限区分用户端与管理端
-- 新增统一认证入口：`/api/v1/auth/login`
-- 统一登录返回 user / roles / permissions / menus / default_portal
-- 统一认证已补齐 `profile / menus / permissions`
-- 管理端已补齐角色列表 / 权限列表 / 菜单列表
-- 题库管理已补齐题目详情、分类列表、题型列表、来源列表、标签列表
-- 开放平台已补齐 quota detail 接口骨架
-- 用户端、管理端与开放平台模块继续沿用同一套用户身份体系
+当前代码已进入 **管理端操作型接口骨架第二轮阶段**：
+- 题目管理已补齐 update / delete 骨架
+- 公告管理已补齐 create / update 骨架
+- 文档文章管理已补齐 create / update 骨架
+- 系统配置已补齐 update 骨架
+- 接口源已补齐 test 骨架
+- 统一认证、题库管理、开放平台和用户中心结构继续保持统一
 
 ## 当前 mock 账号
 ### 用户

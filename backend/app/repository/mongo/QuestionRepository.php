@@ -20,6 +20,11 @@ class QuestionRepository
         return is_array($rows) ? $rows : [];
     }
 
+    protected function saveAll(array $rows): void
+    {
+        file_put_contents($this->file, json_encode(array_values($rows), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+    }
+
     public function findByQuestionId(int $questionId): array
     {
         foreach ($this->all() as $row) {
@@ -65,5 +70,25 @@ class QuestionRepository
             }
         }
         return $result;
+    }
+
+    public function update(int $questionId, array $data): array
+    {
+        $rows = $this->all();
+        foreach ($rows as &$row) {
+            if ((int) ($row['question_id'] ?? 0) === $questionId) {
+                $row = array_merge($row, $data);
+                $this->saveAll($rows);
+                return $row;
+            }
+        }
+        return [];
+    }
+
+    public function delete(int $questionId): bool
+    {
+        $rows = array_values(array_filter($this->all(), fn ($row) => (int) ($row['question_id'] ?? 0) !== $questionId));
+        $this->saveAll($rows);
+        return true;
     }
 }
