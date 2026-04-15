@@ -3,12 +3,18 @@
 Webman 后端代码目录。
 
 ## 当前状态
-当前代码已进入 **代码侧健全性增强阶段**：
-- 已有 auth/rbac 真接入脚本链
-- 已有 question/search 真接入脚本链
-- 已有 mock 模式下更完整的 smoke tests
-- 即使暂不部署，也能对关键主线做基础自检
+当前在 Minis 环境中已完成：
+- Composer 依赖安装
+- backend `composer smoke` 全量通过
 
-## 当前建议
-- 后续如果继续不部署，优先扩展 smoke tests 和关键真实分支
-- 一旦开始搭建，优先跑 auth/rbac -> question/search -> user-center
+## 已验证通过的代码侧主线
+- 统一认证 mock smoke
+- 搜题主线 mock smoke
+- 工作台 mock smoke
+- 题目详情 mock smoke
+- API Key mock smoke
+- 文档配置 mock smoke
+- 采集任务详情 mock smoke
+
+## 说明
+这说明当前代码侧后端主线在 mock 模式下已具备基本可运行性。
