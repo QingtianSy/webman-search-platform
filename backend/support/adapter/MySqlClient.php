@@ -40,4 +40,18 @@ class MySqlClient
             return null;
         }
     }
+
+    public static function executeSqlFile(string $file): bool
+    {
+        $pdo = self::pdo();
+        if (!$pdo || !is_file($file)) {
+            return false;
+        }
+        $sql = trim((string) file_get_contents($file));
+        if ($sql === '') {
+            return false;
+        }
+        $pdo->exec($sql);
+        return true;
+    }
 }

@@ -9,12 +9,11 @@
 - `health_check.sh`：基础健康检查脚本
 - `prepare_backend_dependencies.sh`：后端真实依赖准备脚本
 - `check_backend_runtime.sh`：后端运行时条件检查脚本
+- `check_auth_rbac_db.sh`：auth/rbac 数据库连通检查
+- `apply_auth_rbac_schema.sh`：auth/rbac 表结构执行
+- `apply_auth_rbac_seed.sh`：auth/rbac seed 执行
 
 ## 当前 Python 脚本
 - `check_health.py`：结构化健康检查，适合 CI / 巡检
 - `check_services.py`：systemd 服务状态巡检
 - `report_status.py`：汇总健康检查、服务状态、磁盘状态
-
-## 生产级建议
-- **简单入口脚本保留 shell**：部署、备份、快速检查
-- **复杂巡检与汇总使用 Python**：更适合 JSON、错误处理、报告输出

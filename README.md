@@ -23,4 +23,10 @@
 - 前端统一登录、布局、认证状态、动态菜单预留
 - 前端工作台/题目列表/搜题日志/API Key/钱包套餐页面卡片表格化
 - 前端管理页已进入带基础操作按钮与表单交互的雏形阶段
-- 完成工程收束：控制器一类一文件、InputRequest 兼容层收敛
+- auth / rbac 真实接入可执行脚本链已落地
+
+## 关键文档
+- [Auth/RBAC 真实接入执行脚本说明](./project-docs/30-auth-rbac-runbook.md)
+- [真接入执行总清单](./project-docs/25-real-integration-master-checklist.md)
+- [Auth/RBAC 真替换方案](./project-docs/17-auth-rbac-replacement-plan.md)
+- [Question/Search 真实替换方案](./project-docs/24-question-search-replacement-plan.md)
