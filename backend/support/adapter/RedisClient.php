@@ -14,4 +14,9 @@ class RedisClient
         $config = self::config();
         return !empty($config['host']) && !empty($config['port']);
     }
+
+    public static function key(string $prefix, string|int $id): string
+    {
+        return $prefix . ':' . $id;
+    }
 }

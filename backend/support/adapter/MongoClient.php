@@ -14,4 +14,9 @@ class MongoClient
         $config = self::config();
         return !empty($config['uri']) && !empty($config['database']);
     }
+
+    public static function databaseName(): string
+    {
+        return (string) (self::config()['database'] ?? '');
+    }
 }
