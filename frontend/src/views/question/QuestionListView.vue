@@ -1,8 +1,37 @@
 <template>
-  <div class="page">
+  <div class="page table-page">
     <h1>题目列表</h1>
-    <p>管理员菜单示例页。</p>
-    <pre>{{ dataText }}</pre>
+    <div class="toolbar">
+      <input v-model="keyword" placeholder="输入题目关键词" />
+      <button @click="loadData">查询</button>
+      <button>新增</button>
+      <button>导出</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>题目</th>
+          <th>答案</th>
+          <th>题型</th>
+          <th>来源</th>
+          <th>状态</th>
+          <th>创建时间</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="item in list" :key="item.question_id">
+          <td>{{ item.question_id }}</td>
+          <td>{{ item.stem }}</td>
+          <td>{{ item.answer_text }}</td>
+          <td>{{ item.type_name }}</td>
+          <td>{{ item.source_name }}</td>
+          <td>{{ item.status }}</td>
+          <td>{{ item.created_at }}</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </template>
 
@@ -10,14 +39,17 @@
 import { onMounted, ref } from 'vue';
 import { getQuestionList } from '../../api/business';
 
-const dataText = ref('加载中...');
+const keyword = ref('');
+const list = ref<any[]>([]);
 
-onMounted(async () => {
+async function loadData() {
   try {
-    const { data } = await getQuestionList();
-    dataText.value = JSON.stringify(data, null, 2);
-  } catch (error: any) {
-    dataText.value = String(error);
+    const { data } = await getQuestionList({ stem: keyword.value });
+    list.value = data.data?.list || [];
+  } catch (error) {
+    console.error(error);
   }
-});
+}
+
+onMounted(loadData);
 </script>
