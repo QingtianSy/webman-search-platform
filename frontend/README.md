@@ -27,6 +27,10 @@
 - `src/views/user/BillingView.vue`
 - `src/views/user/DocCenterView.vue`
 - `src/views/user/CollectTaskView.vue`
+- `src/views/admin/AnnouncementManageView.vue`
+- `src/views/admin/SystemConfigView.vue`
+- `src/views/admin/DocManageView.vue`
+- `src/views/admin/CollectManageView.vue`
 
 ## 当前页面目标
 - 登录页：统一认证入口
@@ -37,10 +41,15 @@
 - 钱包套餐页：用户计费页
 - 文档中心页：文档配置页
 - 采集任务页：采集中心页
+- 公告管理页：管理端骨架页
+- 系统配置页：管理端骨架页
+- 文档管理页：管理端骨架页
+- 采集管理页：管理端骨架页
 
 ## 当前阶段
-前端已进入 **统一布局 + 认证状态 + 菜单模型阶段**：
+前端已进入 **统一布局 + 认证状态 + 动态菜单预留 + 管理端页面骨架阶段**：
 - 统一登录页已接入 auth store
+- 登录后会拉取 profile / menus / permissions
 - 已有全局布局壳 AppLayout
 - 已有路由守卫
 - 已预留按 menus 动态渲染菜单的结构

@@ -20,7 +20,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { authLogin } from '../../api/auth';
+import { authLogin, authMenus, authPermissions, authProfile } from '../../api/auth';
 import { useAuthStore } from '../../stores/auth';
 
 const router = useRouter();
@@ -32,8 +32,24 @@ async function handleLogin() {
   try {
     const { data } = await authLogin(form);
     authStore.setAuthPayload(data.data);
-    result.value = JSON.stringify(data, null, 2);
-    if (data.data.default_portal === 'admin') {
+
+    const [profileRes, menusRes, permissionsRes] = await Promise.all([
+      authProfile(),
+      authMenus(),
+      authPermissions(),
+    ]);
+    authStore.setAuthPayload(profileRes.data.data || {});
+    authStore.setMenus(menusRes.data.data || []);
+    authStore.setPermissions(permissionsRes.data.data || []);
+
+    result.value = JSON.stringify({
+      login: data,
+      profile: profileRes.data,
+      menus: menusRes.data,
+      permissions: permissionsRes.data,
+    }, null, 2);
+
+    if ((data.data.default_portal || authStore.defaultPortal) === 'admin') {
       router.push('/admin/question');
     } else {
       router.push('/dashboard');

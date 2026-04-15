@@ -8,6 +8,10 @@ import ApiKeyListView from '../views/user/ApiKeyListView.vue';
 import BillingView from '../views/user/BillingView.vue';
 import DocCenterView from '../views/user/DocCenterView.vue';
 import CollectTaskView from '../views/user/CollectTaskView.vue';
+import AnnouncementManageView from '../views/admin/AnnouncementManageView.vue';
+import SystemConfigView from '../views/admin/SystemConfigView.vue';
+import DocManageView from '../views/admin/DocManageView.vue';
+import CollectManageView from '../views/admin/CollectManageView.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -20,6 +24,10 @@ const router = createRouter({
         { path: '', redirect: '/dashboard' },
         { path: 'dashboard', name: 'dashboard', component: DashboardView },
         { path: 'admin/question', name: 'question-list', component: QuestionListView },
+        { path: 'admin/announcements', name: 'announcement-manage', component: AnnouncementManageView },
+        { path: 'admin/system-config', name: 'system-config', component: SystemConfigView },
+        { path: 'admin/docs', name: 'doc-manage', component: DocManageView },
+        { path: 'admin/collect', name: 'collect-manage', component: CollectManageView },
         { path: 'logs/search', name: 'search-log', component: SearchLogView },
         { path: 'user/api-keys', name: 'api-keys', component: ApiKeyListView },
         { path: 'user/billing', name: 'billing', component: BillingView },

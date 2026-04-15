@@ -13,15 +13,21 @@ export const useAuthStore = defineStore('auth', {
   }),
   actions: {
     setAuthPayload(payload: any) {
-      this.token = payload.token || '';
-      this.user = payload.user || null;
-      this.roles = payload.roles || [];
-      this.permissions = payload.permissions || [];
-      this.menus = payload.menus || [];
-      this.defaultPortal = payload.default_portal || 'portal';
+      this.token = payload.token || this.token || '';
+      this.user = payload.user || this.user;
+      this.roles = payload.roles || this.roles;
+      this.permissions = payload.permissions || this.permissions;
+      this.menus = payload.menus || this.menus;
+      this.defaultPortal = payload.default_portal || this.defaultPortal || 'portal';
       if (this.token) {
         localStorage.setItem('token', this.token);
       }
+    },
+    setMenus(menus: any[]) {
+      this.menus = menus || [];
+    },
+    setPermissions(permissions: string[]) {
+      this.permissions = permissions || [];
     },
     logout() {
       this.token = '';
