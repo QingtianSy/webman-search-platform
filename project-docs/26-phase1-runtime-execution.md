@@ -7,7 +7,14 @@
 - 宿主机可检查运行时条件
 - 后续 auth/rbac 替换可以顺利开始
 
-## 二、执行顺序
+## 二、当前已验证结果
+已在当前可用环境中验证：
+- `composer.json` 依赖解析通过
+- `mongodb` 扩展可用
+- `workerman/webman-framework` 包名已修正并可被 Composer 解析
+- `composer install --dry-run` 可正常生成依赖计划
+
+## 三、执行顺序
 
 ### 1. 宿主机检查
 执行：
@@ -41,7 +48,7 @@
 - 不跑 migration
 - 不接数据库
 
-## 三、完成标志
+## 四、完成标志
 - composer install 可执行
 - vendor/autoload.php 可生成
 - public/index.php 可输出占位 JSON

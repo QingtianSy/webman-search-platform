@@ -3,11 +3,11 @@
 Webman 后端代码目录。
 
 ## 当前状态
-当前代码已进入 **question / search 真实替换推进阶段**：
-- `QuestionRepository` / `QuestionIndexRepository` / `SearchService` 已具备 mock / real 双模式主干
-- real 模式已明确为：ES 命中 -> Mongo 回查 -> MySQL/Mongo 记日志 -> Redis 配额
-- 下一步可继续把 real 分支中剩余占位替换为真实连接实现
+当前代码已进入 **Phase 1 真实依赖接入可执行阶段**：
+- `composer.json` 已修正为可解析的真实依赖声明
+- 当前环境已验证 `composer install --dry-run` 可通过
+- 当前环境已验证 `mongodb` 扩展可用
+- 下一步在宿主机上可直接执行依赖准备，再进入 auth/rbac 真接入
 
 ## 关键文档
-- `project-docs/24-question-search-replacement-plan.md`
-- `project-docs/29-question-search-code-progress.md`
+- `project-docs/26-phase1-runtime-execution.md`
