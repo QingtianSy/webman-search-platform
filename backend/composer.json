@@ -1,0 +1,14 @@
+{
+  "name": "qingtiansy/webman-search-platform-backend",
+  "type": "project",
+  "description": "Production-grade search platform backend based on Webman architecture",
+  "require": {
+    "php": ">=8.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "app\\": "app/",
+      "support\\": "support/"
+    }
+  }
+}
