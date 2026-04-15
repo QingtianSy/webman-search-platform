@@ -2,6 +2,16 @@
 
 namespace app\repository\mysql;
 
+/**
+ * MenuRepository
+ *
+ * 当前阶段：
+ * - 从 storage/mock/menus.json 读取菜单
+ *
+ * 真接入阶段：
+ * - 替换为 MySQL menus 表查询
+ * - 按 permission_code 过滤仍可保持现有逻辑不变
+ */
 class MenuRepository
 {
     protected string $file;

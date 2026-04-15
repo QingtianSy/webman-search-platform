@@ -2,6 +2,15 @@
 
 namespace app\repository\mysql;
 
+/**
+ * PermissionRepository
+ *
+ * 当前阶段：
+ * - 从 storage/mock/permissions.json 读取权限
+ *
+ * 真接入阶段：
+ * - 替换为 MySQL permissions 表查询
+ */
 class PermissionRepository
 {
     protected string $file;

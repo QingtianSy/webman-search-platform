@@ -19,9 +19,12 @@ class AuthService
         if (!$user) {
             return [];
         }
-        if (($user['password'] ?? '') !== $password || (int) ($user['status'] ?? 0) !== 1) {
+
+        $passwordService = new PasswordService();
+        if (!$passwordService->verify($password, $user) || (int) ($user['status'] ?? 0) !== 1) {
             return [];
         }
+
         $userId = (int) ($user['id'] ?? 0);
         $roleIds = (new UserRoleRepository())->roleIdsByUserId($userId);
         $roles = (new RoleRepository())->findByIds($roleIds);
@@ -29,6 +32,7 @@ class AuthService
         $menus = array_values(array_filter((new MenuRepository())->all(), function ($row) use ($permissions) {
             return in_array((string) ($row['permission_code'] ?? ''), $permissions, true);
         }));
+
         unset($user['password']);
         return [
             'user' => $user,
@@ -52,6 +56,7 @@ class AuthService
         if (!$target) {
             return [];
         }
+
         unset($target['password']);
         $roleIds = (new UserRoleRepository())->roleIdsByUserId($userId);
         $roles = (new RoleRepository())->findByIds($roleIds);
@@ -59,6 +64,7 @@ class AuthService
         $menus = array_values(array_filter((new MenuRepository())->all(), function ($row) use ($permissions) {
             return in_array((string) ($row['permission_code'] ?? ''), $permissions, true);
         }));
+
         return [
             'user' => $target,
             'roles' => array_values(array_map(fn ($row) => (string) ($row['code'] ?? ''), $roles)),

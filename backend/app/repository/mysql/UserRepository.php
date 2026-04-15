@@ -2,6 +2,16 @@
 
 namespace app\repository\mysql;
 
+/**
+ * UserRepository
+ *
+ * 当前阶段：
+ * - 从 storage/mock/users.json 读取用户
+ *
+ * 真接入阶段：
+ * - 替换为 MySQL users 表查询
+ * - 方法签名尽量保持不变，减少 AuthService 改动
+ */
 class UserRepository
 {
     protected string $file;

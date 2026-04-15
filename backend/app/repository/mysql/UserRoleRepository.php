@@ -2,6 +2,15 @@
 
 namespace app\repository\mysql;
 
+/**
+ * UserRoleRepository
+ *
+ * 当前阶段：
+ * - 从 storage/mock/user_roles.json 读取用户角色关联
+ *
+ * 真接入阶段：
+ * - 替换为 MySQL user_role 表查询
+ */
 class UserRoleRepository
 {
     protected string $file;
