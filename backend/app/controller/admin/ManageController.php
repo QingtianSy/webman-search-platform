@@ -2,9 +2,9 @@
 
 namespace app\controller\admin;
 
-use app\repository\mysql\AnnouncementRepository;
-use app\repository\mysql\SubscriptionRepository;
-use app\repository\mysql\UserRepository;
+use app\repository\mysql\MenuRepository;
+use app\repository\mysql\PermissionRepository;
+use app\repository\mysql\RoleRepository;
 use support\ApiResponse;
 use support\Pagination;
 
@@ -14,7 +14,7 @@ class UserController
     {
         $users = [];
         foreach (['demo_user', 'admin'] as $username) {
-            $row = (new UserRepository())->findByUsername($username);
+            $row = (new \app\repository\mysql\UserRepository())->findByUsername($username);
             if ($row) {
                 unset($row['password']);
                 $users[] = $row;
@@ -28,7 +28,7 @@ class PlanController
 {
     public function index(): array
     {
-        $list = [(new SubscriptionRepository())->findCurrentByUserId(1)];
+        $list = [(new \app\repository\mysql\SubscriptionRepository())->findCurrentByUserId(1)];
         return ApiResponse::success(Pagination::format(array_filter($list), count(array_filter($list)), 1, 20));
     }
 }
@@ -37,7 +37,7 @@ class AnnouncementController
 {
     public function index(): array
     {
-        $list = (new AnnouncementRepository())->latest();
+        $list = (new \app\repository\mysql\AnnouncementRepository())->latest();
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
     }
 }
@@ -56,6 +56,33 @@ class SearchLogController
                 }
             }
         }
+        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
+    }
+}
+
+class RoleController
+{
+    public function index(): array
+    {
+        $list = (new RoleRepository())->all();
+        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
+    }
+}
+
+class PermissionController
+{
+    public function index(): array
+    {
+        $list = (new PermissionRepository())->all();
+        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
+    }
+}
+
+class MenuController
+{
+    public function index(): array
+    {
+        $list = (new MenuRepository())->all();
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
     }
 }

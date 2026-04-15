@@ -39,6 +39,35 @@ class AuthService
         ];
     }
 
+    public function profile(int $userId): array
+    {
+        $target = null;
+        foreach (['demo_user', 'admin'] as $username) {
+            $candidate = (new UserRepository())->findByUsername($username);
+            if ((int) ($candidate['id'] ?? 0) === $userId) {
+                $target = $candidate;
+                break;
+            }
+        }
+        if (!$target) {
+            return [];
+        }
+        unset($target['password']);
+        $roleIds = (new UserRoleRepository())->roleIdsByUserId($userId);
+        $roles = (new RoleRepository())->findByIds($roleIds);
+        $permissions = (new RolePermissionRepository())->permissionCodesByRoleIds($roleIds);
+        $menus = array_values(array_filter((new MenuRepository())->all(), function ($row) use ($permissions) {
+            return in_array((string) ($row['permission_code'] ?? ''), $permissions, true);
+        }));
+        return [
+            'user' => $target,
+            'roles' => array_values(array_map(fn ($row) => (string) ($row['code'] ?? ''), $roles)),
+            'permissions' => $permissions,
+            'menus' => $menus,
+            'default_portal' => in_array('admin.access', $permissions, true) ? 'admin' : 'portal',
+        ];
+    }
+
     public function userLogin(string $username, string $password): array
     {
         return $this->login($username, $password);

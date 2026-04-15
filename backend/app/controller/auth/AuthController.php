@@ -40,16 +40,17 @@ class AuthController
         ], '登录成功');
     }
 
-    public function profile(): array
+    public function profile(?Request $request = null): array
     {
-        return ApiResponse::success([
-            'id' => 1,
-            'username' => 'demo_user',
-            'nickname' => '测试用户',
-            'avatar' => '',
-            'status' => 1,
-            'roles' => ['user'],
-            'permissions' => ['portal.access', 'search.query'],
-        ]);
+        $request ??= new Request();
+        $authorization = (string) $request->header('Authorization', '');
+        $token = trim(str_replace('Bearer', '', $authorization));
+        $decoded = (new JwtService())->decode($token);
+        $userId = (int) (($decoded['payload']['uid'] ?? 0));
+        $payload = (new AuthService())->profile($userId);
+        if (!$payload) {
+            return ApiResponse::error(40002, '未登录或用户不存在');
+        }
+        return ApiResponse::success($payload);
     }
 }

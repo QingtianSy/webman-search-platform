@@ -34,7 +34,7 @@ Webman 后端代码目录。
 - LogController
 - DocController
 - CollectController
-- 管理端 User / Plan / Announcement / SearchLog 控制器
+- 管理端 User / Role / Permission / Menu / Plan / Announcement / SearchLog 控制器
 - 管理端 Doc / Collect / ApiSource / SystemConfig 控制器
 - 用户/管理端/开放平台控制器骨架与初版逻辑
 - AuthService / JwtService 初版（已收敛为统一用户体系）
@@ -45,19 +45,22 @@ Webman 后端代码目录。
 - DocCategoryRepository / DocArticleRepository / DocConfigRepository
 - CollectAccountRepository / CollectTaskRepository / CollectTaskDetailRepository / ApiSourceRepository
 - RoleRepository / PermissionRepository / UserRoleRepository / RolePermissionRepository / MenuRepository
+- QuestionCategoryRepository / QuestionTypeRepository / QuestionSourceRepository / QuestionTagRepository
 - SystemConfigRepository
 - SearchQueryValidator
 - Repository 骨架与 API Key 仓储骨架
 - HealthService 健康检查服务
-- storage/mock 用户、角色、权限、菜单、题目、钱包、套餐、API Key、公告、日志、文档、采集、接口源、系统配置数据源
+- storage/mock 用户、角色、权限、菜单、题目分类/题型/来源/标签、题目、钱包、套餐、API Key、公告、日志、文档、采集、接口源、系统配置数据源
 - storage/logs 本地日志落地占位
 
 ## 当前状态
-当前代码已进入 **统一用户体系收敛阶段**：
+当前代码已进入 **角色权限菜单主线 + 题库管理细节阶段**：
 - 采用一个 `users` 体系，通过角色和权限区分用户端与管理端
 - 新增统一认证入口：`/api/v1/auth/login`
 - 统一登录返回 user / roles / permissions / menus / default_portal
 - 保留 `/api/v1/user/auth/*` 与 `/api/v1/admin/auth/*` 作为兼容入口
+- 管理端已补齐角色列表 / 权限列表 / 菜单列表
+- 题库管理基础字典已补齐分类 / 题型 / 来源 / 标签 mock 数据源与仓储
 - 用户端、管理端与开放平台模块继续沿用同一套用户身份体系
 
 ## 当前 mock 账号

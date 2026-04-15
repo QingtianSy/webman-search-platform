@@ -6,8 +6,11 @@ use app\controller\admin\ApiSourceManageController;
 use app\controller\admin\AuthController as AdminAuthController;
 use app\controller\admin\CollectManageController;
 use app\controller\admin\DocManageController;
+use app\controller\admin\MenuController;
+use app\controller\admin\PermissionController;
 use app\controller\admin\PlanController;
 use app\controller\admin\QuestionController;
+use app\controller\admin\RoleController;
 use app\controller\admin\SearchLogController as AdminSearchLogController;
 use app\controller\admin\SystemConfigController;
 use app\controller\admin\UserController;
@@ -57,6 +60,9 @@ return [
     ['GET', '/api/v1/admin/question/list', [QuestionController::class, 'index']],
     ['POST', '/api/v1/admin/question/create', [QuestionController::class, 'create']],
     ['GET', '/api/v1/admin/user/list', [UserController::class, 'index']],
+    ['GET', '/api/v1/admin/role/list', [RoleController::class, 'index']],
+    ['GET', '/api/v1/admin/permission/list', [PermissionController::class, 'index']],
+    ['GET', '/api/v1/admin/menu/list', [MenuController::class, 'index']],
     ['GET', '/api/v1/admin/plan/list', [PlanController::class, 'index']],
     ['GET', '/api/v1/admin/announcement/list', [AnnouncementController::class, 'index']],
     ['GET', '/api/v1/admin/log/search/list', [AdminSearchLogController::class, 'index']],

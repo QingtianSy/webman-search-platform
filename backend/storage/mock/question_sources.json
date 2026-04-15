@@ -1,0 +1,4 @@
+[
+  {"id": 1, "name": "本地题库", "code": "local", "platform": "system", "sort": 1, "status": 1},
+  {"id": 2, "name": "超星", "code": "chaoxing", "platform": "chaoxing", "sort": 2, "status": 1}
+]
