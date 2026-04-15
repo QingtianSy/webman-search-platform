@@ -2,6 +2,8 @@
 
 namespace app\repository\mysql;
 
+use support\adapter\MySqlClient;
+
 /**
  * UserRoleRepository
  */
@@ -39,6 +41,14 @@ class UserRoleRepository
 
     protected function roleIdsByUserIdReal(int $userId): array
     {
+        if (!MySqlClient::isConfigured()) {
+            return [];
+        }
+
+        /**
+         * 未来真实查询示意：
+         * SELECT role_id FROM user_role WHERE user_id = :user_id;
+         */
         return [];
     }
 }

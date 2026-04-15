@@ -2,6 +2,8 @@
 
 namespace app\repository\mysql;
 
+use support\adapter\MySqlClient;
+
 /**
  * UserRepository
  *
@@ -47,13 +49,18 @@ class UserRepository
 
     protected function findByUsernameReal(string $username): array
     {
-        return [
-            'id' => 0,
-            'username' => $username,
-            'password_hash' => '',
-            'nickname' => '',
-            'avatar' => '',
-            'status' => 1,
-        ];
+        if (!MySqlClient::isConfigured()) {
+            return [];
+        }
+
+        /**
+         * 未来真实查询示意：
+         * SELECT id, username, password_hash, nickname, avatar, mobile, email, status,
+         *        last_login_ip, last_login_at, created_at, updated_at
+         * FROM users
+         * WHERE username = :username
+         * LIMIT 1;
+         */
+        return [];
     }
 }

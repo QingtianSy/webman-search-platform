@@ -2,6 +2,8 @@
 
 namespace app\repository\mysql;
 
+use support\adapter\MySqlClient;
+
 /**
  * PermissionRepository
  */
@@ -32,6 +34,15 @@ class PermissionRepository
 
     protected function allReal(): array
     {
+        if (!MySqlClient::isConfigured()) {
+            return [];
+        }
+
+        /**
+         * 未来真实查询示意：
+         * SELECT id, name, code, type, created_at, updated_at
+         * FROM permissions;
+         */
         return [];
     }
 }

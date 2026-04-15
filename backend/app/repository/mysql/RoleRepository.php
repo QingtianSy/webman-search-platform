@@ -2,6 +2,8 @@
 
 namespace app\repository\mysql;
 
+use support\adapter\MySqlClient;
+
 /**
  * RoleRepository
  */
@@ -37,6 +39,16 @@ class RoleRepository
 
     protected function allReal(): array
     {
+        if (!MySqlClient::isConfigured()) {
+            return [];
+        }
+
+        /**
+         * 未来真实查询示意：
+         * SELECT id, name, code, sort, status, created_at, updated_at
+         * FROM roles
+         * WHERE status = 1;
+         */
         return [];
     }
 }

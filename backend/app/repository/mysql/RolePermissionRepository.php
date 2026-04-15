@@ -2,6 +2,8 @@
 
 namespace app\repository\mysql;
 
+use support\adapter\MySqlClient;
+
 /**
  * RolePermissionRepository
  */
@@ -39,6 +41,17 @@ class RolePermissionRepository
 
     protected function permissionCodesByRoleIdsReal(array $roleIds): array
     {
+        if (!MySqlClient::isConfigured()) {
+            return [];
+        }
+
+        /**
+         * 未来真实查询示意：
+         * SELECT p.code
+         * FROM role_permission rp
+         * INNER JOIN permissions p ON p.id = rp.permission_id
+         * WHERE rp.role_id IN (...);
+         */
         return [];
     }
 }

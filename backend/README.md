@@ -15,11 +15,15 @@ Webman 后端代码目录。
 - database/migrations/ 首批 auth/rbac SQL 草案
 - database/seeds/ 首批 auth/rbac seed 草案
 - PasswordService 已抽出
-- auth/rbac Repository 已进入 mock/real 双模式准备
+- auth/rbac Repository 已支持 mock/real 双模式占位
 - 其余业务骨架与真接入文档已齐备
 
 ## 当前状态
-当前代码已进入 **auth / rbac Repository 双模式切换准备阶段**：
-- 通过 `config/integration.php` 中的 `AUTH_RBAC_SOURCE` 控制 mock / real
-- Repository 对外方法签名保持不变
-- 下一步可逐个在 real 分支中接真实 SQL 查询
+当前代码已进入 **auth / rbac real 分支实现骨架阶段**：
+- `AUTH_RBAC_SOURCE` 已可切 mock / real
+- `*Real()` 分支已作为真实查询占位落点
+- 下一步只需要把 real 分支中的伪查询替换为真实 DB 查询即可
+
+## 关键文档
+- `project-docs/22-auth-rbac-repository-swap-plan.md`
+- `project-docs/23-auth-rbac-real-query-notes.md`
