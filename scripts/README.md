@@ -15,6 +15,7 @@
 - `apply_search_logs_schema.sh`：搜题日志表结构执行
 - `prepare_question_index.sh`：Elasticsearch 题目索引准备
 - `check_search_stack.sh`：Mongo / ES / Redis 搜题栈检查
+- `run_backend_smoke_tests.sh`：后端 mock 模式冒烟测试执行
 
 ## 当前 Python 脚本
 - `check_health.py`：结构化健康检查，适合 CI / 巡检

@@ -26,6 +26,13 @@
       "support/helpers.php"
     ]
   },
+  "scripts": {
+    "smoke": [
+      "php tests/auth_mock_smoke.php",
+      "php tests/search_mock_smoke.php",
+      "php tests/dashboard_mock_smoke.php"
+    ]
+  },
   "minimum-stability": "stable",
   "prefer-stable": true,
   "config": {

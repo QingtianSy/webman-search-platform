@@ -25,10 +25,10 @@
 - user-center / docs / config / collect 外围已 real-ready
 - 前端统一登录、布局、认证状态、动态菜单预留
 - 前端页面已具备卡片 / 表格 / 基础交互层
-- 搭建前关键阻塞项已检查并修复
+- 代码侧 smoke test 已落地
 
-## 关键检查文档
-- [搭建前检查报告](./project-docs/36-pre-deployment-check-report.md)
-- [真接入执行总清单](./project-docs/25-real-integration-master-checklist.md)
+## 关键文档
+- [代码侧自检说明](./project-docs/37-code-smoke-tests.md)
 - [Auth/RBAC 真实接入执行脚本说明](./project-docs/30-auth-rbac-runbook.md)
 - [Question/Search 真实接入执行脚本说明](./project-docs/31-question-search-runbook.md)
+- [真接入执行总清单](./project-docs/25-real-integration-master-checklist.md)

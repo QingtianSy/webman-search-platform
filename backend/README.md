@@ -3,12 +3,12 @@
 Webman 后端代码目录。
 
 ## 当前状态
-当前代码已进入 **核心模块基本完成 real-ready 收口阶段**：
-- auth/rbac 主线已具备 real 查询骨架
-- question/search 主线已具备 real 分支骨架
-- user-center 已具备 mock / real 双模式基础
-- docs / collect / api_source 外围已具备 mock / real 双模式基础
-- 如果现在开始真实接入，优先建议：auth/rbac -> question/search -> user-center -> docs/config/collect
+当前代码已进入 **代码侧生产级自检可执行阶段**：
+- 已有 auth/rbac 真接入脚本链
+- 已有 question/search 真接入脚本链
+- 已有 mock 模式下的 smoke tests
+- 在不启动真实服务器的情况下，也可以先验证关键代码主线
 
-## 关键文档
-- `project-docs/35-docs-config-collect-code-progress.md`
+## 当前可用自检方式
+- `composer smoke`
+- `scripts/run_backend_smoke_tests.sh`
