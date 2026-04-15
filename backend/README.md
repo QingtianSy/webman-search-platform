@@ -3,11 +3,11 @@
 Webman 后端代码目录。
 
 ## 当前状态
-当前代码已进入 **auth / rbac 真实接入可执行脚本阶段**：
-- 已有 MySQL 连接检查脚本
-- 已有 auth/rbac schema 执行脚本
-- 已有 auth/rbac seed 执行脚本
-- 一旦宿主机环境可用，就可以直接按脚本顺序执行第一批认证主线接入
+当前代码已进入 **question / search 真实接入可执行脚本阶段**：
+- 已有 search_logs 表结构 SQL
+- 已有 question_index 准备脚本
+- 已有 search stack 检查脚本
+- 一旦宿主机 Mongo / ES / Redis / MySQL 可用，就可以直接按脚本推进 question/search 主线真实接入
 
 ## 关键文档
-- `project-docs/30-auth-rbac-runbook.md`
+- `project-docs/31-question-search-runbook.md`
