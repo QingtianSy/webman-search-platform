@@ -4,10 +4,11 @@
 
 ### 核心表
 - users
-- admins
 - roles
 - permissions
 - menus
+- user_role
+- role_permission
 - plans
 - user_subscriptions
 - wallets
@@ -36,10 +37,48 @@
 - system_configs
 
 ### 设计原则
+- 统一用户体系：所有账号统一存放在 `users`
+- 通过 `roles / permissions / menus` 区分用户端与管理端
 - 强关系与强事务数据放 MySQL
-- 所有核心表保留 created_at / updated_at
-- 所有关键业务表保留 status
+- 所有核心表保留 `created_at / updated_at`
+- 所有关键业务表保留 `status`
 - 敏感信息不明文存储
+
+### 统一账户体系说明
+#### users
+存所有账号：
+- 普通用户
+- 套餐用户
+- 运营人员
+- 管理员
+- 超级管理员
+
+#### roles
+示例：
+- user
+- vip_user
+- operator
+- admin
+- super_admin
+
+#### permissions
+示例：
+- portal.access
+- search.query
+- admin.access
+- question.manage
+- system.config
+- collect.manage
+- api_source.manage
+
+#### user_role
+用户与角色关联表
+
+#### role_permission
+角色与权限关联表
+
+#### menus
+按 `permission_code` 控制菜单可见性
 
 ## 二、MongoDB
 
@@ -99,9 +138,8 @@
 
 ### Key 设计
 - token:user:{user_id}
-- token:admin:{admin_id}
-- perm:admin:{admin_id}
-- menu:admin:{admin_id}
+- perm:user:{user_id}
+- menu:user:{user_id}
 - api_key:{api_key}
 - quota:user:{user_id}
 - quota:key:{api_key_id}
@@ -119,10 +157,11 @@
 
 ### 第一批
 - users
-- admins
 - roles
 - permissions
 - menus
+- user_role
+- role_permission
 - user_api_keys
 - plans
 - user_subscriptions

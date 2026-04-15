@@ -2,6 +2,9 @@
 
 ## 一、命名空间
 
+### 统一认证
+- /api/v1/auth/*
+
 ### 用户端
 - /api/v1/user/*
 
@@ -22,14 +25,32 @@
 }
 ```
 
-## 三、用户端核心接口
+## 三、统一认证接口（主入口）
 
 ### 鉴权
+- POST /api/v1/auth/login
+- GET /api/v1/auth/profile
+- GET /api/v1/auth/menus
+- GET /api/v1/auth/permissions
+- POST /api/v1/auth/logout（预留）
+- POST /api/v1/auth/change-password（预留）
+- GET /api/v1/auth/captcha（预留）
+
+### 说明
+- 一个登录页
+- 一个统一用户体系
+- 登录成功后返回：user / roles / permissions / menus / default_portal
+- 前端根据 `default_portal` 与权限决定进入用户端还是管理端
+
+### 兼容入口（保留但非主推荐）
 - POST /api/v1/user/auth/login
 - GET /api/v1/user/auth/profile
-- POST /api/v1/user/auth/logout
-- POST /api/v1/user/auth/change-password
-- GET /api/v1/user/auth/captcha
+- POST /api/v1/admin/auth/login
+- GET /api/v1/admin/auth/profile
+
+> 这两组兼容入口只是为了当前骨架阶段保留兼容，不是最终主推荐认证入口。
+
+## 四、用户端核心接口
 
 ### 工作台 / 用户中心
 - GET /api/v1/user/dashboard/overview
@@ -49,6 +70,7 @@
 
 ### API Key / 白名单
 - GET /api/v1/user/api-key/list
+- GET /api/v1/user/api-key/detail
 - POST /api/v1/user/api-key/create
 - POST /api/v1/user/api-key/toggle
 - DELETE /api/v1/user/api-key/delete
@@ -83,13 +105,7 @@
 - GET /api/v1/user/log/operate
 - GET /api/v1/user/log/login
 
-## 四、管理端核心接口
-
-### 鉴权
-- POST /api/v1/admin/auth/login
-- GET /api/v1/admin/auth/profile
-- GET /api/v1/admin/auth/menus
-- GET /api/v1/admin/auth/permissions
+## 五、管理端核心接口
 
 ### 题库
 - GET /api/v1/admin/question/list
@@ -109,8 +125,10 @@
 
 ### 采集
 - GET /api/v1/admin/collect/task/list
+- GET /api/v1/admin/collect/task/detail
 - GET /api/v1/admin/collect/task/errors
 - POST /api/v1/admin/collect/task/retry
+- POST /api/v1/admin/collect/task/stop
 - GET /api/v1/admin/collect/raw/list
 
 ### 接口源配置
@@ -140,6 +158,9 @@
 - PUT /api/v1/admin/user/update
 - POST /api/v1/admin/user/toggle
 - POST /api/v1/admin/user/reset-password
+- GET /api/v1/admin/role/list
+- GET /api/v1/admin/permission/list
+- GET /api/v1/admin/menu/list
 - GET /api/v1/admin/plan/list
 - POST /api/v1/admin/plan/create
 - PUT /api/v1/admin/plan/update
@@ -154,8 +175,12 @@
 - DELETE /api/v1/admin/announcement/delete
 - GET /api/v1/admin/system-config/list
 - POST /api/v1/admin/system-config/update
+- GET /api/v1/admin/doc/article/list
+- POST /api/v1/admin/doc/article/create
+- PUT /api/v1/admin/doc/article/update
+- DELETE /api/v1/admin/doc/article/delete
 
-## 五、开放平台
+## 六、开放平台
 - POST /open/v1/search/query
 - GET /open/v1/quota/detail
 - GET /open/v1/health
