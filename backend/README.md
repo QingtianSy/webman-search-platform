@@ -4,43 +4,18 @@ Webman 后端代码目录。
 
 ## 当前已落地
 - composer.json 已切换为真实依赖占位版
-- start.php 启动入口骨架
+- start.php 已收束为可替换启动占位层
 - bootstrap/app.php
 - bootstrap/routes.php
-- config/app.php
-- config/routes.php
-- config/middleware.php
 - config/plugin/README.md
-- config/database.php
-- config/redis.php
-- config/mongodb.php
-- config/elasticsearch.php
-- config/jwt.php
-- .env.production.example
 - public/README.md
-- support/helpers.php
-- support/Request.php
-- support/ResponseCode.php
-- support/ApiResponse.php
-- support/ClientFactory.php
-- support/Pagination.php
-- support/adapter/* 适配层骨架
-- BusinessException
-- ExceptionHandler
-- RequestIdMiddleware
-- User/Admin/Open 鉴权中间件
-- 统一认证控制器 auth/AuthController
-- 业务骨架与管理操作接口多轮补齐
-- 结构收束与真接入准备文档
+- public/index.php 占位入口
+- support/Request.php 已收束为兼容请求占位层
+- support/ApiResponse.php 已收束为兼容响应占位层
+- 其余业务骨架与真接入文档已齐备
 
 ## 当前状态
-当前代码已进入 **批次 1 真接入文件准备阶段**：
-- 占位文件与真实替换目标映射已经明确
-- `public/` 与 `config/plugin/` 目录已提前准备
-- 下一步可进入真实 Webman 入口与 Request/Response 替换准备
-
-## 关键文档
-- `project-docs/15-placeholder-replacement-map.md`
-- `project-docs/16-webman-file-prep.md`
-- `project-docs/13-first-integration-execution-checklist.md`
-- `project-docs/14-host-backend-prep.md`
+当前代码已进入 **批次 1 真接入代码级准备阶段**：
+- 占位启动入口、请求层、响应层、bootstrap 层都已标明未来替换边界
+- `public/` 入口预留已创建
+- 下一步可开始按批次替换 auth / rbac 的真实实现

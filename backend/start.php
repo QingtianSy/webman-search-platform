@@ -4,9 +4,26 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/support/helpers.php';
 
-// 生产级说明：
-// 1. 后续接入真实 Webman 时，此文件替换为官方启动入口
-// 2. 当前阶段用于固定项目启动约定与目录结构
-// 3. 宿主机部署统一使用 systemd 调用 php start.php start
+/**
+ * 当前文件是“真接入前的启动占位层”。
+ *
+ * 当前用途：
+ * 1. 统一宿主机脚本入口约定
+ * 2. 固定 backend 目录结构
+ * 3. 作为后续真实 Webman 启动入口替换点
+ *
+ * 后续真实接入时：
+ * - 本文件将被 Webman 官方启动入口实现接管
+ * - systemd / 宿主机启动命令仍可保持 `php start.php start`
+ */
 
-echo "webman-search-platform bootstrap placeholder\n";
+$command = $argv[1] ?? 'help';
+
+if ($command === 'help') {
+    echo "webman-search-platform placeholder start script\n";
+    echo "Available placeholder commands: start | stop | restart | reload | status\n";
+    exit(0);
+}
+
+echo "[placeholder] command: {$command}\n";
+exit(0);

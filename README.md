@@ -2,48 +2,6 @@
 
 基于 **Webman + Swoole + MySQL + MongoDB + Elasticsearch + Redis + Vben Admin + Naive UI** 的生产级题库搜题 SaaS 平台。
 
-## 项目定位
-
-这是一个可商用的题库搜题平台，包含：
-
-- 用户端门户
-- 管理端后台
-- 搜题中心
-- 题库中心
-- 采集中心
-- 开放平台 API
-- 套餐计费中心
-- 日志审计中心
-
-## 技术栈
-
-### 后端
-- PHP 8.2
-- Webman 2.x
-- Workerman 5.x
-- Swoole 5.1.x
-
-### 数据层
-- MySQL 8.0
-- MongoDB 7
-- Elasticsearch 8
-- Redis 7.2
-
-### 前端
-- Node.js 20 LTS
-- Vue 3
-- Vite 5
-- TypeScript 5
-- Vben Admin
-- Naive UI
-
-### 部署
-- Ubuntu 22.04 LTS
-- Nginx
-- systemd
-- 宿主机直装，不使用 Docker Compose
-- Shell + Python 混合运维脚本
-
 ## 当前阶段
 
 当前仓库已推进到：
@@ -63,6 +21,7 @@
 - 前端工作台/题目列表/搜题日志/API Key/钱包套餐页面卡片表格化
 - 前端管理页已进入带基础操作按钮与表单交互的雏形阶段
 - 批次 1 真接入文件准备已开始
+- 批次 1 真接入代码级准备已开始
 
 ## 关键真接入文档
 - [后端真实依赖清单](./project-docs/10-backend-real-dependencies.md)
@@ -72,15 +31,3 @@
 - [宿主机后端接入准备](./project-docs/14-host-backend-prep.md)
 - [占位文件替换映射表](./project-docs/15-placeholder-replacement-map.md)
 - [Webman 文件准备](./project-docs/16-webman-file-prep.md)
-
-## 开发原则
-
-- 先做最小可上线闭环
-- 按生产级思路推进，不只写 demo
-- 先后端主链路，再补前端页面
-- ES 只做搜索索引，不做主存储
-- Redis 只做缓存、配额、限流，不做正式配置库
-- 所有生产配置走 env
-- 宿主机部署统一用 Nginx + systemd
-- 简单运维脚本保留 shell，复杂巡检优先 Python
-- mock 数据只是过渡，最终以真实存储接管

@@ -1,7 +1,12 @@
 # Webman 真接入准备说明
 
 ## 一、当前阶段
-当前仓库是“生产级结构 + mock 业务数据源”阶段，还没有正式拉入 Webman 官方完整运行时。
+当前仓库已经从“纯文档准备”进入到“代码级替换准备”阶段：
+- `start.php` 已作为未来真实入口替换点
+- `support/Request.php` 已作为兼容层保留
+- `support/ApiResponse.php` 已作为兼容层保留
+- `bootstrap/*` 已标明未来接管边界
+- `public/index.php` 已预留
 
 ## 二、接入目标
 后续要完成：
@@ -36,16 +41,3 @@
 
 ### 5. 逐模块替换 mock repository
 按《07-mock-to-real-plan.md》顺序替换。
-
-## 四、接入前不要做的事
-- 不要继续扩大 mock 文件数量到无法维护
-- 不要让 controller 里堆积复杂逻辑
-- 不要在 mock 阶段写死太多路径/结构
-
-## 五、接入后优先验证
-1. 统一登录
-2. 统一 profile / menus / permissions
-3. 题目列表
-4. 搜题接口
-5. 搜题日志
-6. 工作台
