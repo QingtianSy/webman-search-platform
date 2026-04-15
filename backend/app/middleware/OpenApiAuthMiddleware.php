@@ -1,0 +1,21 @@
+<?php
+
+namespace app\middleware;
+
+use app\service\open\ApiKeyService;
+use support\ApiResponse;
+use support\Request;
+
+class OpenApiAuthMiddleware
+{
+    public function process(?Request $request, callable $handler): mixed
+    {
+        $request ??= new Request();
+        $apiKey = (string) $request->header('x-api-key', '');
+        $apiSecret = (string) $request->header('x-api-secret', '');
+        if (!(new ApiKeyService())->verify($apiKey, $apiSecret)) {
+            return ApiResponse::error(40008, 'API Key 无效');
+        }
+        return $handler($request);
+    }
+}

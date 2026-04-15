@@ -60,27 +60,24 @@ scripts/                 # 辅助脚本
 - [API 设计](./project-docs/03-api-design.md)
 - [项目骨架与开发顺序](./project-docs/04-project-structure.md)
 - [宿主机部署方案](./project-docs/05-host-deployment.md)
+- [宿主机执行步骤](./project-docs/06-host-deployment-steps.md)
 
 ## 当前阶段
 
-当前仓库先提交：
-
+当前仓库已推进到：
 - 项目总体设计
 - 数据库设计定稿
 - API 设计定稿
 - 项目目录规划
 - 宿主机生产部署方案
-
-下一阶段开始落：
-
-- Webman 后端骨架
-- 路由分组
-- 第一批核心接口
-- Vben Admin 最小页面
+- 后端真实业务骨架
+- 启动入口与中间件配置骨架
+- 宿主机部署模板与备份脚本
 
 ## 开发原则
 
 - 先做最小可上线闭环
+- 按生产级思路推进，不只写 demo
 - 先后端主链路，再补前端页面
 - ES 只做搜索索引，不做主存储
 - Redis 只做缓存、配额、限流，不做正式配置库
