@@ -63,3 +63,23 @@ export function updateQuestion(data: Record<string, any>) {
 export function deleteQuestion(id: number) {
   return http.delete('/admin/question/delete', { params: { id } });
 }
+
+export function getAdminUsers() {
+  return http.get('/admin/user/list');
+}
+
+export function getAdminRoles() {
+  return http.get('/admin/role/list');
+}
+
+export function getAdminPermissions() {
+  return http.get('/admin/permission/list');
+}
+
+export function getAdminMenus() {
+  return http.get('/admin/menu/list');
+}
+
+export function getAdminPlans() {
+  return http.get('/admin/plan/list');
+}

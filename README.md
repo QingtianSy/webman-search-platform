@@ -17,18 +17,15 @@
 - Python 巡检与状态汇总脚本
 - Mock → Real 替换路线
 - Webman 真接入准备说明
-- 前端统一登录、布局、认证状态、动态菜单预留
-- 前端工作台/题目列表/搜题日志/API Key/钱包套餐页面卡片表格化
-- 前端管理页已进入带基础操作按钮与表单交互的雏形阶段
-- 批次 1 真接入文件准备已开始
-- 批次 1 真接入代码级准备已开始
 - auth / rbac 真替换草案、字段映射、schema SQL、seed SQL 已落地
 - auth / rbac real 查询骨架已落地
 - question / search real 分支骨架已落地
-- Phase 1 真实依赖接入执行文档已落地
+- 前端统一登录、布局、认证状态、动态菜单预留
+- 前端工作台/题目列表/搜题日志/API Key/钱包套餐页面卡片表格化
+- 前端管理页已进入带基础操作按钮与表单交互的雏形阶段
+- 前端更多用户/管理页面骨架已补齐
 
-## 关键文档
-- [Phase 1 真实依赖接入执行文档](./project-docs/26-phase1-runtime-execution.md)
+## 关键真接入文档
 - [真接入执行总清单](./project-docs/25-real-integration-master-checklist.md)
 - [Auth/RBAC 真替换方案](./project-docs/17-auth-rbac-replacement-plan.md)
 - [Question/Search 真实替换方案](./project-docs/24-question-search-replacement-plan.md)
