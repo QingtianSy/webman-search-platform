@@ -1,18 +1,41 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import AppLayout from '../layouts/AppLayout.vue';
 import LoginView from '../views/auth/LoginView.vue';
 import DashboardView from '../views/dashboard/DashboardView.vue';
 import QuestionListView from '../views/question/QuestionListView.vue';
 import SearchLogView from '../views/logs/SearchLogView.vue';
+import ApiKeyListView from '../views/user/ApiKeyListView.vue';
+import BillingView from '../views/user/BillingView.vue';
+import DocCenterView from '../views/user/DocCenterView.vue';
+import CollectTaskView from '../views/user/CollectTaskView.vue';
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/login', name: 'login', component: LoginView },
-    { path: '/', redirect: '/dashboard' },
-    { path: '/dashboard', name: 'dashboard', component: DashboardView },
-    { path: '/admin/question', name: 'question-list', component: QuestionListView },
-    { path: '/logs/search', name: 'search-log', component: SearchLogView },
+    {
+      path: '/',
+      component: AppLayout,
+      children: [
+        { path: '', redirect: '/dashboard' },
+        { path: 'dashboard', name: 'dashboard', component: DashboardView },
+        { path: 'admin/question', name: 'question-list', component: QuestionListView },
+        { path: 'logs/search', name: 'search-log', component: SearchLogView },
+        { path: 'user/api-keys', name: 'api-keys', component: ApiKeyListView },
+        { path: 'user/billing', name: 'billing', component: BillingView },
+        { path: 'user/docs', name: 'docs', component: DocCenterView },
+        { path: 'user/collect', name: 'collect', component: CollectTaskView },
+      ],
+    },
   ],
+});
+
+router.beforeEach((to) => {
+  const token = localStorage.getItem('token');
+  if (to.path !== '/login' && !token) {
+    return '/login';
+  }
+  return true;
 });
 
 export default router;

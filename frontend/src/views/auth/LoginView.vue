@@ -1,7 +1,7 @@
 <template>
   <div class="page login-page">
     <h1>统一登录</h1>
-    <p>一个登录页，登录后按角色与权限决定默认入口。</p>
+    <p>登录后根据 roles / permissions / menus / default_portal 决定默认进入位置。</p>
     <div class="form-card">
       <label>
         账号
@@ -19,16 +19,25 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { authLogin } from '../../api/auth';
+import { useAuthStore } from '../../stores/auth';
 
+const router = useRouter();
+const authStore = useAuthStore();
 const form = reactive({ username: 'demo_user', password: '123456' });
 const result = ref('');
 
 async function handleLogin() {
   try {
     const { data } = await authLogin(form);
-    localStorage.setItem('token', data.data.token);
+    authStore.setAuthPayload(data.data);
     result.value = JSON.stringify(data, null, 2);
+    if (data.data.default_portal === 'admin') {
+      router.push('/admin/question');
+    } else {
+      router.push('/dashboard');
+    }
   } catch (error: any) {
     result.value = String(error);
   }
