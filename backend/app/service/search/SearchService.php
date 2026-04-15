@@ -2,12 +2,22 @@
 
 namespace app\service\search;
 
+use app\service\log\LogService;
+
 class SearchService
 {
     public function query(string $keyword, string $info = '', string $split = '###'): array
     {
+        $logService = new LogService();
+        $logService->info('search.query', [
+            'keyword' => $keyword,
+            'info' => $info,
+            'split' => $split,
+        ]);
+
+        $logNo = 'SL' . date('YmdHis');
         return [
-            'log_no' => 'SL' . date('YmdHis'),
+            'log_no' => $logNo,
             'hit_count' => 1,
             'consume_quota' => 1,
             'list' => [

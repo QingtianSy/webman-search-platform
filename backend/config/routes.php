@@ -6,6 +6,7 @@ use app\controller\admin\QuestionController;
 use app\controller\open\HealthController as OpenHealthController;
 use app\controller\open\SearchController as OpenSearchController;
 use app\controller\user\AuthController as UserAuthController;
+use app\controller\user\DashboardController;
 use app\controller\user\SearchController as UserSearchController;
 
 return [
@@ -14,6 +15,7 @@ return [
 
     ['POST', '/api/v1/user/auth/login', [UserAuthController::class, 'login']],
     ['GET', '/api/v1/user/auth/profile', [UserAuthController::class, 'profile']],
+    ['GET', '/api/v1/user/dashboard/overview', [DashboardController::class, 'overview']],
     ['POST', '/api/v1/user/search/query', [UserSearchController::class, 'query']],
     ['GET', '/api/v1/user/search/logs', [UserSearchController::class, 'logs']],
 

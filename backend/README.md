@@ -15,19 +15,25 @@ Webman 后端代码目录。
 - support/Request.php
 - support/ResponseCode.php
 - support/ApiResponse.php
+- support/ClientFactory.php
 - BusinessException
+- ExceptionHandler
 - RequestIdMiddleware
 - HealthController
-- 用户/管理端/开放平台控制器骨架
+- DashboardController
+- 用户/管理端/开放平台控制器骨架与初版逻辑
 - AuthService / JwtService 初版
-- SearchService / QuotaService 初版
+- SearchService / SearchLogService / QuotaService / LogService 初版
 - Repository 骨架
 
 ## 当前状态
-当前代码是 **生产级项目的第一批可运行逻辑骨架**：
+当前代码已进入 **第二批真实业务骨架阶段**：
 - 用户登录可返回模拟 token
 - 管理员登录可返回模拟 token
-- 搜题接口具备参数校验、额度检查、服务调用骨架
+- 用户工作台概览接口已提供示例结构
+- 搜题接口具备参数校验、额度检查、日志调用、服务调用骨架
+- 开放平台搜题接口已具备基础流程
+- 管理端题目列表接口已具备示例返回结构
 - 健康检查接口可直接使用
 
 ## 下一步
@@ -37,3 +43,4 @@ Webman 后端代码目录。
 - 替换 AuthService 的模拟登录逻辑
 - 替换 SearchService 的模拟搜题逻辑
 - 接入真实日志写入与额度扣减
+- 实现题目 CRUD 与搜索日志持久化
