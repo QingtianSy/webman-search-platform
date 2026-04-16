@@ -7,6 +7,20 @@ if (!function_exists('env')) {
     }
 }
 
+if (!function_exists('base_path')) {
+    function base_path(bool $withSuffix = true): string
+    {
+        return dirname(__DIR__);
+    }
+}
+
+if (!function_exists('runtime_path')) {
+    function runtime_path(string $path = ''): string
+    {
+        return base_path() . DIRECTORY_SEPARATOR . 'runtime' . ($path ? DIRECTORY_SEPARATOR . $path : '');
+    }
+}
+
 if (!function_exists('config')) {
     function config(string $key, mixed $default = null): mixed
     {
