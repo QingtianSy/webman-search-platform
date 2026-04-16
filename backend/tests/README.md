@@ -16,8 +16,10 @@
 - `system_config_mock_smoke.php`
 - `rbac_mock_smoke.php`
 - `health_mock_smoke.php`
+- `user_center_mock_smoke.php`
+- `user_center_real_ready_smoke.php`
 
 ## 当前目标
 - 不依赖服务器部署
 - mock 模式下验证关键主线可用
-- real 模式先保留最小调用占位验证
+- real-ready 阶段先验证代码结构与最小数据读取能力

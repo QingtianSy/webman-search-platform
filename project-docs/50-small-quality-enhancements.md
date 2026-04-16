@@ -1,15 +1,14 @@
 # 小范围质量增强说明
 
-## 本轮新增
-- 新增 `scripts/check_backend_routes.sh`
-- 将后端路由目标存在性检查接入质量门禁
-- 调整质量检查策略：在 Minis 环境下优先使用轻量门禁
+## 已完成
+- 为 `QuestionIndexRepository::searchReal()` 增加异常日志落盘
+- 新增 `search_real_smoke.php`
+- 新增 `check_backend_routes.sh`
+- 建立轻量质量门禁策略
+- 新增 `user_center_real_ready_smoke.php`
 
-## 当前推荐门禁顺序
-1. `composer smoke`
-2. `scripts/check_docs_clean.sh`
-3. `scripts/check_backend_routes.sh`
-
-## 原因
-全仓库逐文件 lint 在 Minis / iSH 环境下成本较高，容易在体感上出现“卡住”。
-轻量门禁更适合作为当前阶段的持续检查方式。
+## 当前价值
+这些增强不改变主结构，但能提升：
+- 代码侧自检能力
+- 小步修改后的回归确认能力
+- 后续真实接入时的问题定位效率
