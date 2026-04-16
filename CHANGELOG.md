@@ -8,7 +8,7 @@
 - 完成生产级 Webman 运行结构准备
 - 新增 Python 巡检脚本（健康检查、服务状态、状态汇总）
 - 收敛为统一用户体系（users + roles + permissions + menus）
-- 完成管理端操作型接口三轮骨架补齐
+- 完成管理端操作型接口多轮骨架补齐
 - 新增 Mock → Real 替换路线、Migration 规划、Webman 真接入准备文档
 - 新增前端最小骨架（统一登录页、工作台、题目列表、搜题日志页）
 - 新增前端统一布局、认证状态和用户页基础骨架
@@ -17,4 +17,12 @@
 - 将前端管理页细化为带基础操作按钮与表单交互的后台页面雏形
 - 新增 auth / rbac 真替换方案、字段映射、schema SQL、seed SQL 草案
 - 新增 auth / rbac 与 question/search 的真接入执行总清单
-- 修复 QuestionIndexRepository 在 CLI 下无法正确切到 real 分支的问题
+- 新增官方文档对齐审查与 Webman / Workerman / Vben 收口文档
+- backend 进一步按官方 Webman 目录和入口方式收口
+- 新增代码侧 smoke tests 与仓库质量门禁
+- 验证 backend Composer 依赖安装与 smoke tests 可运行
+- auth/rbac 真实主线打通
+- question/search 真实主线打通
+- 修复 CLI 环境变量读取兼容问题
+- 修复 user-center 切换开关使用错误数据源的问题
+- 修复根 README 与部分 project-docs 文档污染问题
