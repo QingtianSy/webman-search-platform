@@ -19,4 +19,4 @@
 - 新增 auth / rbac 与 question/search 真接入执行总清单
 - 完成搭建前关键阻塞项检查与修复
 - 新增代码侧 smoke tests 与执行入口
-- 后端业务代码主引用已收回官方命名 `support/Request`
+- 后端业务代码已切回官方 `support\\Request`，删除自定义 Request/Response 兼容层

@@ -15,17 +15,15 @@ class ApiSourceManageController
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
     }
 
-    public function detail(?Request $request = null): array
+    public function detail(Request $request): array
     {
-        $request ??= new Request();
-        $id = (int) $request->input('id', 0);
+                $id = (int) $request->input('id', 0);
         return ApiResponse::success((new ApiSourceRepository())->findById($id));
     }
 
-    public function test(?Request $request = null): array
+    public function test(Request $request): array
     {
-        $request ??= new Request();
-        $id = (int) $request->input('id', 0);
+                $id = (int) $request->input('id', 0);
         return ApiResponse::success((new ApiSourceRepository())->test($id));
     }
 }

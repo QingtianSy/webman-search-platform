@@ -10,8 +10,7 @@ class UserAuthMiddleware
 {
     public function process(?Request $request, callable $handler): mixed
     {
-        $request ??= new Request();
-        $authorization = (string) $request->header('Authorization', '');
+                $authorization = (string) $request->header('Authorization', '');
         if ($authorization === '') {
             return ApiResponse::error(40002, '未登录');
         }

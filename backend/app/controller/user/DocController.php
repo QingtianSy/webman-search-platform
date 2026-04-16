@@ -17,10 +17,9 @@ class DocController
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
     }
 
-    public function detail(?Request $request = null): array
+    public function detail(Request $request): array
     {
-        $request ??= new Request();
-        $slug = (string) $request->input('slug', '');
+                $slug = (string) $request->input('slug', '');
         return ApiResponse::success((new DocArticleRepository())->findBySlug($slug));
     }
 

@@ -23,10 +23,9 @@ class CollectController
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
     }
 
-    public function detail(?Request $request = null): array
+    public function detail(Request $request): array
     {
-        $request ??= new Request();
-        $taskNo = (string) $request->input('task_no', '');
+                $taskNo = (string) $request->input('task_no', '');
         return ApiResponse::success((new CollectTaskDetailRepository())->findByTaskNo($taskNo));
     }
 }

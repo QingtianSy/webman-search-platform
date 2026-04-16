@@ -11,10 +11,9 @@ use support\Request;
 
 class SearchController
 {
-    public function query(?Request $request = null): array
+    public function query(Request $request): array
     {
-        $request ??= new Request();
-        $payload = [
+                $payload = [
             'q' => (string) $request->input('q', ''),
             'info' => (string) $request->input('info', ''),
             'split' => (string) $request->input('split', '###'),

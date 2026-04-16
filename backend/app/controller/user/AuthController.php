@@ -9,10 +9,9 @@ use support\Request;
 
 class AuthController
 {
-    public function login(?Request $request = null): array
+    public function login(Request $request): array
     {
-        $request ??= new Request();
-        $username = (string) $request->input('username', '');
+                $username = (string) $request->input('username', '');
         $password = (string) $request->input('password', '');
 
         $authService = new AuthService();

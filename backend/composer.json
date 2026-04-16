@@ -23,6 +23,7 @@
       "support\\": "support/"
     },
     "files": [
+      "app/functions.php",
       "support/helpers.php"
     ]
   },

@@ -10,10 +10,9 @@ use support\Request;
 
 class SearchController
 {
-    public function query(?Request $request = null): array
+    public function query(Request $request): array
     {
-        $request ??= new Request();
-        $apiKey = (string) $request->header('x-api-key', '');
+                $apiKey = (string) $request->header('x-api-key', '');
         $apiSecret = (string) $request->header('x-api-secret', '');
         if (!(new ApiKeyService())->verify($apiKey, $apiSecret)) {
             return ApiResponse::error(40008, 'API Key 无效');

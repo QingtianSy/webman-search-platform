@@ -20,31 +20,27 @@ class ApiKeyController
         ]);
     }
 
-    public function detail(?Request $request = null): array
+    public function detail(Request $request): array
     {
-        $request ??= new Request();
-        $id = (int) $request->input('id', 0);
+                $id = (int) $request->input('id', 0);
         return ApiResponse::success((new ApiKeyService())->detailById(1, $id));
     }
 
-    public function create(?Request $request = null): array
+    public function create(Request $request): array
     {
-        $request ??= new Request();
-        $appName = (string) $request->input('app_name', '');
+                $appName = (string) $request->input('app_name', '');
         return ApiResponse::success((new ApiKeyService())->mockCreate(1, $appName), '模拟创建成功');
     }
 
-    public function toggle(?Request $request = null): array
+    public function toggle(Request $request): array
     {
-        $request ??= new Request();
-        $id = (int) $request->input('id', 0);
+                $id = (int) $request->input('id', 0);
         return ApiResponse::success(['id' => $id, 'status' => 0], '模拟切换成功');
     }
 
-    public function delete(?Request $request = null): array
+    public function delete(Request $request): array
     {
-        $request ??= new Request();
-        $id = (int) $request->input('id', 0);
+                $id = (int) $request->input('id', 0);
         return ApiResponse::success(['deleted' => (new ApiKeyService())->delete($id)], '模拟删除成功');
     }
 }

@@ -9,10 +9,9 @@ use support\Request;
 
 class AuthController
 {
-    public function login(?Request $request = null): array
+    public function login(Request $request): array
     {
-        $request ??= new Request();
-        $username = (string) $request->input('username', '');
+                $username = (string) $request->input('username', '');
         $password = (string) $request->input('password', '');
 
         $authService = new AuthService();
@@ -40,10 +39,9 @@ class AuthController
         ], '登录成功');
     }
 
-    public function profile(?Request $request = null): array
+    public function profile(Request $request): array
     {
-        $request ??= new Request();
-        $authorization = (string) $request->header('Authorization', '');
+                $authorization = (string) $request->header('Authorization', '');
         $token = trim(str_replace('Bearer', '', $authorization));
         $decoded = (new JwtService())->decode($token);
         $userId = (int) (($decoded['payload']['uid'] ?? 0));
@@ -54,10 +52,9 @@ class AuthController
         return ApiResponse::success($payload);
     }
 
-    public function menus(?Request $request = null): array
+    public function menus(Request $request): array
     {
-        $request ??= new Request();
-        $authorization = (string) $request->header('Authorization', '');
+                $authorization = (string) $request->header('Authorization', '');
         $token = trim(str_replace('Bearer', '', $authorization));
         $decoded = (new JwtService())->decode($token);
         $userId = (int) (($decoded['payload']['uid'] ?? 0));
@@ -65,10 +62,9 @@ class AuthController
         return ApiResponse::success($payload['menus'] ?? []);
     }
 
-    public function permissions(?Request $request = null): array
+    public function permissions(Request $request): array
     {
-        $request ??= new Request();
-        $authorization = (string) $request->header('Authorization', '');
+                $authorization = (string) $request->header('Authorization', '');
         $token = trim(str_replace('Bearer', '', $authorization));
         $decoded = (new JwtService())->decode($token);
         $userId = (int) (($decoded['payload']['uid'] ?? 0));
