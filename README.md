@@ -3,35 +3,21 @@
 一个按 **Webman + Swoole + MySQL + MongoDB + Elasticsearch + Redis** 方向构建的题库搜题平台项目。
 
 ## 当前阶段
-项目已进入：
-- **代码侧生产级方案基本成型**
+项目当前已达到：
+- **统一用户体系已定型**
 - **auth/rbac 真实主线已打通**
 - **question/search 真实主线已打通**
-- **backend 入口已进一步按官方 Webman 方式收口**
-- **代码侧 smoke tests 与质量门禁已具备**
+- **user-center 已具备 real-ready 结构**
+- **后端已更贴官方 Webman 目录与入口方式**
+- **代码侧质量门禁已通过**
 
-## 当前结构
-- `backend/`：Webman 后端代码
-- `frontend/`：统一前端项目（按 Vben Admin + Naive UI 思路组织）
-- `project-docs/`：数据库、API、mock->real、runbook、收口文档
-- `scripts/`：部署、检查、schema/seed、smoke tests、巡检脚本
-- `infra/`：Nginx / systemd 模板
-
-## 当前重点
-当前更推荐优先做：
-1. 后端按官方 Webman 继续收口
-2. 逐步真实接入 auth/rbac、question/search、user-center
-3. 后续再统一进入宝塔部署与联调
-
-## 关键文档
-- `project-docs/25-real-integration-master-checklist.md`
-- `project-docs/27-project-final-convergence-checklist.md`
-- `project-docs/39-official-doc-alignment-review.md`
-- `project-docs/40-workerman-memory-safety-checklist.md`
-- `project-docs/43-official-doc-final-decision.md`
-- `project-docs/48-webman-runtime-takeover-boundary.md`
-- `project-docs/49-search-real-http-prep.md`
+## 关键能力
+- 统一认证与 RBAC
+- 搜题主线（MySQL + MongoDB + ES + Redis 分工）
+- 用户中心
+- 文档 / 配置 / 接口源 / 采集外围
+- 前端统一登录与后台壳
 
 ## 当前结论
-当前仓库已经达到：
-**可以继续在代码侧完善，也可以在条件成熟时进入宝塔真实接入执行。**
+当前仓库已处于：
+**代码侧高完整度、主线已验证、可进入真实搭建与接入执行的状态。**

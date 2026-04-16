@@ -5,27 +5,30 @@
   "license": "proprietary",
   "require": {
     "php": ">=8.2",
-    "ext-swoole": ">=5.0",
-    "ext-redis": "*",
-    "ext-mongodb": "*",
-    "ext-pdo_mysql": "*",
     "workerman/webman-framework": "^1.6",
     "workerman/workerman": "^5.1",
     "vlucas/phpdotenv": "^5.6",
     "monolog/monolog": "^3.8",
     "guzzlehttp/guzzle": "^7.9",
     "mongodb/mongodb": "^1.19",
-    "elasticsearch/elasticsearch": "^8.17"
+    "elasticsearch/elasticsearch": "^8.17",
+    "ext-swoole": "*",
+    "ext-redis": "*",
+    "ext-mongodb": "*",
+    "ext-pdo": "*",
+    "ext-pdo_mysql": "*",
+    "ext-curl": "*",
+    "ext-mbstring": "*"
   },
   "autoload": {
-    "psr-4": {
-      "app\\": "app/",
-      "support\\": "support/"
-    },
     "files": [
       "app/functions.php",
       "support/helpers.php"
-    ]
+    ],
+    "psr-4": {
+      "app\\": "app/",
+      "support\\": "support/"
+    }
   },
   "scripts": {
     "smoke": [
@@ -39,7 +42,8 @@
       "php tests/collect_task_detail_mock_smoke.php",
       "php tests/menu_mock_smoke.php",
       "php tests/system_config_mock_smoke.php",
-      "php tests/rbac_mock_smoke.php"
+      "php tests/rbac_mock_smoke.php",
+      "php tests/health_mock_smoke.php"
     ]
   }
 }

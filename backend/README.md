@@ -3,9 +3,12 @@
 Webman 后端代码目录。
 
 ## 当前状态
-当前 backend 已完成关键一步：
-- 主路由入口已从自定义数组式 `config/routes.php` 切换为更贴官方的 `config/route.php + Webman\\Route` 注册方式
-- 当前后端结构已更接近真正的官方 Webman 运行态
+当前代码已进入 **质量门禁已全部通过阶段**：
+- composer validate / lock sync / dump-autoload 已通过
+- backend smoke tests 已通过
+- 文档污染扫描通过
+- shell/python/json 语法检查通过
+- 前端静态结构检查通过
 
-## 当前建议
-后续继续改后端时，优先改 `config/route.php`，不要再把 `config/routes.php` 当主入口。
+## 当前结论
+仓库当前处于**代码侧高完整度且门禁通过**的状态。
