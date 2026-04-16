@@ -7,15 +7,10 @@
     "workerman/webman-framework": "^1.6",
     "workerman/workerman": "^5.1",
     "vlucas/phpdotenv": "^5.6",
-    "monolog/monolog": "^3.7",
+    "monolog/monolog": "^3.8",
     "guzzlehttp/guzzle": "^7.9",
     "mongodb/mongodb": "^1.19",
-    "elasticsearch/elasticsearch": "^8.15"
-  },
-  "suggest": {
-    "ext-swoole": "用于高性能运行时支持",
-    "ext-redis": "用于 Redis 扩展支持",
-    "ext-mongodb": "用于 MongoDB 扩展支持"
+    "elasticsearch/elasticsearch": "^8.17"
   },
   "autoload": {
     "psr-4": {
@@ -30,18 +25,15 @@
   "scripts": {
     "smoke": [
       "php tests/auth_mock_smoke.php",
+      "php tests/auth_admin_mock_smoke.php",
       "php tests/search_mock_smoke.php",
       "php tests/dashboard_mock_smoke.php",
       "php tests/question_detail_mock_smoke.php",
       "php tests/apikey_mock_smoke.php",
       "php tests/doc_config_mock_smoke.php",
-      "php tests/collect_task_detail_mock_smoke.php"
+      "php tests/collect_task_detail_mock_smoke.php",
+      "php tests/menu_mock_smoke.php",
+      "php tests/system_config_mock_smoke.php"
     ]
-  },
-  "minimum-stability": "stable",
-  "prefer-stable": true,
-  "config": {
-    "sort-packages": true,
-    "optimize-autoloader": true
   }
 }

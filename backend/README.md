@@ -3,8 +3,19 @@
 Webman 后端代码目录。
 
 ## 当前状态
-当前 backend 已进一步严格按官方 Webman 习惯收口：
-- 已删除本地自定义 `support/Request.php` / `InputRequest.php` / `Response.php`
-- 业务代码现在直接使用官方 `support\\Request`
-- composer dump-autoload 与 smoke tests 已通过
-- 这一步意味着后端请求层已不再自定义兼容，后续真接入更干净
+当前代码已进入 **代码质量增强已验证通过阶段**：
+- 扩展后的 smoke tests 已全部通过
+- `composer.json` 已修复并与 lock 文件同步
+- 关键主线在当前 Minis 环境下可完成代码侧自检
+
+## 当前 smoke 覆盖
+- auth user
+- auth admin
+- search
+- dashboard
+- question detail
+- api key
+- doc config
+- collect task detail
+- menus
+- system config

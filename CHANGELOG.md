@@ -21,3 +21,4 @@
 - 将后端请求层主命名收回官方 `support/Request` 习惯
 - 修正仓库根 README 与部分被污染 Markdown 文件
 - 对全仓库做系统级静态检查并修正文档一致性
+- 新增并扩展代码侧 smoke tests，且在 Minis 环境中验证通过
