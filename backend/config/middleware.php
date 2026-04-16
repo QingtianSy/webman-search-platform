@@ -1,16 +1,10 @@
 <?php
 
-return [
-    'global' => [
-        app\middleware\RequestIdMiddleware::class,
-    ],
-    'user' => [
-        app\middleware\UserAuthMiddleware::class,
-    ],
-    'admin' => [
-        app\middleware\AdminAuthMiddleware::class,
-    ],
-    'open' => [
-        app\middleware\OpenApiAuthMiddleware::class,
-    ],
-];
+/**
+ * config/middleware.php
+ *
+ * 按官方 Webman 写法收口。
+ * 后续可在此注册全局中间件。
+ */
+
+return [];

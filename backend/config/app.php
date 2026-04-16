@@ -1,8 +1,20 @@
 <?php
 
+/**
+ * config/app.php
+ *
+ * 按官方 Webman 写法收口。
+ */
+
+use support\Request;
+
 return [
-    'app_name' => env('APP_NAME', 'webman-search-platform'),
-    'app_env' => env('APP_ENV', 'dev'),
-    'app_debug' => (bool) env('APP_DEBUG', true),
-    'app_url' => env('APP_URL', 'http://127.0.0.1'),
+    'debug' => (bool) env('APP_DEBUG', true),
+    'error_reporting' => E_ALL,
+    'default_timezone' => 'Asia/Shanghai',
+    'request_class' => Request::class,
+    'public_path' => base_path() . DIRECTORY_SEPARATOR . 'public',
+    'runtime_path' => base_path(false) . DIRECTORY_SEPARATOR . 'runtime',
+    'controller_suffix' => 'Controller',
+    'controller_reuse' => false,
 ];
