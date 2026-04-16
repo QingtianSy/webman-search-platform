@@ -47,13 +47,17 @@ class AuthService
             return in_array((string) ($row['permission_code'] ?? ''), $permissions, true);
         }));
 
-        unset($user['password'], $user['password_hash']);
+        unset($user['password'], $user['password_hash'], $user['type']);
+
+        $roleCodes = array_values(array_map(fn ($row) => (string) ($row['code'] ?? ''), $roles));
+        $defaultPortal = in_array('admin.access', $permissions, true) ? 'admin' : 'portal';
+
         return [
             'user' => $user,
-            'roles' => array_values(array_map(fn ($row) => (string) ($row['code'] ?? ''), $roles)),
+            'roles' => $roleCodes,
             'permissions' => $permissions,
             'menus' => $menus,
-            'default_portal' => in_array('admin.access', $permissions, true) ? 'admin' : 'portal',
+            'default_portal' => $defaultPortal,
         ];
     }
 
