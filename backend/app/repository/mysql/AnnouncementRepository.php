@@ -25,14 +25,14 @@ class AnnouncementRepository
 
     public function latest(): array
     {
-        return config('integration.auth_rbac_source', 'mock') === 'real'
+        return config('integration.user_center_source', 'mock') === 'real'
             ? $this->latestReal()
             : $this->allRows();
     }
 
     public function create(array $data): array
     {
-        if (config('integration.auth_rbac_source', 'mock') === 'real') {
+        if (config('integration.user_center_source', 'mock') === 'real') {
             return $this->createReal($data);
         }
         $rows = $this->allRows();
@@ -44,7 +44,7 @@ class AnnouncementRepository
 
     public function update(int $id, array $data): array
     {
-        if (config('integration.auth_rbac_source', 'mock') === 'real') {
+        if (config('integration.user_center_source', 'mock') === 'real') {
             return $this->updateReal($id, $data);
         }
         $rows = $this->allRows();

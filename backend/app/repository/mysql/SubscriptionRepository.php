@@ -16,7 +16,7 @@ class SubscriptionRepository
 
     public function findCurrentByUserId(int $userId): array
     {
-        return config('integration.auth_rbac_source', 'mock') === 'real'
+        return config('integration.user_center_source', 'mock') === 'real'
             ? $this->findCurrentByUserIdReal($userId)
             : $this->findCurrentByUserIdMock($userId);
     }

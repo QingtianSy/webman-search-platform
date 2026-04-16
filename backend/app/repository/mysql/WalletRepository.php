@@ -16,7 +16,7 @@ class WalletRepository
 
     public function findByUserId(int $userId): array
     {
-        return config('integration.auth_rbac_source', 'mock') === 'real'
+        return config('integration.user_center_source', 'mock') === 'real'
             ? $this->findByUserIdReal($userId)
             : $this->findByUserIdMock($userId);
     }

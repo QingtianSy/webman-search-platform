@@ -30,21 +30,21 @@ class ApiKeyRepository
 
     public function findByApiKey(string $apiKey): array
     {
-        return config('integration.auth_rbac_source', 'mock') === 'real'
+        return config('integration.user_center_source', 'mock') === 'real'
             ? $this->findByApiKeyReal($apiKey)
             : $this->findByApiKeyMock($apiKey);
     }
 
     public function findByUserId(int $userId): array
     {
-        return config('integration.auth_rbac_source', 'mock') === 'real'
+        return config('integration.user_center_source', 'mock') === 'real'
             ? $this->findByUserIdReal($userId)
             : array_values(array_filter($this->all(), fn ($row) => (int) ($row['user_id'] ?? 0) === $userId));
     }
 
     public function delete(int $id): bool
     {
-        if (config('integration.auth_rbac_source', 'mock') === 'real') {
+        if (config('integration.user_center_source', 'mock') === 'real') {
             return $this->deleteReal($id);
         }
         $rows = array_values(array_filter($this->all(), fn ($row) => (int) ($row['id'] ?? 0) !== $id));
