@@ -17,10 +17,5 @@
 - 将前端管理页细化为带基础操作按钮与表单交互的后台页面雏形
 - 新增 auth / rbac 真替换方案、字段映射、schema SQL、seed SQL 草案
 - 新增 auth / rbac 与 question/search 的真接入执行总清单
-- 基于官方 Webman 目录结构继续收口 backend
-- 将后端请求层主命名收回官方 `support/Request` 习惯
-- 修正仓库根 README 与部分被污染 Markdown 文件
-- 对全仓库做系统级静态检查并修正文档一致性
-- 新增并扩展代码侧 smoke tests，且在 Minis 环境中验证通过
-- 新增仓库级质量门禁脚本并验证通过
-- 后端继续向官方运行态接管边界收口
+- 完成仓库总复查与官方目录结构进一步收口
+- 修正技术栈声明，使 backend 对齐 Webman + Swoole + MySQL + MongoDB + Elasticsearch + Redis，frontend 对齐 Vben 思路 + Naive UI

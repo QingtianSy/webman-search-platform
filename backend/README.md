@@ -2,12 +2,15 @@
 
 Webman 后端代码目录。
 
-## 当前状态
-当前 backend 已进入 **官方运行态接管准备阶段**：
-- `public/index.php` 已具备更明确的运行边界提示
-- `start.php` 已具备更明确的命令入口提示
-- `config/exception.php` / `config/log.php` / `config/process.php` 已更接近真实配置职责
-- 后续一旦开始真接入，可更平滑切到官方运行态
+## 当前技术栈对齐状态
+当前 backend 已明确收口到：
+- **Webman + Swoole**
+- **MySQL**
+- **MongoDB**
+- **Elasticsearch**
+- **Redis**
 
-## 关键文档
-- `project-docs/48-webman-runtime-takeover-boundary.md`
+## 说明
+- `composer.json` 已声明 `ext-swoole` / `ext-redis` / `ext-mongodb` / `ext-pdo_mysql`
+- 当前结构与官方 Webman 骨架已明显对齐
+- 后续真实接入将继续按官方 Webman / Workerman 思路推进

@@ -1,10 +1,14 @@
 {
   "name": "qingtiansy/webman-search-platform-backend",
   "type": "project",
-  "description": "Production-grade search platform backend based on Webman architecture",
+  "description": "Production-grade search platform backend based on Webman + Swoole",
   "license": "proprietary",
   "require": {
     "php": ">=8.2",
+    "ext-swoole": ">=5.0",
+    "ext-redis": "*",
+    "ext-mongodb": "*",
+    "ext-pdo_mysql": "*",
     "workerman/webman-framework": "^1.6",
     "workerman/workerman": "^5.1",
     "vlucas/phpdotenv": "^5.6",
