@@ -3,13 +3,9 @@
 Webman 后端代码目录。
 
 ## 当前状态
-当前 backend 的启动主入口已进一步按官方 Webman 写法收口：
-- `start.php` 现在直接 `require vendor/autoload.php` + `support/bootstrap.php` + `support\\App::run()`
-- `support/bootstrap.php` 现在直接对齐官方框架 bootstrap
-- 当前项目后端已不再使用 `public/index.php` 作为主入口
+当前 backend 已完成关键一步：
+- 主路由入口已从自定义数组式 `config/routes.php` 切换为更贴官方的 `config/route.php + Webman\\Route` 注册方式
+- 当前后端结构已更接近真正的官方 Webman 运行态
 
-## 部署提示
-后续在宝塔中启动 Webman 主体进程，优先使用：
-```bash
-php /www/wwwroot/search-platform/backend/start.php start
-```
+## 当前建议
+后续继续改后端时，优先改 `config/route.php`，不要再把 `config/routes.php` 当主入口。
