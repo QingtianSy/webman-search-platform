@@ -9,7 +9,16 @@ class MySqlClient
 {
     public static function config(): array
     {
-        return config('database.connections.mysql', []);
+        $config = function_exists('config') ? config('database.connections.mysql', []) : [];
+
+        if (is_array($config) && !empty($config)) {
+            return $config;
+        }
+
+        $path = dirname(__DIR__, 2) . '/config/database.php';
+        $all = is_file($path) ? require $path : [];
+
+        return $all['connections']['mysql'] ?? [];
     }
 
     public static function isConfigured(): bool
