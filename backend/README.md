@@ -3,9 +3,13 @@
 Webman 后端代码目录。
 
 ## 当前状态
-当前 backend 已完成两条关键真实主线验证：
-- auth/rbac 真实主线已打通
-- question/search 真实查询链已打通（ES HTTPS + Basic Auth + 索引命中）
+当前 backend 的启动主入口已进一步按官方 Webman 写法收口：
+- `start.php` 现在直接 `require vendor/autoload.php` + `support/bootstrap.php` + `support\\App::run()`
+- `support/bootstrap.php` 现在直接对齐官方框架 bootstrap
+- 当前项目后端已不再使用 `public/index.php` 作为主入口
 
-## 当前结论
-如果后续开始宝塔部署，当前项目已经不再停留在纯 mock 阶段，而是进入真实接入执行阶段。
+## 部署提示
+后续在宝塔中启动 Webman 主体进程，优先使用：
+```bash
+php /www/wwwroot/search-platform/backend/start.php start
+```

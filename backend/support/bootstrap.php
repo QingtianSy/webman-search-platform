@@ -1,7 +1,3 @@
 <?php
 
-/**
- * support/bootstrap.php
- *
- * 预留应用启动后的公共初始化逻辑。
- */
+require_once __DIR__ . '/../vendor/workerman/webman-framework/src/support/bootstrap.php';

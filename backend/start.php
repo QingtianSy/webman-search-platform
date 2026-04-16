@@ -9,8 +9,6 @@ if (!file_exists(__DIR__ . '/vendor/autoload.php')) {
 }
 
 require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/support/bootstrap.php';
 
-// 后续真实接入时，此处替换为：
-// support\App::run();
-
-echo "webman start placeholder (replace with support\\App::run() after real integration)\n";
+support\App::run();
