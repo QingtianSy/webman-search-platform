@@ -17,5 +17,4 @@
 - 将前端管理页细化为带基础操作按钮与表单交互的后台页面雏形
 - 新增 auth / rbac 真替换方案、字段映射、schema SQL、seed SQL 草案
 - 新增 auth / rbac 与 question/search 的真接入执行总清单
-- 完成仓库总复查与官方目录结构进一步收口
-- 修正技术栈声明，使 backend 对齐 Webman + Swoole + MySQL + MongoDB + Elasticsearch + Redis，frontend 对齐 Vben 思路 + Naive UI
+- 修复 `env()` 不读取 `getenv()` 导致 CLI 脚本无法读取临时环境变量的问题
