@@ -5,7 +5,7 @@ namespace app\controller\admin;
 use app\repository\mysql\SystemConfigRepository;
 use support\ApiResponse;
 use support\Pagination;
-use support\InputRequest;
+use support\Request;
 
 class SystemConfigController
 {
@@ -15,9 +15,9 @@ class SystemConfigController
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
     }
 
-    public function update(?InputRequest $request = null): array
+    public function update(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $key = (string) $request->input('config_key', '');
         $value = (string) $request->input('config_value', '');
         return ApiResponse::success((new SystemConfigRepository())->updateByKey($key, $value), '系统配置更新骨架已创建');

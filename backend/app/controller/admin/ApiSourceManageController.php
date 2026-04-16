@@ -5,7 +5,7 @@ namespace app\controller\admin;
 use app\repository\mysql\ApiSourceRepository;
 use support\ApiResponse;
 use support\Pagination;
-use support\InputRequest;
+use support\Request;
 
 class ApiSourceManageController
 {
@@ -15,16 +15,16 @@ class ApiSourceManageController
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
     }
 
-    public function detail(?InputRequest $request = null): array
+    public function detail(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $id = (int) $request->input('id', 0);
         return ApiResponse::success((new ApiSourceRepository())->findById($id));
     }
 
-    public function test(?InputRequest $request = null): array
+    public function test(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $id = (int) $request->input('id', 0);
         return ApiResponse::success((new ApiSourceRepository())->test($id));
     }

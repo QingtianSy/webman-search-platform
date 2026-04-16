@@ -4,13 +4,13 @@ namespace app\middleware;
 
 use app\service\open\ApiKeyService;
 use support\ApiResponse;
-use support\InputRequest;
+use support\Request;
 
 class OpenApiAuthMiddleware
 {
-    public function process(?InputRequest $request, callable $handler): mixed
+    public function process(?Request $request, callable $handler): mixed
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $apiKey = (string) $request->header('x-api-key', '');
         $apiSecret = (string) $request->header('x-api-secret', '');
         if (!(new ApiKeyService())->verify($apiKey, $apiSecret)) {

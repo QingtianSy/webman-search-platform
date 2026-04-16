@@ -7,7 +7,7 @@ use app\repository\mysql\DocCategoryRepository;
 use app\repository\mysql\DocConfigRepository;
 use support\ApiResponse;
 use support\Pagination;
-use support\InputRequest;
+use support\Request;
 
 class DocController
 {
@@ -17,9 +17,9 @@ class DocController
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
     }
 
-    public function detail(?InputRequest $request = null): array
+    public function detail(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $slug = (string) $request->input('slug', '');
         return ApiResponse::success((new DocArticleRepository())->findBySlug($slug));
     }

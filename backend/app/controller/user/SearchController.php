@@ -7,13 +7,13 @@ use app\service\search\SearchLogService;
 use app\service\search\SearchService;
 use app\validate\SearchQueryValidator;
 use support\ApiResponse;
-use support\InputRequest;
+use support\Request;
 
 class SearchController
 {
-    public function query(?InputRequest $request = null): array
+    public function query(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $payload = [
             'q' => (string) $request->input('q', ''),
             'info' => (string) $request->input('info', ''),

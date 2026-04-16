@@ -4,7 +4,7 @@ namespace app\controller\admin;
 
 use support\ApiResponse;
 use support\Pagination;
-use support\InputRequest;
+use support\Request;
 
 class AnnouncementController
 {
@@ -14,9 +14,9 @@ class AnnouncementController
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
     }
 
-    public function create(?InputRequest $request = null): array
+    public function create(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $created = (new \app\repository\mysql\AnnouncementRepository())->create([
             'title' => (string) $request->input('title', '新公告'),
             'content' => (string) $request->input('content', ''),
@@ -27,9 +27,9 @@ class AnnouncementController
         return ApiResponse::success($created, '公告创建骨架已创建');
     }
 
-    public function update(?InputRequest $request = null): array
+    public function update(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $id = (int) $request->input('id', 0);
         $updated = (new \app\repository\mysql\AnnouncementRepository())->update($id, [
             'title' => (string) $request->input('title', ''),
@@ -38,9 +38,9 @@ class AnnouncementController
         return ApiResponse::success($updated, '公告更新骨架已创建');
     }
 
-    public function delete(?InputRequest $request = null): array
+    public function delete(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $id = (int) $request->input('id', 0);
         return ApiResponse::success(['deleted' => true, 'id' => $id], '公告删除骨架已创建');
     }

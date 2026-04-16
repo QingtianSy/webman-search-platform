@@ -7,7 +7,7 @@ use app\repository\mysql\CollectTaskDetailRepository;
 use app\repository\mysql\CollectTaskRepository;
 use support\ApiResponse;
 use support\Pagination;
-use support\InputRequest;
+use support\Request;
 
 class CollectController
 {
@@ -23,9 +23,9 @@ class CollectController
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
     }
 
-    public function detail(?InputRequest $request = null): array
+    public function detail(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $taskNo = (string) $request->input('task_no', '');
         return ApiResponse::success((new CollectTaskDetailRepository())->findByTaskNo($taskNo));
     }

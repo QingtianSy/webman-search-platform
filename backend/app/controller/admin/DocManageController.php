@@ -5,7 +5,7 @@ namespace app\controller\admin;
 use app\repository\mysql\DocArticleRepository;
 use support\ApiResponse;
 use support\Pagination;
-use support\InputRequest;
+use support\Request;
 
 class DocManageController
 {
@@ -15,9 +15,9 @@ class DocManageController
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
     }
 
-    public function create(?InputRequest $request = null): array
+    public function create(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $created = (new DocArticleRepository())->create([
             'category_id' => (int) $request->input('category_id', 1),
             'slug' => (string) $request->input('slug', 'new-doc'),
@@ -29,9 +29,9 @@ class DocManageController
         return ApiResponse::success($created, '文档创建骨架已创建');
     }
 
-    public function update(?InputRequest $request = null): array
+    public function update(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $id = (int) $request->input('id', 0);
         $updated = (new DocArticleRepository())->update($id, [
             'title' => (string) $request->input('title', ''),
@@ -41,9 +41,9 @@ class DocManageController
         return ApiResponse::success($updated, '文档更新骨架已创建');
     }
 
-    public function delete(?InputRequest $request = null): array
+    public function delete(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $id = (int) $request->input('id', 0);
         return ApiResponse::success(['deleted' => true, 'id' => $id], '文档删除骨架已创建');
     }

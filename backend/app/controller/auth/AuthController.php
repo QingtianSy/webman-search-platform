@@ -5,13 +5,13 @@ namespace app\controller\auth;
 use app\service\auth\AuthService;
 use app\service\auth\JwtService;
 use support\ApiResponse;
-use support\InputRequest;
+use support\Request;
 
 class AuthController
 {
-    public function login(?InputRequest $request = null): array
+    public function login(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $username = (string) $request->input('username', '');
         $password = (string) $request->input('password', '');
 
@@ -40,9 +40,9 @@ class AuthController
         ], '登录成功');
     }
 
-    public function profile(?InputRequest $request = null): array
+    public function profile(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $authorization = (string) $request->header('Authorization', '');
         $token = trim(str_replace('Bearer', '', $authorization));
         $decoded = (new JwtService())->decode($token);
@@ -54,9 +54,9 @@ class AuthController
         return ApiResponse::success($payload);
     }
 
-    public function menus(?InputRequest $request = null): array
+    public function menus(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $authorization = (string) $request->header('Authorization', '');
         $token = trim(str_replace('Bearer', '', $authorization));
         $decoded = (new JwtService())->decode($token);
@@ -65,9 +65,9 @@ class AuthController
         return ApiResponse::success($payload['menus'] ?? []);
     }
 
-    public function permissions(?InputRequest $request = null): array
+    public function permissions(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $authorization = (string) $request->header('Authorization', '');
         $token = trim(str_replace('Bearer', '', $authorization));
         $decoded = (new JwtService())->decode($token);

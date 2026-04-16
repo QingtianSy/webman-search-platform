@@ -4,7 +4,7 @@ namespace app\controller\user;
 
 use app\service\open\ApiKeyService;
 use support\ApiResponse;
-use support\InputRequest;
+use support\Request;
 
 class ApiKeyController
 {
@@ -20,30 +20,30 @@ class ApiKeyController
         ]);
     }
 
-    public function detail(?InputRequest $request = null): array
+    public function detail(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $id = (int) $request->input('id', 0);
         return ApiResponse::success((new ApiKeyService())->detailById(1, $id));
     }
 
-    public function create(?InputRequest $request = null): array
+    public function create(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $appName = (string) $request->input('app_name', '');
         return ApiResponse::success((new ApiKeyService())->mockCreate(1, $appName), '模拟创建成功');
     }
 
-    public function toggle(?InputRequest $request = null): array
+    public function toggle(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $id = (int) $request->input('id', 0);
         return ApiResponse::success(['id' => $id, 'status' => 0], '模拟切换成功');
     }
 
-    public function delete(?InputRequest $request = null): array
+    public function delete(?Request $request = null): array
     {
-        $request ??= new InputRequest();
+        $request ??= new Request();
         $id = (int) $request->input('id', 0);
         return ApiResponse::success(['deleted' => (new ApiKeyService())->delete($id)], '模拟删除成功');
     }
