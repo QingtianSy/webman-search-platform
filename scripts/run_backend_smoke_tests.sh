@@ -14,5 +14,8 @@ php tests/doc_config_mock_smoke.php
 php tests/collect_task_detail_mock_smoke.php
 php tests/menu_mock_smoke.php
 php tests/system_config_mock_smoke.php
+php tests/rbac_mock_smoke.php
+php tests/health_mock_smoke.php
+php tests/user_center_mock_smoke.php
 
 echo 'all backend smoke tests passed'
