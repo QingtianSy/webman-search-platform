@@ -16,7 +16,8 @@
 - 将核心前端页面细化为卡片/表格形态
 - 将前端管理页细化为带基础操作按钮与表单交互的后台页面雏形
 - 新增 auth / rbac 真替换方案、字段映射、schema SQL、seed SQL 草案
-- 新增 auth / rbac 与 question/search 真接入执行总清单
-- 完成搭建前关键阻塞项检查与修复
-- 新增代码侧 smoke tests 与执行入口
-- 后端业务代码已切回官方 `support\\Request`，删除自定义 Request/Response 兼容层
+- 新增 auth / rbac 与 question/search 的真接入执行总清单
+- 基于官方 Webman 目录结构继续收口 backend
+- 将后端请求层主命名收回官方 `support/Request` 习惯
+- 修正仓库根 README 与部分被污染 Markdown 文件
+- 对全仓库做系统级静态检查并修正文档一致性
