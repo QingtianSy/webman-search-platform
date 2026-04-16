@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8098b109befa9514f15ba0cc765b6dc0",
+    "content-hash": "a448f23a907743d9377ea89afa349dba",
     "packages": [
         {
             "name": "elastic/transport",
@@ -2190,7 +2190,11 @@
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
-        "php": ">=8.2"
+        "php": ">=8.2",
+        "ext-swoole": ">=5.0",
+        "ext-redis": "*",
+        "ext-mongodb": "*",
+        "ext-pdo_mysql": "*"
     },
     "platform-dev": {},
     "plugin-api-version": "2.6.0"

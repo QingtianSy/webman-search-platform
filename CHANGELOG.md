@@ -18,7 +18,7 @@
 - 新增 auth / rbac 真替换方案、字段映射、schema SQL、seed SQL 草案
 - 新增 auth / rbac 与 question/search 的真接入执行总清单
 - 新增官方文档对齐审查与 Webman / Workerman / Vben 收口文档
-- backend 进一步按官方 Webman 目录和入口方式收口
+- backend 进一步按官方 Webman 目录、请求层、路由入口与运行态边界收口
 - 新增代码侧 smoke tests 与仓库质量门禁
 - 验证 backend Composer 依赖安装与 smoke tests 可运行
 - auth/rbac 真实主线打通
@@ -26,3 +26,6 @@
 - 修复 CLI 环境变量读取兼容问题
 - 修复 user-center 切换开关使用错误数据源的问题
 - 修复根 README 与部分 project-docs 文档污染问题
+- 完成全仓库一致性复查与根文档修复
+- 完成更多质量门禁与 smoke tests 增强
+- backend composer.lock 已与当前真实依赖声明同步
