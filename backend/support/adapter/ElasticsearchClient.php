@@ -19,4 +19,24 @@ class ElasticsearchClient
     {
         return (string) (self::config()['index']['question'] ?? 'question_index');
     }
+
+    public static function baseUri(): string
+    {
+        return rtrim((string) (self::config()['host'] ?? ''), '/');
+    }
+
+    public static function auth(): array
+    {
+        return [
+            'username' => (string) (self::config()['username'] ?? ''),
+            'password' => (string) (self::config()['password'] ?? ''),
+        ];
+    }
+
+    public static function sslOptions(): array
+    {
+        return [
+            'verify' => false,
+        ];
+    }
 }
