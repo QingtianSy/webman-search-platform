@@ -1,25 +1,16 @@
+#!/usr/bin/env php
 <?php
 
-declare(strict_types=1);
-
-require_once __DIR__ . '/support/helpers.php';
-
-/**
- * start.php
- *
- * 当前阶段：
- * - 保留宿主机命令入口习惯：php start.php start
- * - 在官方 Webman 接管前，只承担占位与依赖提示职责
- *
- * 后续阶段：
- * - 替换为官方启动入口逻辑
- */
+chdir(__DIR__);
 
 if (!file_exists(__DIR__ . '/vendor/autoload.php')) {
-    fwrite(STDERR, "backend dependencies not installed, run scripts/prepare_backend_dependencies.sh first\n");
+    fwrite(STDERR, "Run 'composer install' first.\n");
     exit(1);
 }
 
-$command = $argv[1] ?? 'status';
+require_once __DIR__ . '/vendor/autoload.php';
 
-echo "webman start placeholder: {$command}\n";
+// 后续真实接入时，此处替换为：
+// support\App::run();
+
+echo "webman start placeholder (replace with support\\App::run() after real integration)\n";
