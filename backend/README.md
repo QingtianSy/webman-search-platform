@@ -3,11 +3,11 @@
 Webman 后端代码目录。
 
 ## 当前状态
-当前代码已进入 **质量门禁可执行阶段**：
-- 全仓库静态检查脚本已具备
-- 后端 smoke tests 已覆盖 auth/search/dashboard/question/api/doc/collect/menu/system-config/rbac
-- 当前 Minis 环境下执行 `scripts/check_repo_quality.sh` 已通过
+当前 backend 已进入 **官方运行态接管准备阶段**：
+- `public/index.php` 已具备更明确的运行边界提示
+- `start.php` 已具备更明确的命令入口提示
+- `config/exception.php` / `config/log.php` / `config/process.php` 已更接近真实配置职责
+- 后续一旦开始真接入，可更平滑切到官方运行态
 
-## 当前建议
-- 后续继续开发时，优先先跑质量门禁
-- 后续开始搭建前，可再次执行质量门禁确认仓库状态
+## 关键文档
+- `project-docs/48-webman-runtime-takeover-boundary.md`

@@ -8,33 +8,19 @@
 
 ## 当前阶段
 当前项目已进入：
-**代码侧生产级方案基本成型，且后端 smoke tests 可运行通过**
+**官方 Webman 运行态接管准备阶段 + 代码侧质量门禁可执行阶段**
 
-## 已完成的核心能力
+## 当前已完成
 - 统一用户体系与 RBAC
-- 用户端 / 管理端 / 开放平台骨架
-- question/search 主线 mock/real 双模式准备
+- auth/rbac 真接入准备与脚本链
+- question/search 真接入准备与脚本链
 - user-center / docs / config / collect 外围 real-ready
-- Webman 官方结构进一步收口
-- 前端统一布局、页面骨架与交互层
-- auth/rbac 与 question/search 可执行脚本链
-- 代码侧 smoke tests
-
-## 关键文档
-- `project-docs/25-real-integration-master-checklist.md`
-- `project-docs/27-project-final-convergence-checklist.md`
-- `project-docs/39-official-doc-alignment-review.md`
-- `project-docs/43-official-doc-final-decision.md`
-- `project-docs/46-code-quality-enhancement-checklist.md`
+- 前后端骨架与主要页面结构
+- 后端 smoke tests 与仓库级质量门禁
+- 官方 Webman / Workerman / Vben 文档对齐与结构收口
 
 ## 当前结论
-从代码侧看，项目已达到：
-- 架构完整
-- 模块完整
-- mock → real 路线清晰
-- 关键主线有自检能力
-
-后续若进入搭建阶段，建议优先：
-1. auth/rbac 真接入
-2. question/search 真接入
-3. user-center 真接入
+- 代码侧已比较健全
+- 后端已明显更贴官方 Webman 结构
+- 后续可继续在 Minis 内做质量增强
+- 真正服务器搭建时可按既定 runbook 执行
