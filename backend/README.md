@@ -3,19 +3,11 @@
 Webman 后端代码目录。
 
 ## 当前状态
-当前代码已进入 **代码质量增强已验证通过阶段**：
-- 扩展后的 smoke tests 已全部通过
-- `composer.json` 已修复并与 lock 文件同步
-- 关键主线在当前 Minis 环境下可完成代码侧自检
+当前代码已进入 **质量门禁可执行阶段**：
+- 全仓库静态检查脚本已具备
+- 后端 smoke tests 已覆盖 auth/search/dashboard/question/api/doc/collect/menu/system-config/rbac
+- 当前 Minis 环境下执行 `scripts/check_repo_quality.sh` 已通过
 
-## 当前 smoke 覆盖
-- auth user
-- auth admin
-- search
-- dashboard
-- question detail
-- api key
-- doc config
-- collect task detail
-- menus
-- system config
+## 当前建议
+- 后续继续开发时，优先先跑质量门禁
+- 后续开始搭建前，可再次执行质量门禁确认仓库状态

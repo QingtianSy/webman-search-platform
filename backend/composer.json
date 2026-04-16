@@ -2,6 +2,7 @@
   "name": "qingtiansy/webman-search-platform-backend",
   "type": "project",
   "description": "Production-grade search platform backend based on Webman architecture",
+  "license": "proprietary",
   "require": {
     "php": ">=8.2",
     "workerman/webman-framework": "^1.6",
@@ -33,7 +34,8 @@
       "php tests/doc_config_mock_smoke.php",
       "php tests/collect_task_detail_mock_smoke.php",
       "php tests/menu_mock_smoke.php",
-      "php tests/system_config_mock_smoke.php"
+      "php tests/system_config_mock_smoke.php",
+      "php tests/rbac_mock_smoke.php"
     ]
   }
 }
