@@ -19,6 +19,9 @@ find . -type f -name '*.json' | while read -r f; do python3 -m json.tool "$f" >/
 echo '== docs contamination =='
 sh scripts/check_docs_clean.sh .
 
+echo '== route targets =='
+sh scripts/check_backend_routes.sh .
+
 echo '== backend composer validate =='
 cd backend
 composer validate --no-check-publish >/dev/null
