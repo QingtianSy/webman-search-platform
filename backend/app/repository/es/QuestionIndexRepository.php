@@ -9,7 +9,15 @@ class QuestionIndexRepository
 {
     public function search(string $keyword): array
     {
-        return config('integration.question_source', 'mock') === 'real'
+        $source = env('QUESTION_SOURCE', 'mock');
+
+        if ($source !== 'real') {
+            $path = dirname(__DIR__, 2) . '/config/integration.php';
+            $all = is_file($path) ? require $path : [];
+            $source = $all['question_source'] ?? 'mock';
+        }
+
+        return $source === 'real'
             ? $this->searchReal($keyword)
             : $this->searchMock($keyword);
     }
@@ -26,11 +34,11 @@ class QuestionIndexRepository
         }
 
         $client = new Client([
-            'base_uri' => ElasticsearchClient::baseUri(),
-            'verify' => ElasticsearchClient::sslOptions()['verify'],
+            'base_uri' => ElasticsearchClient::host(),
+            'verify' => false,
             'auth' => [
-                ElasticsearchClient::auth()['username'],
-                ElasticsearchClient::auth()['password'],
+                ElasticsearchClient::username(),
+                ElasticsearchClient::password(),
             ],
             'timeout' => 10,
         ]);
