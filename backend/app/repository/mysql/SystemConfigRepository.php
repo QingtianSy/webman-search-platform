@@ -2,6 +2,9 @@
 
 namespace app\repository\mysql;
 
+use PDO;
+use support\adapter\MySqlClient;
+
 class SystemConfigRepository
 {
     protected string $file;
@@ -22,10 +25,19 @@ class SystemConfigRepository
 
     public function all(): array
     {
-        return $this->allRows();
+        return config('integration.config_source', 'mock') === 'real'
+            ? $this->allReal()
+            : $this->allRows();
     }
 
     public function updateByKey(string $key, string $value): array
+    {
+        return config('integration.config_source', 'mock') === 'real'
+            ? $this->updateByKeyReal($key, $value)
+            : $this->updateByKeyMock($key, $value);
+    }
+
+    protected function updateByKeyMock(string $key, string $value): array
     {
         $rows = $this->allRows();
         foreach ($rows as &$row) {
@@ -36,5 +48,31 @@ class SystemConfigRepository
             }
         }
         return [];
+    }
+
+    protected function allReal(): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return [];
+        }
+        $stmt = $pdo->query('SELECT id, config_group, config_key, config_value, config_type, status, created_at, updated_at FROM system_configs ORDER BY id DESC');
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    protected function updateByKeyReal(string $key, string $value): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return [];
+        }
+        $stmt = $pdo->prepare('UPDATE system_configs SET config_value = :config_value, updated_at = NOW() WHERE config_key = :config_key');
+        $stmt->execute([
+            'config_key' => $key,
+            'config_value' => $value,
+        ]);
+        $stmt = $pdo->prepare('SELECT id, config_group, config_key, config_value, config_type, status, created_at, updated_at FROM system_configs WHERE config_key = :config_key LIMIT 1');
+        $stmt->execute(['config_key' => $key]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
     }
 }
