@@ -7,5 +7,5 @@ namespace app\model\admin;
  */
 class ApiSource extends Base
 {
-    protected string $table = 'api_sources';
+    protected $table = 'api_sources';
 }

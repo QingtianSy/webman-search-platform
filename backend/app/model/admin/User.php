@@ -8,5 +8,5 @@ namespace app\model\admin;
  */
 class User extends Base
 {
-    protected string $table = 'users';
+    protected $table = 'users';
 }

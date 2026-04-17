@@ -7,5 +7,5 @@ namespace app\model\admin;
  */
 class Permission extends Base
 {
-    protected string $table = 'permissions';
+    protected $table = 'permissions';
 }

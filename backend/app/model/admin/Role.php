@@ -7,5 +7,5 @@ namespace app\model\admin;
  */
 class Role extends Base
 {
-    protected string $table = 'roles';
+    protected $table = 'roles';
 }

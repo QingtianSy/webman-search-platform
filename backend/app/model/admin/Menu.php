@@ -7,5 +7,5 @@ namespace app\model\admin;
  */
 class Menu extends Base
 {
-    protected string $table = 'menus';
+    protected $table = 'menus';
 }

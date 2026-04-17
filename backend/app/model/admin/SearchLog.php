@@ -7,5 +7,5 @@ namespace app\model\admin;
  */
 class SearchLog extends Base
 {
-    protected string $table = 'search_logs';
+    protected $table = 'search_logs';
 }

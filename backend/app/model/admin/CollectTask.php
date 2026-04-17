@@ -7,5 +7,5 @@ namespace app\model\admin;
  */
 class CollectTask extends Base
 {
-    protected string $table = 'collect_tasks';
+    protected $table = 'collect_tasks';
 }

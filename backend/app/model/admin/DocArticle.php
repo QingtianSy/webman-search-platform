@@ -7,5 +7,5 @@ namespace app\model\admin;
  */
 class DocArticle extends Base
 {
-    protected string $table = 'docs_articles';
+    protected $table = 'docs_articles';
 }
