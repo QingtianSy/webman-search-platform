@@ -11,19 +11,19 @@ use support\Request;
 
 class DocController
 {
-    public function categories(): array
+    public function categories()
     {
         $list = (new DocCategoryRepository())->all();
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
     }
 
-    public function detail(Request $request): array
+    public function detail(Request $request)
     {
                 $slug = (string) $request->input('slug', '');
         return ApiResponse::success((new DocArticleRepository())->findBySlug($slug));
     }
 
-    public function config(): array
+    public function config()
     {
         return ApiResponse::success((new DocConfigRepository())->get());
     }

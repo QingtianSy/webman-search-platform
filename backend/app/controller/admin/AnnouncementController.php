@@ -8,13 +8,13 @@ use support\Request;
 
 class AnnouncementController
 {
-    public function index(): array
+    public function index()
     {
         $list = (new \app\repository\mysql\AnnouncementRepository())->latest();
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
     }
 
-    public function create(Request $request): array
+    public function create(Request $request)
     {
                 $created = (new \app\repository\mysql\AnnouncementRepository())->create([
             'title' => (string) $request->input('title', '新公告'),
@@ -26,7 +26,7 @@ class AnnouncementController
         return ApiResponse::success($created, '公告创建骨架已创建');
     }
 
-    public function update(Request $request): array
+    public function update(Request $request)
     {
                 $id = (int) $request->input('id', 0);
         $updated = (new \app\repository\mysql\AnnouncementRepository())->update($id, [
@@ -36,7 +36,7 @@ class AnnouncementController
         return ApiResponse::success($updated, '公告更新骨架已创建');
     }
 
-    public function delete(Request $request): array
+    public function delete(Request $request)
     {
                 $id = (int) $request->input('id', 0);
         return ApiResponse::success(['deleted' => true, 'id' => $id], '公告删除骨架已创建');

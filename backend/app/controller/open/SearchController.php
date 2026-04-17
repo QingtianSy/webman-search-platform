@@ -10,7 +10,7 @@ use support\Request;
 
 class SearchController
 {
-    public function query(Request $request): array
+    public function query(Request $request)
     {
                 $apiKey = (string) $request->header('x-api-key', '');
         $apiSecret = (string) $request->header('x-api-secret', '');
@@ -32,7 +32,7 @@ class SearchController
         return ApiResponse::success($result['list'][0]['answer_text'] ?? 'TODO_ANSWER', 'success');
     }
 
-    public function quotaDetail(): array
+    public function quotaDetail()
     {
         return ApiResponse::success([
             'remain_quota' => (new QuotaService())->getUserQuota(1),

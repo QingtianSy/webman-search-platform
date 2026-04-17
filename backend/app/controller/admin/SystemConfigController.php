@@ -9,13 +9,13 @@ use support\Request;
 
 class SystemConfigController
 {
-    public function index(): array
+    public function index()
     {
         $list = (new SystemConfigRepository())->all();
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
     }
 
-    public function update(Request $request): array
+    public function update(Request $request)
     {
                 $key = (string) $request->input('config_key', '');
         $value = (string) $request->input('config_value', '');

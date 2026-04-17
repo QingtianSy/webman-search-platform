@@ -6,7 +6,7 @@ use support\ApiResponse;
 
 class HealthController
 {
-    public function index(): array
+    public function index()
     {
         return ApiResponse::success([
             'status' => 'ok',

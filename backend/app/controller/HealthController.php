@@ -7,7 +7,7 @@ use support\ApiResponse;
 
 class HealthController
 {
-    public function health(): array
+    public function health()
     {
         $service = new HealthService();
         return ApiResponse::success([
@@ -16,7 +16,7 @@ class HealthController
         ]);
     }
 
-    public function ready(): array
+    public function ready()
     {
         $service = new HealthService();
         $detail = $service->detail();

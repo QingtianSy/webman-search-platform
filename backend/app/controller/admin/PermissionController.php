@@ -8,7 +8,7 @@ use support\Pagination;
 
 class PermissionController
 {
-    public function index(): array
+    public function index()
     {
         $list = (new PermissionRepository())->all();
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));

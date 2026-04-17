@@ -13,7 +13,7 @@ use support\Request;
 
 class QuestionController
 {
-    public function index(Request $request): array
+    public function index(Request $request)
     {
                 $filters = [
             'stem' => (string) $request->input('stem', ''),
@@ -22,18 +22,18 @@ class QuestionController
         return ApiResponse::success($service->getList($filters), '题目列表接口骨架已接入服务层');
     }
 
-    public function detail(Request $request): array
+    public function detail(Request $request)
     {
                 $id = (int) $request->input('id', 0);
         return ApiResponse::success((new QuestionService())->detail($id));
     }
 
-    public function create(): array
+    public function create()
     {
         return ApiResponse::success([], '题目新增接口骨架已创建');
     }
 
-    public function update(Request $request): array
+    public function update(Request $request)
     {
                 $id = (int) $request->input('id', 0);
         $stem = (string) $request->input('stem', '');
@@ -41,7 +41,7 @@ class QuestionController
         return ApiResponse::success($updated, '题目更新骨架已创建');
     }
 
-    public function delete(Request $request): array
+    public function delete(Request $request)
     {
                 $id = (int) $request->input('id', 0);
         $deleted = (new \app\repository\mongo\QuestionRepository())->delete($id);
@@ -51,7 +51,7 @@ class QuestionController
 
 class QuestionCategoryController
 {
-    public function index(): array
+    public function index()
     {
         $list = (new QuestionCategoryRepository())->all();
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
@@ -60,7 +60,7 @@ class QuestionCategoryController
 
 class QuestionTypeController
 {
-    public function index(): array
+    public function index()
     {
         $list = (new QuestionTypeRepository())->all();
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
@@ -69,7 +69,7 @@ class QuestionTypeController
 
 class QuestionSourceController
 {
-    public function index(): array
+    public function index()
     {
         $list = (new QuestionSourceRepository())->all();
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
@@ -78,7 +78,7 @@ class QuestionSourceController
 
 class QuestionTagController
 {
-    public function index(): array
+    public function index()
     {
         $list = (new QuestionTagRepository())->all();
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));

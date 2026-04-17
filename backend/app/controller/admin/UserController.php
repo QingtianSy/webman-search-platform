@@ -7,7 +7,7 @@ use support\Pagination;
 
 class UserController
 {
-    public function index(): array
+    public function index()
     {
         $users = [];
         foreach (['demo_user', 'admin'] as $username) {

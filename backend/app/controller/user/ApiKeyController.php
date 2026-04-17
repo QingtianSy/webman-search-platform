@@ -8,7 +8,7 @@ use support\Request;
 
 class ApiKeyController
 {
-    public function index(): array
+    public function index()
     {
         $service = new ApiKeyService();
         $list = $service->listByUserId(1);
@@ -20,25 +20,25 @@ class ApiKeyController
         ]);
     }
 
-    public function detail(Request $request): array
+    public function detail(Request $request)
     {
                 $id = (int) $request->input('id', 0);
         return ApiResponse::success((new ApiKeyService())->detailById(1, $id));
     }
 
-    public function create(Request $request): array
+    public function create(Request $request)
     {
                 $appName = (string) $request->input('app_name', '');
         return ApiResponse::success((new ApiKeyService())->mockCreate(1, $appName), '模拟创建成功');
     }
 
-    public function toggle(Request $request): array
+    public function toggle(Request $request)
     {
                 $id = (int) $request->input('id', 0);
         return ApiResponse::success(['id' => $id, 'status' => 0], '模拟切换成功');
     }
 
-    public function delete(Request $request): array
+    public function delete(Request $request)
     {
                 $id = (int) $request->input('id', 0);
         return ApiResponse::success(['deleted' => (new ApiKeyService())->delete($id)], '模拟删除成功');

@@ -7,7 +7,7 @@ use support\ApiResponse;
 
 class DashboardController
 {
-    public function overview(): array
+    public function overview()
     {
         $service = new DashboardService();
         return ApiResponse::success($service->overview(1));

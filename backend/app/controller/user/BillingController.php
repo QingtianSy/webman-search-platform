@@ -8,12 +8,12 @@ use support\ApiResponse;
 
 class BillingController
 {
-    public function wallet(): array
+    public function wallet()
     {
         return ApiResponse::success((new WalletRepository())->findByUserId(1));
     }
 
-    public function currentPlan(): array
+    public function currentPlan()
     {
         return ApiResponse::success((new SubscriptionRepository())->findCurrentByUserId(1));
     }

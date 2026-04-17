@@ -9,13 +9,13 @@ use support\Request;
 
 class DocManageController
 {
-    public function articles(): array
+    public function articles()
     {
         $list = (new DocArticleRepository())->all();
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
     }
 
-    public function create(Request $request): array
+    public function create(Request $request)
     {
                 $created = (new DocArticleRepository())->create([
             'category_id' => (int) $request->input('category_id', 1),
@@ -28,7 +28,7 @@ class DocManageController
         return ApiResponse::success($created, '文档创建骨架已创建');
     }
 
-    public function update(Request $request): array
+    public function update(Request $request)
     {
                 $id = (int) $request->input('id', 0);
         $updated = (new DocArticleRepository())->update($id, [
@@ -39,7 +39,7 @@ class DocManageController
         return ApiResponse::success($updated, '文档更新骨架已创建');
     }
 
-    public function delete(Request $request): array
+    public function delete(Request $request)
     {
                 $id = (int) $request->input('id', 0);
         return ApiResponse::success(['deleted' => true, 'id' => $id], '文档删除骨架已创建');

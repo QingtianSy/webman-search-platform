@@ -10,25 +10,25 @@ use support\Request;
 
 class CollectManageController
 {
-    public function tasks(): array
+    public function tasks()
     {
         $list = (new CollectTaskRepository())->listByUserId(1);
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
     }
 
-    public function detail(Request $request): array
+    public function detail(Request $request)
     {
                 $taskNo = (string) $request->input('task_no', '');
         return ApiResponse::success((new CollectTaskDetailRepository())->findByTaskNo($taskNo));
     }
 
-    public function stop(Request $request): array
+    public function stop(Request $request)
     {
                 $taskNo = (string) $request->input('task_no', '');
         return ApiResponse::success((new CollectTaskRepository())->updateStatus($taskNo, 4, '手动停止'), '任务停止骨架已创建');
     }
 
-    public function retry(Request $request): array
+    public function retry(Request $request)
     {
                 $taskNo = (string) $request->input('task_no', '');
         return ApiResponse::success((new CollectTaskRepository())->updateStatus($taskNo, 1, ''), '任务重试骨架已创建');

@@ -11,7 +11,7 @@ use support\Request;
 
 class SearchController
 {
-    public function query(Request $request): array
+    public function query(Request $request)
     {
                 $payload = [
             'q' => (string) $request->input('q', ''),
@@ -43,7 +43,7 @@ class SearchController
         return ApiResponse::success($result, 'success');
     }
 
-    public function logs(): array
+    public function logs()
     {
         return ApiResponse::success([
             'list' => [],

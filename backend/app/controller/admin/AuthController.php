@@ -9,7 +9,7 @@ use support\Request;
 
 class AuthController
 {
-    public function login(Request $request): array
+    public function login(Request $request)
     {
                 $username = (string) $request->input('username', '');
         $password = (string) $request->input('password', '');
@@ -39,7 +39,7 @@ class AuthController
         ], '登录成功');
     }
 
-    public function profile(): array
+    public function profile()
     {
         return ApiResponse::success([
             'id' => 2,

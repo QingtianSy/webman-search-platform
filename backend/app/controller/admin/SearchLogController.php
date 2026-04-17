@@ -7,7 +7,7 @@ use support\Pagination;
 
 class SearchLogController
 {
-    public function index(): array
+    public function index()
     {
         $file = dirname(__DIR__, 3) . '/storage/logs/search_logs.jsonl';
         $list = [];

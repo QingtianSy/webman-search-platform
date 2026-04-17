@@ -11,19 +11,19 @@ use support\Request;
 
 class CollectController
 {
-    public function accounts(): array
+    public function accounts()
     {
         $list = (new CollectAccountRepository())->listByUserId(1);
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
     }
 
-    public function tasks(): array
+    public function tasks()
     {
         $list = (new CollectTaskRepository())->listByUserId(1);
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
     }
 
-    public function detail(Request $request): array
+    public function detail(Request $request)
     {
                 $taskNo = (string) $request->input('task_no', '');
         return ApiResponse::success((new CollectTaskDetailRepository())->findByTaskNo($taskNo));

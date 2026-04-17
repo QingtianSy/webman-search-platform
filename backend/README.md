@@ -3,10 +3,11 @@
 Webman 后端代码目录。
 
 ## 当前状态
-当前 backend 已进入 **轻量质量门禁可持续执行阶段**：
-- `composer smoke` 可快速验证关键主线
-- `scripts/check_docs_clean.sh` 可快速发现文档污染
-- `scripts/check_backend_routes.sh` 可快速验证路由目标存在性
+当前 backend 已完成一轮真正面向官方运行态的关键兼容修复：
+- `config/container.php` 已修为 `new Webman\\Container`
+- `support/ApiResponse` 已改为返回 Webman JSON Response
+- 控制器的旧 `: array` 返回类型已批量清理
+- 这使得后端在真实 Webman 运行态下不再停留在“数组返回”兼容阶段
 
-## 当前建议
-在 Minis 环境中，优先使用轻量门禁，不再频繁执行全仓库逐文件 lint。
+## 当前结论
+当前仓库已经明显更接近企业级 Webman 运行代码，而不只是结构相似。

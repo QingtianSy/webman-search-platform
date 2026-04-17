@@ -9,7 +9,7 @@ use support\Request;
 
 class AuthController
 {
-    public function login(Request $request): array
+    public function login(Request $request)
     {
                 $username = (string) $request->input('username', '');
         $password = (string) $request->input('password', '');
@@ -39,7 +39,7 @@ class AuthController
         ], '登录成功');
     }
 
-    public function profile(Request $request): array
+    public function profile(Request $request)
     {
                 $authorization = (string) $request->header('Authorization', '');
         $token = trim(str_replace('Bearer', '', $authorization));
@@ -52,7 +52,7 @@ class AuthController
         return ApiResponse::success($payload);
     }
 
-    public function menus(Request $request): array
+    public function menus(Request $request)
     {
                 $authorization = (string) $request->header('Authorization', '');
         $token = trim(str_replace('Bearer', '', $authorization));
@@ -62,7 +62,7 @@ class AuthController
         return ApiResponse::success($payload['menus'] ?? []);
     }
 
-    public function permissions(Request $request): array
+    public function permissions(Request $request)
     {
                 $authorization = (string) $request->header('Authorization', '');
         $token = trim(str_replace('Bearer', '', $authorization));

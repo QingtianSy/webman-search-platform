@@ -8,7 +8,7 @@ use support\Pagination;
 
 class MenuController
 {
-    public function index(): array
+    public function index()
     {
         $list = (new MenuRepository())->all();
         return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
