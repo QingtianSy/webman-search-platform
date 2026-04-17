@@ -2,8 +2,8 @@
 
 namespace app\service\admin;
 
+use app\common\admin\AdminListBuilder;
 use app\repository\mysql\UserRepository;
-use support\Pagination;
 
 class UserAdminService
 {
@@ -13,6 +13,6 @@ class UserAdminService
         foreach ($list as &$row) {
             unset($row['password'], $row['password_hash'], $row['type']);
         }
-        return Pagination::format($list, count($list), 1, 20);
+        return AdminListBuilder::make($list);
     }
 }
