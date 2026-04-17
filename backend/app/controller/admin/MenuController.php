@@ -2,8 +2,8 @@
 
 namespace app\controller\admin;
 
-use app\common\admin\AdminQuery;
 use app\service\admin\MenuAdminService;
+use app\validate\admin\AdminQueryValidate;
 use support\ApiResponse;
 use support\Request;
 
@@ -11,7 +11,7 @@ class MenuController
 {
     public function index(Request $request)
     {
-        $query = AdminQuery::parse($request->all());
+        $query = (new AdminQueryValidate())->list($request->all());
         return ApiResponse::success((new MenuAdminService())->getList($query));
     }
 }
