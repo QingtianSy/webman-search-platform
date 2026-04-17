@@ -18,5 +18,6 @@ php tests/rbac_mock_smoke.php
 php tests/health_mock_smoke.php
 php tests/user_center_mock_smoke.php
 php tests/user_center_real_ready_smoke.php
+php tests/admin_modules_mock_smoke.php
 
 echo 'all backend smoke tests passed'

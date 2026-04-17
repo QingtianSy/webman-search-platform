@@ -13,9 +13,9 @@ class HealthService
     {
         return [
             'app' => [
-                'name' => env('APP_NAME', 'webman-search-platform'),
-                'env' => env('APP_ENV', 'dev'),
-                'debug' => (bool) env('APP_DEBUG', true),
+                'name' => config('app.name', 'webman-search-platform'),
+                'env' => config('app.env', 'dev'),
+                'debug' => (bool) config('app.debug', true),
             ],
             'services' => [
                 'mysql' => MySqlClient::isConfigured(),

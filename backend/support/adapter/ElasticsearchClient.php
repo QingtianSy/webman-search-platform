@@ -6,7 +6,7 @@ class ElasticsearchClient
 {
     public static function config(): array
     {
-        return config('elasticsearch', []);
+        return function_exists('config') ? config('elasticsearch', []) : [];
     }
 
     public static function isConfigured(): bool
@@ -15,28 +15,23 @@ class ElasticsearchClient
         return !empty($config['host']);
     }
 
+    public static function host(): string
+    {
+        return (string) (self::config()['host'] ?? '');
+    }
+
+    public static function username(): string
+    {
+        return (string) (self::config()['username'] ?? '');
+    }
+
+    public static function password(): string
+    {
+        return (string) (self::config()['password'] ?? '');
+    }
+
     public static function questionIndex(): string
     {
         return (string) (self::config()['index']['question'] ?? 'question_index');
-    }
-
-    public static function baseUri(): string
-    {
-        return rtrim((string) (self::config()['host'] ?? ''), '/');
-    }
-
-    public static function auth(): array
-    {
-        return [
-            'username' => (string) (self::config()['username'] ?? ''),
-            'password' => (string) (self::config()['password'] ?? ''),
-        ];
-    }
-
-    public static function sslOptions(): array
-    {
-        return [
-            'verify' => false,
-        ];
     }
 }

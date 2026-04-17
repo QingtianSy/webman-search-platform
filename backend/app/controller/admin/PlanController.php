@@ -2,14 +2,13 @@
 
 namespace app\controller\admin;
 
+use app\service\admin\PlanAdminService;
 use support\ApiResponse;
-use support\Pagination;
 
 class PlanController
 {
     public function index()
     {
-        $list = [(new \app\repository\mysql\SubscriptionRepository())->findCurrentByUserId(1)];
-        return ApiResponse::success(Pagination::format(array_filter($list), count(array_filter($list)), 1, 20));
+        return ApiResponse::success((new PlanAdminService())->getList());
     }
 }

@@ -1,10 +1,17 @@
 <?php
-
 /**
- * config/exception.php
+ * This file is part of webman.
  *
- * 后续真实接入时，可在此对接全局异常处理器与日志记录策略。
+ * Licensed under The MIT License
+ * For full copyright and license information, please see the MIT-LICENSE.txt
+ * Redistributions of files must retain the above copyright notice.
+ *
+ * @author    walkor<walkor@workerman.net>
+ * @copyright walkor<walkor@workerman.net>
+ * @link      http://www.workerman.net/
+ * @license   http://www.opensource.org/licenses/mit-license.php MIT License
  */
+
 return [
-    'handler' => app\exception\ExceptionHandler::class,
+    '' => support\exception\Handler::class,
 ];

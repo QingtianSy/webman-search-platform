@@ -18,8 +18,10 @@
 - `health_mock_smoke.php`
 - `user_center_mock_smoke.php`
 - `user_center_real_ready_smoke.php`
+- `admin_modules_mock_smoke.php`
 
 ## 当前目标
 - 不依赖服务器部署
 - mock 模式下验证关键主线可用
 - real-ready 阶段先验证代码结构与最小数据读取能力
+- 后台管理模块开始具备独立自检能力

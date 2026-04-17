@@ -1,9 +1,21 @@
 <?php
-
 /**
- * config/autoload.php
+ * This file is part of webman.
  *
- * 预留自动加载配置入口。
- * 后续接真实 Webman / 插件自动加载时在此扩展。
+ * Licensed under The MIT License
+ * For full copyright and license information, please see the MIT-LICENSE.txt
+ * Redistributions of files must retain the above copyright notice.
+ *
+ * @author    walkor<walkor@workerman.net>
+ * @copyright walkor<walkor@workerman.net>
+ * @link      http://www.workerman.net/
+ * @license   http://www.opensource.org/licenses/mit-license.php MIT License
  */
-return [];
+
+return [
+    'files' => [
+        base_path() . '/app/functions.php',
+        base_path() . '/support/Request.php',
+        base_path() . '/support/Response.php',
+    ]
+];

@@ -10,41 +10,30 @@ class MySqlClient
     public static function config(): array
     {
         $config = function_exists('config') ? config('database.connections.mysql', []) : [];
-
         if (is_array($config) && !empty($config)) {
             return $config;
         }
-
         $path = dirname(__DIR__, 2) . '/config/database.php';
         $all = is_file($path) ? require $path : [];
-
         return $all['connections']['mysql'] ?? [];
     }
 
     public static function isConfigured(): bool
     {
-        $config = self::config();
-        return !empty($config['host']) && !empty($config['database']) && !empty($config['username']);
+        $c = self::config();
+        return !empty($c['host']) && !empty($c['database']) && !empty($c['username']);
     }
 
     public static function pdo(): ?PDO
     {
-        if (!self::isConfigured()) {
-            return null;
-        }
-        $config = self::config();
-        $dsn = sprintf(
-            'mysql:host=%s;port=%d;dbname=%s;charset=%s',
-            $config['host'],
-            (int) ($config['port'] ?? 3306),
-            $config['database'],
-            $config['charset'] ?? 'utf8mb4'
-        );
+        $c = self::config();
         try {
-            return new PDO($dsn, $config['username'], $config['password'] ?? '', [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            ]);
+            return new PDO(
+                sprintf('mysql:host=%s;port=%s;dbname=%s;charset=%s', $c['host'], $c['port'], $c['database'], $c['charset'] ?? 'utf8mb4'),
+                $c['username'] ?? '',
+                $c['password'] ?? '',
+                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+            );
         } catch (PDOException) {
             return null;
         }
@@ -56,11 +45,7 @@ class MySqlClient
         if (!$pdo || !is_file($file)) {
             return false;
         }
-        $sql = trim((string) file_get_contents($file));
-        if ($sql === '') {
-            return false;
-        }
-        $pdo->exec($sql);
-        return true;
+        $sql = file_get_contents($file);
+        return $pdo->exec($sql) !== false || $sql !== false;
     }
 }

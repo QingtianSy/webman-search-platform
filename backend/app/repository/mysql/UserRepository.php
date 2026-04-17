@@ -5,15 +5,6 @@ namespace app\repository\mysql;
 use PDO;
 use support\adapter\MySqlClient;
 
-/**
- * UserRepository
- *
- * 当前阶段：
- * - 默认从 storage/mock/users.json 读取用户
- *
- * 真接入阶段：
- * - 切换 AUTH_RBAC_SOURCE=real 后，改走真实 users 表查询
- */
 class UserRepository
 {
     protected string $file;
@@ -23,75 +14,85 @@ class UserRepository
         $this->file = dirname(__DIR__, 3) . '/storage/mock/users.json';
     }
 
-    public function findByUsername(string $username): array
+    public function all(): array
     {
-        $source = config('integration.auth_rbac_source', 'mock');
-        return $source === 'real'
+        return config('integration.auth_rbac_source', 'mock') === 'real'
+            ? $this->allReal()
+            : $this->allMock();
+    }
+
+    public function findByUsername(string $username): ?array
+    {
+        return config('integration.auth_rbac_source', 'mock') === 'real'
             ? $this->findByUsernameReal($username)
             : $this->findByUsernameMock($username);
     }
 
-    public function findById(int $id): array
+    public function findById(int $id): ?array
     {
-        $source = config('integration.auth_rbac_source', 'mock');
-        return $source === 'real'
+        return config('integration.auth_rbac_source', 'mock') === 'real'
             ? $this->findByIdReal($id)
             : $this->findByIdMock($id);
     }
 
-    protected function findByUsernameMock(string $username): array
+    protected function allMock(): array
     {
         if (!is_file($this->file)) {
             return [];
         }
         $rows = json_decode((string) file_get_contents($this->file), true);
-        if (!is_array($rows)) {
-            return [];
-        }
-        foreach ($rows as $row) {
+        return is_array($rows) ? $rows : [];
+    }
+
+    protected function findByUsernameMock(string $username): ?array
+    {
+        foreach ($this->allMock() as $row) {
             if (($row['username'] ?? '') === $username) {
                 return $row;
             }
         }
-        return [];
+        return null;
     }
 
-    protected function findByIdMock(int $id): array
+    protected function findByIdMock(int $id): ?array
     {
-        if (!is_file($this->file)) {
-            return [];
-        }
-        $rows = json_decode((string) file_get_contents($this->file), true);
-        if (!is_array($rows)) {
-            return [];
-        }
-        foreach ($rows as $row) {
+        foreach ($this->allMock() as $row) {
             if ((int) ($row['id'] ?? 0) === $id) {
                 return $row;
             }
         }
-        return [];
+        return null;
     }
 
-    protected function findByUsernameReal(string $username): array
+    protected function allReal(): array
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
             return [];
         }
-        $stmt = $pdo->prepare('SELECT id, username, password_hash, nickname, avatar, mobile, email, status, last_login_ip, last_login_at, created_at, updated_at FROM users WHERE username = :username LIMIT 1');
+        $stmt = $pdo->query('SELECT * FROM users ORDER BY id DESC');
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    protected function findByUsernameReal(string $username): ?array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return null;
+        }
+        $stmt = $pdo->prepare('SELECT * FROM users WHERE username = :username LIMIT 1');
         $stmt->execute(['username' => $username]);
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
-    protected function findByIdReal(int $id): array
+    protected function findByIdReal(int $id): ?array
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
-            return [];
+            return null;
         }
-        $stmt = $pdo->prepare('SELECT id, username, password_hash, nickname, avatar, mobile, email, status, last_login_ip, last_login_at, created_at, updated_at FROM users WHERE id = :id LIMIT 1');
+        $stmt = $pdo->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
         $stmt->execute(['id' => $id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 }
