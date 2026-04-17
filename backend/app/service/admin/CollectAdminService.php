@@ -3,6 +3,7 @@
 namespace app\service\admin;
 
 use app\common\admin\AdminListBuilder;
+use app\common\admin\AdminStatusFilter;
 use app\repository\mysql\CollectTaskDetailRepository;
 use app\repository\mysql\CollectTaskRepository;
 
@@ -10,7 +11,7 @@ class CollectAdminService
 {
     public function getList(array $query = []): array
     {
-        $query += ['keyword' => '', 'page' => 1, 'page_size' => 20];
+        $query += ['keyword' => '', 'status' => null, 'page' => 1, 'page_size' => 20];
         $keyword = trim((string) $query['keyword']);
         $page = (int) $query['page'];
         $pageSize = (int) $query['page_size'];
@@ -22,6 +23,7 @@ class CollectAdminService
                     || str_contains((string) ($row['type'] ?? ''), $keyword);
             }));
         }
+        $list = AdminStatusFilter::apply($list, $query['status']);
         return AdminListBuilder::make($list, $page, $pageSize);
     }
 
