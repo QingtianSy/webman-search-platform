@@ -2,7 +2,7 @@
 
 namespace app\controller\admin;
 
-use app\common\admin\AdminPage;
+use app\common\admin\AdminQuery;
 use app\service\admin\RoleAdminService;
 use support\ApiResponse;
 use support\Request;
@@ -11,7 +11,7 @@ class RoleController
 {
     public function index(Request $request)
     {
-        [$page, $pageSize] = AdminPage::parse($request->all());
-        return ApiResponse::success((new RoleAdminService())->getList($page, $pageSize));
+        $query = AdminQuery::parse($request->all());
+        return ApiResponse::success((new RoleAdminService())->getList($query));
     }
 }
