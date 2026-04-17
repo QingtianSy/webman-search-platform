@@ -1,13 +1,15 @@
 <?php
 
-/**
- * config/server.php
- *
- * 按官方 Webman 写法收口，并明确 Swoole 事件循环配置。
- */
-
 return [
-    'event_loop' => \Workerman\Events\Swoole::class,
+    'listen' => 'http://0.0.0.0:8787',
+    'transport' => 'tcp',
+    'context' => [],
+    'name' => 'webman',
+    'count' => cpu_count() * 4,
+    'user' => '',
+    'group' => '',
+    'reusePort' => false,
+    'event_loop' => '',
     'stop_timeout' => 2,
     'pid_file' => runtime_path() . '/webman.pid',
     'status_file' => runtime_path() . '/webman.status',
