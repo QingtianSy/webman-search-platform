@@ -2,15 +2,16 @@
 
 namespace app\controller\admin;
 
-use app\repository\mysql\QuestionTagRepository;
+use app\common\admin\AdminQuery;
+use app\service\admin\QuestionTagAdminService;
 use support\ApiResponse;
-use support\Pagination;
+use support\Request;
 
 class QuestionTagController
 {
-    public function index()
+    public function index(Request $request)
     {
-        $list = (new QuestionTagRepository())->all();
-        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
+        $query = AdminQuery::parse($request->all());
+        return ApiResponse::success((new QuestionTagAdminService())->getList($query));
     }
 }

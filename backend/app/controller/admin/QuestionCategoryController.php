@@ -2,15 +2,16 @@
 
 namespace app\controller\admin;
 
-use app\repository\mysql\QuestionCategoryRepository;
+use app\common\admin\AdminQuery;
+use app\service\admin\QuestionCategoryAdminService;
 use support\ApiResponse;
-use support\Pagination;
+use support\Request;
 
 class QuestionCategoryController
 {
-    public function index()
+    public function index(Request $request)
     {
-        $list = (new QuestionCategoryRepository())->all();
-        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
+        $query = AdminQuery::parse($request->all());
+        return ApiResponse::success((new QuestionCategoryAdminService())->getList($query));
     }
 }

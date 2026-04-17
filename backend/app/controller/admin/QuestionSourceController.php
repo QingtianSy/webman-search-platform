@@ -2,15 +2,16 @@
 
 namespace app\controller\admin;
 
-use app\repository\mysql\QuestionSourceRepository;
+use app\common\admin\AdminQuery;
+use app\service\admin\QuestionSourceAdminService;
 use support\ApiResponse;
-use support\Pagination;
+use support\Request;
 
 class QuestionSourceController
 {
-    public function index()
+    public function index(Request $request)
     {
-        $list = (new QuestionSourceRepository())->all();
-        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
+        $query = AdminQuery::parse($request->all());
+        return ApiResponse::success((new QuestionSourceAdminService())->getList($query));
     }
 }
