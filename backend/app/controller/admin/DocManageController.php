@@ -2,28 +2,17 @@
 
 namespace app\controller\admin;
 
+use app\common\admin\AdminQuery;
+use app\service\admin\DocAdminService;
+use support\ApiResponse;
+use support\Request;
+
 class DocManageController
 {
-    public function articles()
+    public function articles(Request $request)
     {
-        return json([
-            'code' => 1,
-            'msg' => 'success',
-            'data' => [
-                'list' => [
-                    [
-                        'id' => 1,
-                        'title' => '接入说明',
-                        'slug' => 'integration-guide',
-                        'status' => 1
-                    ]
-                ],
-                'total' => 1,
-                'page' => 1,
-                'page_size' => 20
-            ],
-            'request_id' => ''
-        ]);
+        $query = AdminQuery::parse($request->get());
+        return ApiResponse::success((new DocAdminService())->getList($query));
     }
 
     public function create()
