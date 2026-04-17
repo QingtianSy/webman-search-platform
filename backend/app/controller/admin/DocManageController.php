@@ -2,8 +2,10 @@
 
 namespace app\controller\admin;
 
+use app\common\admin\AdminId;
 use app\common\admin\AdminQuery;
 use app\service\admin\DocAdminService;
+use app\validate\admin\DocValidate;
 use support\ApiResponse;
 use support\Request;
 
@@ -15,18 +17,21 @@ class DocManageController
         return ApiResponse::success((new DocAdminService())->getList($query));
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        return json(['code' => 1, 'msg' => 'success', 'data' => []]);
+        $data = (new DocValidate())->create($request->post());
+        return ApiResponse::success((new DocAdminService())->create($data), '文档创建成功');
     }
 
-    public function update()
+    public function update(Request $request)
     {
-        return json(['code' => 1, 'msg' => 'success', 'data' => []]);
+        $data = (new DocValidate())->update($request->post());
+        return ApiResponse::success((new DocAdminService())->update($data['id'], $data), '文档更新成功');
     }
 
-    public function delete()
+    public function delete(Request $request)
     {
-        return json(['code' => 1, 'msg' => 'success', 'data' => ['deleted' => true]]);
+        $id = AdminId::parse($request->post(), 'id', '文档ID');
+        return ApiResponse::success((new DocAdminService())->delete($id), '文档删除成功');
     }
 }
