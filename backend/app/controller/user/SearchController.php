@@ -3,11 +3,11 @@
 namespace app\controller\user;
 
 use app\common\CurrentUser;
-use app\common\user\UserListBuilder;
 use app\common\user\UserQuery;
 use app\service\quota\QuotaService;
 use app\service\search\SearchLogService;
 use app\service\search\SearchService;
+use app\service\user\SearchHistoryService;
 use app\validate\SearchQueryValidator;
 use support\ApiResponse;
 use support\Request;
@@ -50,7 +50,8 @@ class SearchController
 
     public function logs(Request $request)
     {
+        $userId = CurrentUser::id($request);
         $query = UserQuery::parse($request->all());
-        return ApiResponse::success(UserListBuilder::make([], $query['page'], $query['page_size']));
+        return ApiResponse::success((new SearchHistoryService())->getList($userId, $query));
     }
 }
