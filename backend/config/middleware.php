@@ -3,8 +3,12 @@
 /**
  * config/middleware.php
  *
- * 按官方 Webman 写法收口。
- * 后续可在此注册全局中间件。
+ * 更贴官方 Webman 的全局中间件注册方式。
  */
 
-return [];
+return [
+    '' => [
+        app\middleware\StaticFile::class,
+        app\middleware\RequestIdMiddleware::class,
+    ],
+];
