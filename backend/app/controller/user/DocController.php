@@ -2,11 +2,8 @@
 
 namespace app\controller\user;
 
-use app\common\user\UserListBuilder;
 use app\common\user\UserQuery;
-use app\repository\mysql\DocArticleRepository;
-use app\repository\mysql\DocCategoryRepository;
-use app\repository\mysql\DocConfigRepository;
+use app\service\user\DocService;
 use app\validate\user\DocValidate;
 use support\ApiResponse;
 use support\Request;
@@ -16,18 +13,17 @@ class DocController
     public function categories(Request $request)
     {
         $query = UserQuery::parse($request->all());
-        $list = (new DocCategoryRepository())->all();
-        return ApiResponse::success(UserListBuilder::make($list, $query['page'], $query['page_size']));
+        return ApiResponse::success((new DocService())->categories($query));
     }
 
     public function detail(Request $request)
     {
         $slug = (new DocValidate())->slug($request->all());
-        return ApiResponse::success((new DocArticleRepository())->findBySlug($slug));
+        return ApiResponse::success((new DocService())->detail($slug));
     }
 
     public function config()
     {
-        return ApiResponse::success((new DocConfigRepository())->get());
+        return ApiResponse::success((new DocService())->config());
     }
 }

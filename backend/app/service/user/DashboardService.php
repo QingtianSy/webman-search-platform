@@ -3,15 +3,14 @@
 namespace app\service\user;
 
 use app\repository\mysql\AnnouncementRepository;
-use app\repository\mysql\SubscriptionRepository;
-use app\repository\mysql\WalletRepository;
 
 class DashboardService
 {
     public function overview(int $userId): array
     {
-        $wallet = (new WalletRepository())->findByUserId($userId);
-        $subscription = (new SubscriptionRepository())->findCurrentByUserId($userId);
+        $billing = new BillingService();
+        $wallet = $billing->wallet($userId);
+        $subscription = $billing->currentPlan($userId);
         $announcements = (new AnnouncementRepository())->latest();
 
         return [
