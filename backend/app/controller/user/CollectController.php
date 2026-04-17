@@ -2,30 +2,36 @@
 
 namespace app\controller\user;
 
+use app\common\CurrentUser;
+use app\common\user\UserListBuilder;
+use app\common\user\UserQuery;
 use app\repository\mysql\CollectAccountRepository;
 use app\repository\mysql\CollectTaskDetailRepository;
 use app\repository\mysql\CollectTaskRepository;
 use support\ApiResponse;
-use support\Pagination;
 use support\Request;
 
 class CollectController
 {
-    public function accounts()
+    public function accounts(Request $request)
     {
-        $list = (new CollectAccountRepository())->listByUserId(1);
-        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
+        $userId = CurrentUser::id($request);
+        $query = UserQuery::parse($request->all());
+        $list = (new CollectAccountRepository())->listByUserId($userId);
+        return ApiResponse::success(UserListBuilder::make($list, $query['page'], $query['page_size']));
     }
 
-    public function tasks()
+    public function tasks(Request $request)
     {
-        $list = (new CollectTaskRepository())->listByUserId(1);
-        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
+        $userId = CurrentUser::id($request);
+        $query = UserQuery::parse($request->all());
+        $list = (new CollectTaskRepository())->listByUserId($userId);
+        return ApiResponse::success(UserListBuilder::make($list, $query['page'], $query['page_size']));
     }
 
     public function detail(Request $request)
     {
-                $taskNo = (string) $request->input('task_no', '');
+        $taskNo = (string) $request->input('task_no', '');
         return ApiResponse::success((new CollectTaskDetailRepository())->findByTaskNo($taskNo));
     }
 }

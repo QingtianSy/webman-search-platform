@@ -3,6 +3,8 @@
 namespace app\controller\user;
 
 use app\common\CurrentUser;
+use app\common\user\UserListBuilder;
+use app\common\user\UserQuery;
 use app\service\quota\QuotaService;
 use app\service\search\SearchLogService;
 use app\service\search\SearchService;
@@ -46,13 +48,9 @@ class SearchController
         return ApiResponse::success($result, 'success');
     }
 
-    public function logs()
+    public function logs(Request $request)
     {
-        return ApiResponse::success([
-            'list' => [],
-            'total' => 0,
-            'page' => 1,
-            'page_size' => 20,
-        ]);
+        $query = UserQuery::parse($request->all());
+        return ApiResponse::success(UserListBuilder::make([], $query['page'], $query['page_size']));
     }
 }

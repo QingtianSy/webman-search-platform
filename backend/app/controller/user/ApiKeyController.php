@@ -3,6 +3,8 @@
 namespace app\controller\user;
 
 use app\common\CurrentUser;
+use app\common\user\UserListBuilder;
+use app\common\user\UserQuery;
 use app\service\open\ApiKeyService;
 use support\ApiResponse;
 use support\Request;
@@ -12,14 +14,10 @@ class ApiKeyController
     public function index(Request $request)
     {
         $userId = CurrentUser::id($request);
+        $query = UserQuery::parse($request->all());
         $service = new ApiKeyService();
         $list = $service->listByUserId($userId);
-        return ApiResponse::success([
-            'list' => $list,
-            'total' => count($list),
-            'page' => 1,
-            'page_size' => 20,
-        ]);
+        return ApiResponse::success(UserListBuilder::make($list, $query['page'], $query['page_size']));
     }
 
     public function detail(Request $request)
