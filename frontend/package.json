@@ -13,8 +13,7 @@
     "vue-router": "^4.4.0",
     "pinia": "^2.1.7",
     "axios": "^1.7.7",
-    "naive-ui": "^2.40.1",
-    "@vben-core/shared": "^5.0.0"
+    "naive-ui": "^2.40.1"
   },
   "devDependencies": {
     "vite": "^5.4.0",
