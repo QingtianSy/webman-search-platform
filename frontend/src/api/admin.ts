@@ -52,8 +52,16 @@ export function retryCollectTask(task_no: string) {
   return http.post('/admin/collect/task/retry', { task_no });
 }
 
+export function getQuestionList(params?: Record<string, any>) {
+  return http.get('/admin/question/list', { params });
+}
+
 export function getQuestionDetail(id: number) {
   return http.get('/admin/question/detail', { params: { id } });
+}
+
+export function createQuestion(data: Record<string, any>) {
+  return http.post('/admin/question/create', data);
 }
 
 export function updateQuestion(data: Record<string, any>) {
