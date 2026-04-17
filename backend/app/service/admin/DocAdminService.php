@@ -58,16 +58,38 @@ class DocAdminService
 
     public function create(array $data): array
     {
+        if (config('integration.docs_source', 'mock') === 'real') {
+            $row = new DocArticle();
+            $row->fill($data);
+            $row->save();
+            return $row->toArray();
+        }
         return (new DocArticleRepository())->create($data);
     }
 
     public function update(int $id, array $data): array
     {
+        if (config('integration.docs_source', 'mock') === 'real') {
+            $row = DocArticle::query()->find($id);
+            if (!$row) {
+                return [];
+            }
+            $row->fill($data);
+            $row->save();
+            return $row->toArray();
+        }
         return (new DocArticleRepository())->update($id, $data);
     }
 
     public function delete(int $id): array
     {
+        if (config('integration.docs_source', 'mock') === 'real') {
+            $row = DocArticle::query()->find($id);
+            if ($row) {
+                $row->delete();
+            }
+            return ['deleted' => true, 'id' => $id];
+        }
         return ['deleted' => true, 'id' => $id];
     }
 }

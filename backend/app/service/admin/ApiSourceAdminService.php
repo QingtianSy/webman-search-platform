@@ -11,7 +11,7 @@ class ApiSourceAdminService
 {
     public function getList(array $query = []): array
     {
-        $query += ['keyword' => '', 'status' => null, 'page' => 1, 'page_size' => 20, 'sort' => '', 'order' => 'desc'];
+        $query += ['keyword' => '', 'status' => null, 'page' => 1, 'page_size' => 20];
         return config('integration.api_source_source', 'mock') === 'real'
             ? $this->getListReal($query)
             : $this->getListMock($query);
@@ -40,6 +40,7 @@ class ApiSourceAdminService
         $pageSize = (int) $query['page_size'];
         $keyword = trim((string) $query['keyword']);
         $status = $query['status'];
+
         $builder = ApiSource::query();
         if ($keyword !== '') {
             $builder->where(function ($q) use ($keyword) {
@@ -57,6 +58,10 @@ class ApiSourceAdminService
 
     public function detail(int $id): array
     {
+        if (config('integration.api_source_source', 'mock') === 'real') {
+            $row = ApiSource::query()->find($id);
+            return $row ? $row->toArray() : [];
+        }
         return (new ApiSourceRepository())->findById($id);
     }
 

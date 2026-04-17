@@ -64,11 +64,29 @@ class CollectAdminService
 
     public function stop(string $taskNo): array
     {
+        if (config('integration.collect_source', 'mock') === 'real') {
+            $row = CollectTask::query()->where('task_no', $taskNo)->first();
+            if ($row) {
+                $row->status = 4;
+                $row->error_message = '手动停止';
+                $row->save();
+            }
+            return ['stopped' => true, 'task_no' => $taskNo];
+        }
         return (new CollectTaskRepository())->updateStatus($taskNo, 4, '手动停止');
     }
 
     public function retry(string $taskNo): array
     {
+        if (config('integration.collect_source', 'mock') === 'real') {
+            $row = CollectTask::query()->where('task_no', $taskNo)->first();
+            if ($row) {
+                $row->status = 1;
+                $row->error_message = '';
+                $row->save();
+            }
+            return ['retried' => true, 'task_no' => $taskNo];
+        }
         return (new CollectTaskRepository())->updateStatus($taskNo, 1, '');
     }
 }
