@@ -5,7 +5,7 @@ namespace app\controller\user;
 use app\common\CurrentUser;
 use app\common\user\UserListBuilder;
 use app\common\user\UserQuery;
-use app\service\open\ApiKeyService;
+use app\service\user\ApiKeyService;
 use app\validate\user\ApiKeyValidate;
 use support\ApiResponse;
 use support\Request;
@@ -16,8 +16,7 @@ class ApiKeyController
     {
         $userId = CurrentUser::id($request);
         $query = UserQuery::parse($request->all());
-        $service = new ApiKeyService();
-        $list = $service->listByUserId($userId);
+        $list = (new ApiKeyService())->listByUserId($userId);
         return ApiResponse::success(UserListBuilder::make($list, $query['page'], $query['page_size']));
     }
 

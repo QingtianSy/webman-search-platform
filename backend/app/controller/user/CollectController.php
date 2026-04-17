@@ -5,9 +5,7 @@ namespace app\controller\user;
 use app\common\CurrentUser;
 use app\common\user\UserListBuilder;
 use app\common\user\UserQuery;
-use app\repository\mysql\CollectAccountRepository;
-use app\repository\mysql\CollectTaskDetailRepository;
-use app\repository\mysql\CollectTaskRepository;
+use app\service\user\CollectService;
 use app\validate\user\CollectValidate;
 use support\ApiResponse;
 use support\Request;
@@ -18,7 +16,7 @@ class CollectController
     {
         $userId = CurrentUser::id($request);
         $query = UserQuery::parse($request->all());
-        $list = (new CollectAccountRepository())->listByUserId($userId);
+        $list = (new CollectService())->accounts($userId);
         return ApiResponse::success(UserListBuilder::make($list, $query['page'], $query['page_size']));
     }
 
@@ -26,13 +24,13 @@ class CollectController
     {
         $userId = CurrentUser::id($request);
         $query = UserQuery::parse($request->all());
-        $list = (new CollectTaskRepository())->listByUserId($userId);
+        $list = (new CollectService())->tasks($userId);
         return ApiResponse::success(UserListBuilder::make($list, $query['page'], $query['page_size']));
     }
 
     public function detail(Request $request)
     {
         $taskNo = (new CollectValidate())->taskNo($request->all());
-        return ApiResponse::success((new CollectTaskDetailRepository())->findByTaskNo($taskNo));
+        return ApiResponse::success((new CollectService())->detail($taskNo));
     }
 }
