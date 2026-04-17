@@ -3,8 +3,8 @@
 namespace app\controller\admin;
 
 use app\common\admin\AdminId;
-use app\common\admin\AdminQuery;
 use app\service\admin\DocAdminService;
+use app\validate\admin\AdminQueryValidate;
 use app\validate\admin\DocValidate;
 use support\ApiResponse;
 use support\Request;
@@ -13,7 +13,7 @@ class DocManageController
 {
     public function articles(Request $request)
     {
-        $query = AdminQuery::parse($request->all());
+        $query = (new AdminQueryValidate())->list($request->all());
         return ApiResponse::success((new DocAdminService())->getList($query));
     }
 
