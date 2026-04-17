@@ -2,56 +2,29 @@
 
 namespace app\controller\admin;
 
+use app\service\admin\ApiSourceAdminService;
+use app\validate\admin\AdminQueryValidate;
+use app\validate\admin\ApiSourceValidate;
+use support\ApiResponse;
+use support\Request;
+
 class ApiSourceManageController
 {
-    public function index()
+    public function index(Request $request)
     {
-        return json([
-            'code' => 1,
-            'msg' => 'success',
-            'data' => [
-                'list' => [
-                    [
-                        'id' => 1,
-                        'name' => '本地健康检查接口源',
-                        'code' => 'local_health',
-                        'url' => 'http://127.0.0.1:8787/health',
-                        'status' => 1
-                    ]
-                ],
-                'total' => 1,
-                'page' => 1,
-                'page_size' => 20
-            ],
-            'request_id' => ''
-        ]);
+        $query = (new AdminQueryValidate())->list($request->get());
+        return ApiResponse::success((new ApiSourceAdminService())->getList($query));
     }
 
-    public function detail()
+    public function detail(Request $request)
     {
-        return json([
-            'code' => 1,
-            'msg' => 'success',
-            'data' => [
-                'id' => 1,
-                'name' => '本地健康检查接口源',
-                'code' => 'local_health',
-                'url' => 'http://127.0.0.1:8787/health',
-                'status' => 1
-            ],
-            'request_id' => ''
-        ]);
+        $id = (new ApiSourceValidate())->id($request->get());
+        return ApiResponse::success((new ApiSourceAdminService())->detail($id));
     }
 
-    public function test()
+    public function test(Request $request)
     {
-        return json([
-            'code' => 1,
-            'msg' => 'success',
-            'data' => [
-                'tested' => true
-            ],
-            'request_id' => ''
-        ]);
+        $id = (new ApiSourceValidate())->id($request->post());
+        return ApiResponse::success((new ApiSourceAdminService())->test($id));
     }
 }
