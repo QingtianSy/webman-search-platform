@@ -20,12 +20,27 @@ class CollectController
         return ApiResponse::success(UserListBuilder::make($list, $query['page'], $query['page_size']));
     }
 
-    public function tasks(Request $request)
+    public function tasks()
     {
-        $userId = CurrentUser::id($request);
-        $query = UserQuery::parse($request->all());
-        $list = (new CollectService())->tasks($userId);
-        return ApiResponse::success(UserListBuilder::make($list, $query['page'], $query['page_size']));
+        return json([
+            'code' => 1,
+            'msg' => 'success',
+            'data' => [
+                'list' => [
+                    [
+                        'task_no' => 'CT202604150001',
+                        'status' => 2,
+                        'course_count' => 1,
+                        'question_count' => 2,
+                        'runner_script' => 'pending://collect-core-script',
+                    ]
+                ],
+                'total' => 1,
+                'page' => 1,
+                'page_size' => 20
+            ],
+            'request_id' => ''
+        ]);
     }
 
     public function detail(Request $request)
