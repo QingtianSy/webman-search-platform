@@ -8,7 +8,7 @@ use app\service\quota\QuotaService;
 use app\service\search\SearchLogService;
 use app\service\search\SearchService;
 use app\service\user\SearchHistoryService;
-use app\validate\SearchQueryValidator;
+use app\validate\user\SearchValidate;
 use support\ApiResponse;
 use support\Request;
 
@@ -17,16 +17,7 @@ class SearchController
     public function query(Request $request)
     {
         $userId = CurrentUser::id($request);
-        $payload = [
-            'q' => (string) $request->input('q', ''),
-            'info' => (string) $request->input('info', ''),
-            'split' => (string) $request->input('split', '###'),
-        ];
-
-        [$passed, $message] = (new SearchQueryValidator())->validate($payload);
-        if (!$passed) {
-            return ApiResponse::error(40001, $message);
-        }
+        $payload = (new SearchValidate())->query($request->all());
 
         $quotaService = new QuotaService();
         $remainQuota = $quotaService->getUserQuota($userId);

@@ -13,6 +13,11 @@ class SearchValidate
         if ($q === '') {
             throw new BusinessException('搜索关键词不能为空', ResponseCode::PARAM_ERROR);
         }
-        return ['q' => $q];
+
+        return [
+            'q' => $q,
+            'info' => (string) ($data['info'] ?? ''),
+            'split' => (string) ($data['split'] ?? '###'),
+        ];
     }
 }
