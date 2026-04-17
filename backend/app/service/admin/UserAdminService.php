@@ -7,18 +7,27 @@ use app\repository\mysql\UserRepository;
 
 class UserAdminService
 {
-    public function getList(array $query): array
+    public function getList(array $query = []): array
     {
+        $query += ['keyword' => '', 'page' => 1, 'page_size' => 20];
+        $keyword = trim((string) $query['keyword']);
+        $page = (int) $query['page'];
+        $pageSize = (int) $query['page_size'];
+
         $list = (new UserRepository())->all();
-        if ($query['keyword'] !== '') {
-            $list = array_values(array_filter($list, function ($row) use ($query) {
-                return str_contains((string) ($row['username'] ?? ''), $query['keyword'])
-                    || str_contains((string) ($row['nickname'] ?? ''), $query['keyword']);
-            }));
-        }
         foreach ($list as &$row) {
             unset($row['password'], $row['password_hash'], $row['type']);
         }
-        return AdminListBuilder::make($list, $query['page'], $query['page_size']);
+
+        if ($keyword !== '') {
+            $list = array_values(array_filter($list, function ($row) use ($keyword) {
+                return str_contains((string) ($row['username'] ?? ''), $keyword)
+                    || str_contains((string) ($row['nickname'] ?? ''), $keyword)
+                    || str_contains((string) ($row['mobile'] ?? ''), $keyword)
+                    || str_contains((string) ($row['email'] ?? ''), $keyword);
+            }));
+        }
+
+        return AdminListBuilder::make($list, $page, $pageSize);
     }
 }
