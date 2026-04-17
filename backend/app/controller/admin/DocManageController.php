@@ -13,19 +13,19 @@ class DocManageController
 {
     public function articles(Request $request)
     {
-        $query = (new AdminQueryValidate())->list($request->all());
+        $query = (new AdminQueryValidate())->list($request->get());
         return ApiResponse::success((new DocAdminService())->getList($query));
     }
 
     public function create(Request $request)
     {
-        $data = (new DocValidate())->create($request->all());
+        $data = (new DocValidate())->create($request->post());
         return ApiResponse::success((new DocAdminService())->create($data), '文档创建骨架已创建');
     }
 
     public function update(Request $request)
     {
-        $data = (new DocValidate())->update($request->all());
+        $data = (new DocValidate())->update($request->post());
         return ApiResponse::success((new DocAdminService())->update($data['id'], $data), '文档更新骨架已创建');
     }
 

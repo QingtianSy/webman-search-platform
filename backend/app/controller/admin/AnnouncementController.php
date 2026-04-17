@@ -13,19 +13,19 @@ class AnnouncementController
 {
     public function index(Request $request)
     {
-        $query = (new AdminQueryValidate())->list($request->all());
+        $query = (new AdminQueryValidate())->list($request->get());
         return ApiResponse::success((new AnnouncementAdminService())->getList($query));
     }
 
     public function create(Request $request)
     {
-        $data = (new AnnouncementValidate())->create($request->all());
+        $data = (new AnnouncementValidate())->create($request->post());
         return ApiResponse::success((new AnnouncementAdminService())->create($data), '公告创建骨架已创建');
     }
 
     public function update(Request $request)
     {
-        $data = (new AnnouncementValidate())->update($request->all());
+        $data = (new AnnouncementValidate())->update($request->post());
         return ApiResponse::success((new AnnouncementAdminService())->update($data['id'], $data), '公告更新骨架已创建');
     }
 

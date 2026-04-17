@@ -11,7 +11,7 @@ class PlanController
 {
     public function index(Request $request)
     {
-        $query = (new AdminQueryValidate())->list($request->all());
+        $query = (new AdminQueryValidate())->list($request->get());
         return ApiResponse::success((new PlanAdminService())->getList($query));
     }
 }

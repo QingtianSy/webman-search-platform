@@ -11,7 +11,7 @@ class SearchLogController
 {
     public function index(Request $request)
     {
-        $query = AdminQuery::parse($request->all());
+        $query = AdminQuery::parse($request->get());
         return ApiResponse::success((new SearchLogAdminService())->getList($query));
     }
 }
