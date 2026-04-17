@@ -15,7 +15,7 @@ class CollectController
     public function accounts(Request $request)
     {
         $userId = CurrentUser::id($request);
-        $query = UserQuery::parse($request->all());
+        $query = UserQuery::parse($request->get());
         $list = (new CollectService())->accounts($userId);
         return ApiResponse::success(UserListBuilder::make($list, $query['page'], $query['page_size']));
     }
@@ -45,7 +45,7 @@ class CollectController
 
     public function detail(Request $request)
     {
-        $taskNo = (new CollectValidate())->taskNo($request->all());
+        $taskNo = (new CollectValidate())->taskNo($request->get());
         return ApiResponse::success((new CollectService())->detail($taskNo));
     }
 }

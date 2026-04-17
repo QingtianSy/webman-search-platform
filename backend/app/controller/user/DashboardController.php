@@ -12,7 +12,7 @@ class DashboardController
 {
     public function overview(Request $request)
     {
-        (new DashboardValidate())->overview($request->all());
+        (new DashboardValidate())->overview($request->get());
         $userId = CurrentUser::id($request);
         $service = new DashboardService();
         return ApiResponse::success($service->overview($userId));

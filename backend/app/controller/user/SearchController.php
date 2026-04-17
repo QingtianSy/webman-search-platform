@@ -17,7 +17,7 @@ class SearchController
     public function query(Request $request)
     {
         $userId = CurrentUser::id($request);
-        $payload = (new SearchValidate())->query($request->all());
+        $payload = (new SearchValidate())->query($request->post());
 
         $quotaService = new QuotaService();
         $remainQuota = $quotaService->getUserQuota($userId);
@@ -42,7 +42,7 @@ class SearchController
     public function logs(Request $request)
     {
         $userId = CurrentUser::id($request);
-        $query = UserQuery::parse($request->all());
+        $query = UserQuery::parse($request->get());
         return ApiResponse::success((new SearchHistoryService())->getList($userId, $query));
     }
 }
