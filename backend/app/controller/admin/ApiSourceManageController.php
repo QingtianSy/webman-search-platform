@@ -2,28 +2,27 @@
 
 namespace app\controller\admin;
 
-use app\repository\mysql\ApiSourceRepository;
+use app\service\admin\ApiSourceAdminService;
+use app\validate\admin\ApiSourceValidate;
 use support\ApiResponse;
-use support\Pagination;
 use support\Request;
 
 class ApiSourceManageController
 {
     public function index()
     {
-        $list = (new ApiSourceRepository())->all();
-        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
+        return ApiResponse::success((new ApiSourceAdminService())->getList());
     }
 
     public function detail(Request $request)
     {
-                $id = (int) $request->input('id', 0);
-        return ApiResponse::success((new ApiSourceRepository())->findById($id));
+        $id = (new ApiSourceValidate())->id($request->all());
+        return ApiResponse::success((new ApiSourceAdminService())->detail($id));
     }
 
     public function test(Request $request)
     {
-                $id = (int) $request->input('id', 0);
-        return ApiResponse::success((new ApiSourceRepository())->test($id));
+        $id = (new ApiSourceValidate())->id($request->all());
+        return ApiResponse::success((new ApiSourceAdminService())->test($id));
     }
 }

@@ -2,23 +2,21 @@
 
 namespace app\controller\admin;
 
-use app\repository\mysql\SystemConfigRepository;
+use app\service\admin\SystemConfigAdminService;
+use app\validate\admin\SystemConfigValidate;
 use support\ApiResponse;
-use support\Pagination;
 use support\Request;
 
 class SystemConfigController
 {
     public function index()
     {
-        $list = (new SystemConfigRepository())->all();
-        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
+        return ApiResponse::success((new SystemConfigAdminService())->getList());
     }
 
     public function update(Request $request)
     {
-                $key = (string) $request->input('config_key', '');
-        $value = (string) $request->input('config_value', '');
-        return ApiResponse::success((new SystemConfigRepository())->updateByKey($key, $value), '系统配置更新骨架已创建');
+        $data = (new SystemConfigValidate())->update($request->all());
+        return ApiResponse::success((new SystemConfigAdminService())->update($data['config_key'], $data['config_value']), '系统配置更新骨架已创建');
     }
 }

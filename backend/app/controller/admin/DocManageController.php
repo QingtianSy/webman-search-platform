@@ -2,46 +2,33 @@
 
 namespace app\controller\admin;
 
-use app\repository\mysql\DocArticleRepository;
+use app\service\admin\DocAdminService;
+use app\validate\admin\DocValidate;
 use support\ApiResponse;
-use support\Pagination;
 use support\Request;
 
 class DocManageController
 {
     public function articles()
     {
-        $list = (new DocArticleRepository())->all();
-        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
+        return ApiResponse::success((new DocAdminService())->getList());
     }
 
     public function create(Request $request)
     {
-                $created = (new DocArticleRepository())->create([
-            'category_id' => (int) $request->input('category_id', 1),
-            'slug' => (string) $request->input('slug', 'new-doc'),
-            'title' => (string) $request->input('title', '新文档'),
-            'summary' => (string) $request->input('summary', ''),
-            'content_md' => (string) $request->input('content_md', ''),
-            'status' => 1,
-        ]);
-        return ApiResponse::success($created, '文档创建骨架已创建');
+        $data = (new DocValidate())->create($request->all());
+        return ApiResponse::success((new DocAdminService())->create($data), '文档创建骨架已创建');
     }
 
     public function update(Request $request)
     {
-                $id = (int) $request->input('id', 0);
-        $updated = (new DocArticleRepository())->update($id, [
-            'title' => (string) $request->input('title', ''),
-            'summary' => (string) $request->input('summary', ''),
-            'content_md' => (string) $request->input('content_md', ''),
-        ]);
-        return ApiResponse::success($updated, '文档更新骨架已创建');
+        $data = (new DocValidate())->update($request->all());
+        return ApiResponse::success((new DocAdminService())->update($data['id'], $data), '文档更新骨架已创建');
     }
 
     public function delete(Request $request)
     {
-                $id = (int) $request->input('id', 0);
-        return ApiResponse::success(['deleted' => true, 'id' => $id], '文档删除骨架已创建');
+        $id = (int) $request->input('id', 0);
+        return ApiResponse::success((new DocAdminService())->delete($id), '文档删除骨架已创建');
     }
 }

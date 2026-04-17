@@ -2,35 +2,33 @@
 
 namespace app\controller\admin;
 
-use app\repository\mysql\CollectTaskDetailRepository;
-use app\repository\mysql\CollectTaskRepository;
+use app\service\admin\CollectAdminService;
+use app\validate\admin\CollectTaskValidate;
 use support\ApiResponse;
-use support\Pagination;
 use support\Request;
 
 class CollectManageController
 {
     public function tasks()
     {
-        $list = (new CollectTaskRepository())->listByUserId(1);
-        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
+        return ApiResponse::success((new CollectAdminService())->getList());
     }
 
     public function detail(Request $request)
     {
-                $taskNo = (string) $request->input('task_no', '');
-        return ApiResponse::success((new CollectTaskDetailRepository())->findByTaskNo($taskNo));
+        $taskNo = (new CollectTaskValidate())->taskNo($request->all());
+        return ApiResponse::success((new CollectAdminService())->detail($taskNo));
     }
 
     public function stop(Request $request)
     {
-                $taskNo = (string) $request->input('task_no', '');
-        return ApiResponse::success((new CollectTaskRepository())->updateStatus($taskNo, 4, '手动停止'), '任务停止骨架已创建');
+        $taskNo = (new CollectTaskValidate())->taskNo($request->all());
+        return ApiResponse::success((new CollectAdminService())->stop($taskNo), '任务停止骨架已创建');
     }
 
     public function retry(Request $request)
     {
-                $taskNo = (string) $request->input('task_no', '');
-        return ApiResponse::success((new CollectTaskRepository())->updateStatus($taskNo, 1, ''), '任务重试骨架已创建');
+        $taskNo = (new CollectTaskValidate())->taskNo($request->all());
+        return ApiResponse::success((new CollectAdminService())->retry($taskNo), '任务重试骨架已创建');
     }
 }
