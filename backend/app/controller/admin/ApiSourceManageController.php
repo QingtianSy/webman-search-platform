@@ -25,6 +25,6 @@ class ApiSourceManageController
     public function test(Request $request)
     {
         $id = (new ApiSourceValidate())->id($request->post());
-        return ApiResponse::success((new ApiSourceAdminService())->test($id));
+        return ApiResponse::success((new ApiSourceAdminService())->test($id), '接口源测试完成');
     }
 }
