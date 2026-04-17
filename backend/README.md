@@ -3,10 +3,11 @@
 Webman 后端代码目录。
 
 ## 当前状态
-当前 backend 的重构标准已明确：
-- **运行骨架按 Webman 官方**
-- **后台业务层按 webman-admin 官方思路**
-- **多数据源业务层（search/collect/open）保留项目扩展设计**
+当前 backend 已明确下一阶段的后台管理模块演进方向：
+- 运行骨架继续按 Webman 官方
+- 后台管理类 MySQL 模块逐步引入 `webman/database`
+- 后台业务层继续朝 `Model + Service + Validate` 方向演进
+- 搜题/采集/开放平台等复杂多数据源模块仍保留 Repository 模式
 
-## 当前结论
-后续再改后台管理模块时，优先参考 webman-admin 的组织方式，而不是继续发散自定义结构。
+## 关键文档
+- `project-docs/55-webman-database-plan.md`
