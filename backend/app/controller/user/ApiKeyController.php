@@ -6,6 +6,7 @@ use app\common\CurrentUser;
 use app\common\user\UserListBuilder;
 use app\common\user\UserQuery;
 use app\service\open\ApiKeyService;
+use app\validate\user\ApiKeyValidate;
 use support\ApiResponse;
 use support\Request;
 
@@ -23,27 +24,26 @@ class ApiKeyController
     public function detail(Request $request)
     {
         $userId = CurrentUser::id($request);
-        $id = (int) $request->input('id', 0);
+        $id = (new ApiKeyValidate())->id($request->all());
         return ApiResponse::success((new ApiKeyService())->detailById($userId, $id));
     }
 
     public function create(Request $request)
     {
         $userId = CurrentUser::id($request);
-        $appName = (string) $request->input('app_name', '默认应用');
-        return ApiResponse::success((new ApiKeyService())->mockCreate($userId, $appName), '模拟创建成功');
+        $data = (new ApiKeyValidate())->create($request->all());
+        return ApiResponse::success((new ApiKeyService())->mockCreate($userId, $data['app_name']), '模拟创建成功');
     }
 
     public function toggle(Request $request)
     {
-        $id = (int) $request->input('id', 0);
-        $status = (int) $request->input('status', 1);
-        return ApiResponse::success((new ApiKeyService())->toggle($id, $status), '状态已切换');
+        $data = (new ApiKeyValidate())->toggle($request->all());
+        return ApiResponse::success((new ApiKeyService())->toggle($data['id'], $data['status']), '状态已切换');
     }
 
     public function delete(Request $request)
     {
-        $id = (int) $request->input('id', 0);
+        $id = (new ApiKeyValidate())->id($request->all());
         return ApiResponse::success((new ApiKeyService())->delete($id), '删除成功');
     }
 }

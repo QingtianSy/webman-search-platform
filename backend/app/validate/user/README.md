@@ -6,6 +6,8 @@
 - `SearchValidate`
 - `CollectValidate`
 - `DocValidate`
+- `ApiKeyValidate`
+- `LogQueryValidate`
 
 ## 目标
 让用户端模块也逐步形成：
