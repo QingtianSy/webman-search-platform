@@ -2,8 +2,10 @@
 
 namespace app\model\admin;
 
+/**
+ * 权限模型占位。
+ */
 class Permission extends Base
 {
-    protected $table = 'permissions';
-    protected $primaryKey = 'id';
+    protected string $table = 'permissions';
 }
