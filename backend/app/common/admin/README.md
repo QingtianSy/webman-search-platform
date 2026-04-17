@@ -8,6 +8,8 @@
 - `AdminPage`：统一后台分页参数解析
 - `AdminQuery`：统一后台查询参数解析（keyword/status/page/page_size）
 - `AdminStatusFilter`：统一后台状态过滤
+- `AdminSort`：统一后台排序参数解析
+- `AdminTimeRange`：统一后台时间范围参数解析
 
 ## 目的
 让后台模块继续向 webman-admin 风格收口时，避免重复写列表/ID/分页/查询条件逻辑。
