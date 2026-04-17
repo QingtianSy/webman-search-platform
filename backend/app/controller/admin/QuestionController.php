@@ -48,39 +48,3 @@ class QuestionController
         return ApiResponse::success(['deleted' => $deleted], '题目删除骨架已创建');
     }
 }
-
-class QuestionCategoryController
-{
-    public function index()
-    {
-        $list = (new QuestionCategoryRepository())->all();
-        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
-    }
-}
-
-class QuestionTypeController
-{
-    public function index()
-    {
-        $list = (new QuestionTypeRepository())->all();
-        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
-    }
-}
-
-class QuestionSourceController
-{
-    public function index()
-    {
-        $list = (new QuestionSourceRepository())->all();
-        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
-    }
-}
-
-class QuestionTagController
-{
-    public function index()
-    {
-        $list = (new QuestionTagRepository())->all();
-        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
-    }
-}

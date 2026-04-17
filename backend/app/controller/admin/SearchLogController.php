@@ -2,23 +2,16 @@
 
 namespace app\controller\admin;
 
+use app\common\admin\AdminQuery;
+use app\service\admin\SearchLogAdminService;
 use support\ApiResponse;
-use support\Pagination;
+use support\Request;
 
 class SearchLogController
 {
-    public function index()
+    public function index(Request $request)
     {
-        $file = dirname(__DIR__, 3) . '/storage/logs/search_logs.jsonl';
-        $list = [];
-        if (is_file($file)) {
-            foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-                $decoded = json_decode($line, true);
-                if (is_array($decoded)) {
-                    $list[] = $decoded;
-                }
-            }
-        }
-        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
+        $query = AdminQuery::parse($request->all());
+        return ApiResponse::success((new SearchLogAdminService())->getList($query));
     }
 }
