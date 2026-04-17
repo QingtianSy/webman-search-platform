@@ -2,19 +2,23 @@
 
 namespace app\controller\user;
 
+use app\common\CurrentUser;
 use app\repository\mysql\SubscriptionRepository;
 use app\repository\mysql\WalletRepository;
 use support\ApiResponse;
+use support\Request;
 
 class BillingController
 {
-    public function wallet()
+    public function wallet(Request $request)
     {
-        return ApiResponse::success((new WalletRepository())->findByUserId(1));
+        $userId = CurrentUser::id($request);
+        return ApiResponse::success((new WalletRepository())->findByUserId($userId));
     }
 
-    public function currentPlan()
+    public function currentPlan(Request $request)
     {
-        return ApiResponse::success((new SubscriptionRepository())->findCurrentByUserId(1));
+        $userId = CurrentUser::id($request);
+        return ApiResponse::success((new SubscriptionRepository())->findCurrentByUserId($userId));
     }
 }

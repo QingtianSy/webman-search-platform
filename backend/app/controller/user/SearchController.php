@@ -2,6 +2,7 @@
 
 namespace app\controller\user;
 
+use app\common\CurrentUser;
 use app\service\quota\QuotaService;
 use app\service\search\SearchLogService;
 use app\service\search\SearchService;
@@ -13,7 +14,8 @@ class SearchController
 {
     public function query(Request $request)
     {
-                $payload = [
+        $userId = CurrentUser::id($request);
+        $payload = [
             'q' => (string) $request->input('q', ''),
             'info' => (string) $request->input('info', ''),
             'split' => (string) $request->input('split', '###'),
@@ -25,15 +27,16 @@ class SearchController
         }
 
         $quotaService = new QuotaService();
-        $remainQuota = $quotaService->getUserQuota(1);
+        $remainQuota = $quotaService->getUserQuota($userId);
         if ($remainQuota <= 0) {
             return ApiResponse::error(40006, '额度不足');
         }
 
         $searchService = new SearchService();
         $result = $searchService->query($payload['q'], $payload['info'], $payload['split']);
-        $quotaService->consume(1, 1);
+        $quotaService->consume($userId, 1);
         $log = (new SearchLogService())->create([
+            'user_id' => $userId,
             'keyword' => $payload['q'],
             'request' => $payload,
             'result' => $result,
