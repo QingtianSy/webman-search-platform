@@ -2,15 +2,13 @@
 
 namespace app\controller\admin;
 
-use app\repository\mysql\MenuRepository;
+use app\service\admin\MenuAdminService;
 use support\ApiResponse;
-use support\Pagination;
 
 class MenuController
 {
     public function index()
     {
-        $list = (new MenuRepository())->all();
-        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
+        return ApiResponse::success((new MenuAdminService())->getList());
     }
 }

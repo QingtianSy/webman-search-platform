@@ -2,15 +2,13 @@
 
 namespace app\controller\admin;
 
-use app\repository\mysql\PermissionRepository;
+use app\service\admin\PermissionAdminService;
 use support\ApiResponse;
-use support\Pagination;
 
 class PermissionController
 {
     public function index()
     {
-        $list = (new PermissionRepository())->all();
-        return ApiResponse::success(Pagination::format($list, count($list), 1, 20));
+        return ApiResponse::success((new PermissionAdminService())->getList());
     }
 }

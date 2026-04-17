@@ -2,21 +2,13 @@
 
 namespace app\controller\admin;
 
+use app\service\admin\UserAdminService;
 use support\ApiResponse;
-use support\Pagination;
 
 class UserController
 {
     public function index()
     {
-        $users = [];
-        foreach (['demo_user', 'admin'] as $username) {
-            $row = (new \app\repository\mysql\UserRepository())->findByUsername($username);
-            if ($row) {
-                unset($row['password']);
-                $users[] = $row;
-            }
-        }
-        return ApiResponse::success(Pagination::format($users, count($users), 1, 20));
+        return ApiResponse::success((new UserAdminService())->getList());
     }
 }
