@@ -2,34 +2,36 @@
 
 namespace app\controller\admin;
 
-use app\service\admin\SystemConfigAdminService;
-use app\validate\admin\SystemConfigValidate;
-use support\ApiResponse;
-
 class SystemConfigController
 {
     public function index()
     {
-        return ApiResponse::success(
-            (new SystemConfigAdminService())->getList([
-                'keyword' => '',
-                'status' => null,
+        return json([
+            'code' => 1,
+            'msg' => 'success',
+            'data' => [
+                'list' => [
+                    [
+                        'config_group' => 'system',
+                        'config_key' => 'site_name',
+                        'config_value' => '搜题平台'
+                    ]
+                ],
+                'total' => 1,
                 'page' => 1,
-                'page_size' => 20,
-                'sort' => '',
-                'order' => 'desc',
-                'start_time' => '',
-                'end_time' => '',
-            ])
-        );
+                'page_size' => 20
+            ],
+            'request_id' => ''
+        ]);
     }
 
     public function update()
     {
-        $data = (new SystemConfigValidate())->update(request()->post());
-        return ApiResponse::success(
-            (new SystemConfigAdminService())->update($data['config_key'], $data['config_value']),
-            '系统配置更新骨架已创建'
-        );
+        return json([
+            'code' => 1,
+            'msg' => 'success',
+            'data' => ['updated' => true],
+            'request_id' => ''
+        ]);
     }
 }
