@@ -6,6 +6,7 @@ use app\common\admin\AdminListBuilder;
 use app\common\admin\AdminSort;
 use app\common\admin\AdminStatusFilter;
 use app\common\admin\AdminTimeRange;
+use app\model\admin\Announcement;
 use app\repository\mysql\AnnouncementRepository;
 
 class AnnouncementAdminService
@@ -13,6 +14,13 @@ class AnnouncementAdminService
     public function getList(array $query = []): array
     {
         $query += ['keyword' => '', 'status' => null, 'page' => 1, 'page_size' => 20, 'sort' => '', 'order' => 'desc', 'start_time' => '', 'end_time' => ''];
+        return config('integration.config_source', 'mock') === 'real'
+            ? $this->getListReal($query)
+            : $this->getListMock($query);
+    }
+
+    protected function getListMock(array $query): array
+    {
         $keyword = trim((string) $query['keyword']);
         $page = (int) $query['page'];
         $pageSize = (int) $query['page_size'];
@@ -41,6 +49,41 @@ class AnnouncementAdminService
             });
         }
         return AdminListBuilder::make($list, $page, $pageSize);
+    }
+
+    protected function getListReal(array $query): array
+    {
+        $page = (int) $query['page'];
+        $pageSize = (int) $query['page_size'];
+        $keyword = trim((string) $query['keyword']);
+        $status = $query['status'];
+        [$sort, $order] = AdminSort::parse($query);
+        $range = AdminTimeRange::parse($query);
+
+        $sortable = ['id', 'title', 'status', 'created_at', 'updated_at'];
+        if (!in_array($sort, $sortable, true)) {
+            $sort = 'id';
+        }
+
+        $builder = Announcement::query();
+        if ($keyword !== '') {
+            $builder->where(function ($q) use ($keyword) {
+                $q->where('title', 'like', "%{$keyword}%")
+                  ->orWhere('content', 'like', "%{$keyword}%");
+            });
+        }
+        if ($status !== null && $status !== '' && $status !== 'all') {
+            $builder->where('status', $status);
+        }
+        if ($range['start_time'] !== '') {
+            $builder->where('created_at', '>=', $range['start_time']);
+        }
+        if ($range['end_time'] !== '') {
+            $builder->where('created_at', '<=', $range['end_time']);
+        }
+        $total = $builder->count();
+        $list = $builder->orderBy($sort, $order)->forPage($page, $pageSize)->get()->toArray();
+        return AdminListBuilder::make($list, $page, $pageSize) + ['total' => $total];
     }
 
     public function create(array $data): array
