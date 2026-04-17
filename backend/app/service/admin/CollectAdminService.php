@@ -10,9 +10,18 @@ class CollectAdminService
 {
     public function getList(array $query = []): array
     {
-        $page = $query['page'] ?? 1;
-        $pageSize = $query['page_size'] ?? 20;
+        $query += ['keyword' => '', 'page' => 1, 'page_size' => 20];
+        $keyword = trim((string) $query['keyword']);
+        $page = (int) $query['page'];
+        $pageSize = (int) $query['page_size'];
+
         $list = (new CollectTaskRepository())->listByUserId(1);
+        if ($keyword !== '') {
+            $list = array_values(array_filter($list, function ($row) use ($keyword) {
+                return str_contains((string) ($row['task_no'] ?? ''), $keyword)
+                    || str_contains((string) ($row['type'] ?? ''), $keyword);
+            }));
+        }
         return AdminListBuilder::make($list, $page, $pageSize);
     }
 
