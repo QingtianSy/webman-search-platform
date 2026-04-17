@@ -2,6 +2,7 @@
 
 namespace app\controller\admin;
 
+use app\common\admin\AdminId;
 use app\service\admin\DocAdminService;
 use app\validate\admin\DocValidate;
 use support\ApiResponse;
@@ -28,7 +29,7 @@ class DocManageController
 
     public function delete(Request $request)
     {
-        $id = (int) $request->input('id', 0);
+        $id = AdminId::parse($request->all(), 'id', '文档ID');
         return ApiResponse::success((new DocAdminService())->delete($id), '文档删除骨架已创建');
     }
 }

@@ -2,6 +2,7 @@
 
 namespace app\controller\admin;
 
+use app\common\admin\AdminId;
 use app\service\admin\AnnouncementAdminService;
 use app\validate\admin\AnnouncementValidate;
 use support\ApiResponse;
@@ -28,7 +29,7 @@ class AnnouncementController
 
     public function delete(Request $request)
     {
-        $id = (int) $request->input('id', 0);
+        $id = AdminId::parse($request->all(), 'id', '公告ID');
         return ApiResponse::success((new AnnouncementAdminService())->delete($id), '公告删除骨架已创建');
     }
 }
