@@ -8,9 +8,10 @@
 - `DocValidate`
 - `ApiKeyValidate`
 - `LogQueryValidate`
+- `DashboardValidate`
 
 ## 目标
-让用户端模块也逐步形成：
+让用户端模块逐步形成：
 - controller
 - validate
 - service
