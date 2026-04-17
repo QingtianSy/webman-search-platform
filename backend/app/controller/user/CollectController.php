@@ -8,6 +8,7 @@ use app\common\user\UserQuery;
 use app\repository\mysql\CollectAccountRepository;
 use app\repository\mysql\CollectTaskDetailRepository;
 use app\repository\mysql\CollectTaskRepository;
+use app\validate\user\CollectValidate;
 use support\ApiResponse;
 use support\Request;
 
@@ -31,7 +32,7 @@ class CollectController
 
     public function detail(Request $request)
     {
-        $taskNo = (string) $request->input('task_no', '');
+        $taskNo = (new CollectValidate())->taskNo($request->all());
         return ApiResponse::success((new CollectTaskDetailRepository())->findByTaskNo($taskNo));
     }
 }

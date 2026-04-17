@@ -7,6 +7,7 @@ use app\common\user\UserQuery;
 use app\repository\mysql\DocArticleRepository;
 use app\repository\mysql\DocCategoryRepository;
 use app\repository\mysql\DocConfigRepository;
+use app\validate\user\DocValidate;
 use support\ApiResponse;
 use support\Request;
 
@@ -21,7 +22,7 @@ class DocController
 
     public function detail(Request $request)
     {
-        $slug = (string) $request->input('slug', '');
+        $slug = (new DocValidate())->slug($request->all());
         return ApiResponse::success((new DocArticleRepository())->findBySlug($slug));
     }
 
