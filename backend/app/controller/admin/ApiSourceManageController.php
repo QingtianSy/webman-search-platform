@@ -2,6 +2,7 @@
 
 namespace app\controller\admin;
 
+use app\common\admin\AdminQuery;
 use app\service\admin\ApiSourceAdminService;
 use app\validate\admin\ApiSourceValidate;
 use support\ApiResponse;
@@ -9,9 +10,10 @@ use support\Request;
 
 class ApiSourceManageController
 {
-    public function index()
+    public function index(Request $request)
     {
-        return ApiResponse::success((new ApiSourceAdminService())->getList());
+        $query = AdminQuery::parse($request->all());
+        return ApiResponse::success((new ApiSourceAdminService())->getList($query));
     }
 
     public function detail(Request $request)

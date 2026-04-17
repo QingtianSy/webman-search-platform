@@ -2,6 +2,7 @@
 
 namespace app\controller\admin;
 
+use app\common\admin\AdminQuery;
 use app\service\admin\SystemConfigAdminService;
 use app\validate\admin\SystemConfigValidate;
 use support\ApiResponse;
@@ -9,9 +10,10 @@ use support\Request;
 
 class SystemConfigController
 {
-    public function index()
+    public function index(Request $request)
     {
-        return ApiResponse::success((new SystemConfigAdminService())->getList());
+        $query = AdminQuery::parse($request->all());
+        return ApiResponse::success((new SystemConfigAdminService())->getList($query));
     }
 
     public function update(Request $request)

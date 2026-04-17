@@ -2,15 +2,17 @@
 
 namespace app\service\admin;
 
-use app\repository\mysql\DocArticleRepository;
 use app\common\admin\AdminListBuilder;
+use app\repository\mysql\DocArticleRepository;
 
 class DocAdminService
 {
-    public function getList(): array
+    public function getList(array $query = []): array
     {
+        $page = $query['page'] ?? 1;
+        $pageSize = $query['page_size'] ?? 20;
         $list = (new DocArticleRepository())->all();
-        return AdminListBuilder::make($list);
+        return AdminListBuilder::make($list, $page, $pageSize);
     }
 
     public function create(array $data): array

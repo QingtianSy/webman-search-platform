@@ -2,15 +2,17 @@
 
 namespace app\service\admin;
 
-use app\repository\mysql\AnnouncementRepository;
 use app\common\admin\AdminListBuilder;
+use app\repository\mysql\AnnouncementRepository;
 
 class AnnouncementAdminService
 {
-    public function getList(): array
+    public function getList(array $query = []): array
     {
+        $page = $query['page'] ?? 1;
+        $pageSize = $query['page_size'] ?? 20;
         $list = (new AnnouncementRepository())->latest();
-        return AdminListBuilder::make($list);
+        return AdminListBuilder::make($list, $page, $pageSize);
     }
 
     public function create(array $data): array

@@ -2,16 +2,18 @@
 
 namespace app\service\admin;
 
+use app\common\admin\AdminListBuilder;
 use app\repository\mysql\CollectTaskDetailRepository;
 use app\repository\mysql\CollectTaskRepository;
-use app\common\admin\AdminListBuilder;
 
 class CollectAdminService
 {
-    public function getList(): array
+    public function getList(array $query = []): array
     {
+        $page = $query['page'] ?? 1;
+        $pageSize = $query['page_size'] ?? 20;
         $list = (new CollectTaskRepository())->listByUserId(1);
-        return AdminListBuilder::make($list);
+        return AdminListBuilder::make($list, $page, $pageSize);
     }
 
     public function detail(string $taskNo): array

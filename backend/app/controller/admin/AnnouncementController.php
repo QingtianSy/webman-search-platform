@@ -3,6 +3,7 @@
 namespace app\controller\admin;
 
 use app\common\admin\AdminId;
+use app\common\admin\AdminQuery;
 use app\service\admin\AnnouncementAdminService;
 use app\validate\admin\AnnouncementValidate;
 use support\ApiResponse;
@@ -10,9 +11,10 @@ use support\Request;
 
 class AnnouncementController
 {
-    public function index()
+    public function index(Request $request)
     {
-        return ApiResponse::success((new AnnouncementAdminService())->getList());
+        $query = AdminQuery::parse($request->all());
+        return ApiResponse::success((new AnnouncementAdminService())->getList($query));
     }
 
     public function create(Request $request)

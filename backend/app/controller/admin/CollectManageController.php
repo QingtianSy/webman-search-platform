@@ -2,6 +2,7 @@
 
 namespace app\controller\admin;
 
+use app\common\admin\AdminQuery;
 use app\service\admin\CollectAdminService;
 use app\validate\admin\CollectTaskValidate;
 use support\ApiResponse;
@@ -9,9 +10,10 @@ use support\Request;
 
 class CollectManageController
 {
-    public function tasks()
+    public function tasks(Request $request)
     {
-        return ApiResponse::success((new CollectAdminService())->getList());
+        $query = AdminQuery::parse($request->all());
+        return ApiResponse::success((new CollectAdminService())->getList($query));
     }
 
     public function detail(Request $request)
