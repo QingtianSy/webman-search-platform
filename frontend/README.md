@@ -1,22 +1,16 @@
 # frontend
 
-当前 `frontend/` 已切换为：
-# **官方 Vben Admin 完整基座（monorepo）**
+当前 `frontend/` 已切换为官方 Vben 完整基座。
 
-## 当前状态
-- `frontend-legacy/`：保留此前自研前端实现，作为业务页面迁移参考
-- `frontend/`：采用官方 Vben 仓库完整结构
+## 当前阶段
+已进入 **前端迁移执行准备阶段**：
+- `frontend-legacy/` 保留为旧前端参考
+- 新主前端为 `frontend/`
+- 已建立迁移映射：优先迁移登录、认证、布局、菜单、dashboard
 
-## 后续策略
-1. 不再继续迭代 `frontend-legacy/`
-2. 在新的官方 Vben 基座上逐步迁移我们的业务：
-   - 登录
-   - dashboard
-   - question
-   - logs
-   - api-key
-   - billing
-   - docs
-   - collect
-   - admin pages
-3. 迁移过程中优先保持后端接口不变
+## 当前建议
+不要再修改 `frontend-legacy/` 的功能，后续以 `frontend/` 为主进行前端开发。
+
+## 关键文档
+- `project-docs/51-frontend-official-rebuild.md`
+- `project-docs/52-frontend-migration-map.md`
