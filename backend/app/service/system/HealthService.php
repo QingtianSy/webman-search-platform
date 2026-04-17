@@ -2,11 +2,6 @@
 
 namespace app\service\system;
 
-use support\adapter\ElasticsearchClient;
-use support\adapter\MongoClient;
-use support\adapter\MySqlClient;
-use support\adapter\RedisClient;
-
 class HealthService
 {
     public function detail(): array
@@ -14,14 +9,14 @@ class HealthService
         return [
             'app' => [
                 'name' => config('app.name', 'webman-search-platform'),
-                'env' => config('app.env', 'dev'),
-                'debug' => (bool) config('app.debug', true),
+                'env' => config('app.env', 'prod'),
+                'debug' => (bool) config('app.debug', false),
             ],
             'services' => [
-                'mysql' => MySqlClient::isConfigured(),
-                'redis' => RedisClient::isConfigured(),
-                'mongodb' => MongoClient::isConfigured(),
-                'elasticsearch' => ElasticsearchClient::isConfigured(),
+                'mysql' => 'skipped',
+                'redis' => 'skipped',
+                'mongodb' => 'skipped',
+                'elasticsearch' => 'skipped',
             ],
         ];
     }
