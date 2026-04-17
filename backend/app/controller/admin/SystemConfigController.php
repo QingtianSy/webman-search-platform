@@ -2,36 +2,26 @@
 
 namespace app\controller\admin;
 
+use app\service\admin\SystemConfigAdminService;
+use app\validate\admin\AdminQueryValidate;
+use app\validate\admin\SystemConfigValidate;
+use support\ApiResponse;
+use support\Request;
+
 class SystemConfigController
 {
-    public function index()
+    public function index(Request $request)
     {
-        return json([
-            'code' => 1,
-            'msg' => 'success',
-            'data' => [
-                'list' => [
-                    [
-                        'config_group' => 'system',
-                        'config_key' => 'site_name',
-                        'config_value' => '搜题平台'
-                    ]
-                ],
-                'total' => 1,
-                'page' => 1,
-                'page_size' => 20
-            ],
-            'request_id' => ''
-        ]);
+        $query = (new AdminQueryValidate())->list($request->get());
+        return ApiResponse::success((new SystemConfigAdminService())->getList($query));
     }
 
-    public function update()
+    public function update(Request $request)
     {
-        return json([
-            'code' => 1,
-            'msg' => 'success',
-            'data' => ['updated' => true],
-            'request_id' => ''
-        ]);
+        $data = (new SystemConfigValidate())->update($request->post());
+        return ApiResponse::success(
+            (new SystemConfigAdminService())->update($data['config_key'], $data['config_value']),
+            '系统配置更新骨架已创建'
+        );
     }
 }
