@@ -58,6 +58,15 @@ class SystemConfigAdminService
 
     public function update(string $key, string $value): array
     {
+        if (config('integration.config_source', 'mock') === 'real') {
+            $row = SystemConfig::query()->where('config_key', $key)->first();
+            if (!$row) {
+                return [];
+            }
+            $row->config_value = $value;
+            $row->save();
+            return $row->toArray();
+        }
         return (new SystemConfigRepository())->updateByKey($key, $value);
     }
 }

@@ -88,16 +88,38 @@ class AnnouncementAdminService
 
     public function create(array $data): array
     {
+        if (config('integration.config_source', 'mock') === 'real') {
+            $row = new Announcement();
+            $row->fill($data);
+            $row->save();
+            return $row->toArray();
+        }
         return (new AnnouncementRepository())->create($data);
     }
 
     public function update(int $id, array $data): array
     {
+        if (config('integration.config_source', 'mock') === 'real') {
+            $row = Announcement::query()->find($id);
+            if (!$row) {
+                return [];
+            }
+            $row->fill($data);
+            $row->save();
+            return $row->toArray();
+        }
         return (new AnnouncementRepository())->update($id, $data);
     }
 
     public function delete(int $id): array
     {
+        if (config('integration.config_source', 'mock') === 'real') {
+            $row = Announcement::query()->find($id);
+            if ($row) {
+                $row->delete();
+            }
+            return ['deleted' => true, 'id' => $id];
+        }
         return ['deleted' => true, 'id' => $id];
     }
 }
