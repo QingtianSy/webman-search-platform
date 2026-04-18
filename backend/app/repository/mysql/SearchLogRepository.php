@@ -7,31 +7,7 @@ use support\adapter\MySqlClient;
 
 class SearchLogRepository
 {
-    protected string $file;
-
-    public function __construct()
-    {
-        $this->file = dirname(__DIR__, 3) . '/storage/logs/search_logs.jsonl';
-    }
-
     public function create(array $data): bool
-    {
-        return config('integration.log_source', 'mock') === 'real'
-            ? $this->createReal($data)
-            : $this->createMock($data);
-    }
-
-    protected function createMock(array $data): bool
-    {
-        $dir = dirname($this->file);
-        if (!is_dir($dir)) {
-            mkdir($dir, 0777, true);
-        }
-        $line = json_encode($data, JSON_UNESCAPED_UNICODE) . PHP_EOL;
-        return file_put_contents($this->file, $line, FILE_APPEND | LOCK_EX) !== false;
-    }
-
-    protected function createReal(array $data): bool
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
@@ -52,7 +28,7 @@ class SearchLogRepository
                 'cost_ms' => $data['cost_ms'] ?? 0,
             ]);
         } catch (\PDOException $e) {
-            error_log("[SearchLogRepository] createReal failed: " . $e->getMessage());
+            error_log("[SearchLogRepository] create failed: " . $e->getMessage());
             return false;
         }
     }

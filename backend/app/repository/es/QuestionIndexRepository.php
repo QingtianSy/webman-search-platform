@@ -9,19 +9,8 @@ use support\adapter\ElasticsearchClient;
 class QuestionIndexRepository
 {
     protected static ?Client $client = null;
+
     public function search(string $keyword): array
-    {
-        return config('integration.question_source', 'mock') === 'real'
-            ? $this->searchReal($keyword)
-            : $this->searchMock($keyword);
-    }
-
-    protected function searchMock(string $keyword): array
-    {
-        return [];
-    }
-
-    protected function searchReal(string $keyword): array
     {
         if (!ElasticsearchClient::isConfigured() || trim($keyword) === '') {
             return [];
@@ -52,7 +41,7 @@ class QuestionIndexRepository
                 ];
             }, $hits);
         } catch (Throwable $e) {
-            error_log("[QuestionIndexRepository] searchReal failed: " . $e->getMessage());
+            error_log("[QuestionIndexRepository] search failed: " . $e->getMessage());
             return [];
         }
     }

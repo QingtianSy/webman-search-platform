@@ -25,34 +25,6 @@ class ApiKeyService
 
     public function create(int $userId, string $appName): array
     {
-        return config('integration.user_center_source', 'mock') === 'real'
-            ? $this->createReal($userId, $appName)
-            : $this->createMock($userId, $appName);
-    }
-
-    protected function createMock(int $userId, string $appName): array
-    {
-        $apiKey = 'ak_' . bin2hex(random_bytes(16));
-        $apiSecret = 'sk_' . bin2hex(random_bytes(24));
-        $row = [
-            'id' => time(),
-            'user_id' => $userId,
-            'app_name' => $appName !== '' ? $appName : '新应用',
-            'api_key' => $apiKey,
-            'api_secret' => $apiSecret,
-            'status' => 1,
-            'expire_at' => null,
-            'created_at' => date('Y-m-d H:i:s'),
-        ];
-        $file = base_path() . '/storage/mock/api_keys.json';
-        $rows = is_file($file) ? (json_decode(file_get_contents($file), true) ?: []) : [];
-        $rows[] = $row;
-        file_put_contents($file, json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX);
-        return $row;
-    }
-
-    protected function createReal(int $userId, string $appName): array
-    {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
             return [];
@@ -78,7 +50,7 @@ class ApiKeyService
                 'created_at' => date('Y-m-d H:i:s'),
             ];
         } catch (\PDOException $e) {
-            error_log("[ApiKeyService] createReal failed: " . $e->getMessage());
+            error_log("[ApiKeyService] create failed: " . $e->getMessage());
             return [];
         }
     }

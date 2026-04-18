@@ -1,4 +1,0 @@
-[
-  {"id": 1, "parent_id": 0, "name": "政治", "code": "politics", "sort": 1, "status": 1},
-  {"id": 2, "parent_id": 0, "name": "计算机", "code": "computer", "sort": 2, "status": 1}
-]

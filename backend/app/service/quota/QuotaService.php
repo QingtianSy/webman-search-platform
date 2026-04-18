@@ -10,22 +10,6 @@ class QuotaService
 {
     public function getUserQuota(int $userId): int
     {
-        if (config('integration.log_source', 'mock') === 'real') {
-            return $this->getUserQuotaReal($userId);
-        }
-        return 1000;
-    }
-
-    public function consume(int $userId, int $amount = 1): bool
-    {
-        if (config('integration.log_source', 'mock') === 'real') {
-            return $this->consumeReal($userId, $amount);
-        }
-        return $amount > 0;
-    }
-
-    protected function getUserQuotaReal(int $userId): int
-    {
         $cache = new QuotaCacheRepository();
         $cached = $cache->getUserQuota($userId);
         if ($cached >= 0) {
@@ -51,12 +35,12 @@ class QuotaService
             $cache->setUserQuota($userId, $quota);
             return $quota;
         } catch (\PDOException $e) {
-            error_log("[QuotaService] getUserQuotaReal failed: " . $e->getMessage());
+            error_log("[QuotaService] getUserQuota failed: " . $e->getMessage());
             return 0;
         }
     }
 
-    protected function consumeReal(int $userId, int $amount): bool
+    public function consume(int $userId, int $amount = 1): bool
     {
         if ($amount <= 0) {
             return false;
@@ -83,7 +67,7 @@ class QuotaService
             }
             return $ok;
         } catch (\PDOException $e) {
-            error_log("[QuotaService] consumeReal failed: " . $e->getMessage());
+            error_log("[QuotaService] consume failed: " . $e->getMessage());
             $cache->deleteUserQuota($userId);
             return false;
         }

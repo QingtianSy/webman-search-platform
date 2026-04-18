@@ -4,7 +4,6 @@ namespace app\service\admin;
 
 use app\common\admin\AdminListBuilder;
 use app\common\admin\AdminSort;
-use app\common\admin\AdminStatusFilter;
 use app\common\admin\AdminTimeRange;
 use app\model\admin\Announcement;
 use app\repository\mysql\AnnouncementRepository;
@@ -14,45 +13,6 @@ class AnnouncementAdminService
     public function getList(array $query = []): array
     {
         $query += ['keyword' => '', 'status' => null, 'page' => 1, 'page_size' => 20, 'sort' => '', 'order' => 'desc', 'start_time' => '', 'end_time' => ''];
-        return config('integration.config_source', 'mock') === 'real'
-            ? $this->getListReal($query)
-            : $this->getListMock($query);
-    }
-
-    protected function getListMock(array $query): array
-    {
-        $keyword = trim((string) $query['keyword']);
-        $page = (int) $query['page'];
-        $pageSize = (int) $query['page_size'];
-        [$sort, $order] = AdminSort::parse($query);
-        $range = AdminTimeRange::parse($query);
-
-        $list = (new AnnouncementRepository())->latest();
-        if ($keyword !== '') {
-            $list = array_values(array_filter($list, function ($row) use ($keyword) {
-                return str_contains((string) ($row['title'] ?? ''), $keyword)
-                    || str_contains((string) ($row['content'] ?? ''), $keyword);
-            }));
-        }
-        $list = AdminStatusFilter::apply($list, $query['status']);
-        if ($range['start_time'] !== '') {
-            $list = array_values(array_filter($list, fn($row) => (string)($row['created_at'] ?? '') >= $range['start_time']));
-        }
-        if ($range['end_time'] !== '') {
-            $list = array_values(array_filter($list, fn($row) => (string)($row['created_at'] ?? '') <= $range['end_time']));
-        }
-        if ($sort !== '') {
-            usort($list, function ($a, $b) use ($sort, $order) {
-                $av = $a[$sort] ?? null;
-                $bv = $b[$sort] ?? null;
-                return $order === 'asc' ? ($av <=> $bv) : ($bv <=> $av);
-            });
-        }
-        return AdminListBuilder::make($list, $page, $pageSize);
-    }
-
-    protected function getListReal(array $query): array
-    {
         $page = (int) $query['page'];
         $pageSize = (int) $query['page_size'];
         $keyword = trim((string) $query['keyword']);
@@ -88,41 +48,29 @@ class AnnouncementAdminService
 
     public function create(array $data): array
     {
-        if (config('integration.config_source', 'mock') === 'real') {
-            $row = new Announcement();
-            $row->fill($data);
-            $row->save();
-            return ['success' => true, 'action' => 'create', 'id' => $row->id, 'data' => $row->toArray()];
-        }
-        $row = (new AnnouncementRepository())->create($data);
-        return ['success' => true, 'action' => 'create', 'id' => $row['id'] ?? null, 'data' => $row];
+        $row = new Announcement();
+        $row->fill($data);
+        $row->save();
+        return ['success' => true, 'action' => 'create', 'id' => $row->id, 'data' => $row->toArray()];
     }
 
     public function update(int $id, array $data): array
     {
-        if (config('integration.config_source', 'mock') === 'real') {
-            $row = Announcement::query()->find($id);
-            if (!$row) {
-                return [];
-            }
-            $row->fill($data);
-            $row->save();
-            return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];
+        $row = Announcement::query()->find($id);
+        if (!$row) {
+            return [];
         }
-        $row = (new AnnouncementRepository())->update($id, $data);
-        return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row];
+        $row->fill($data);
+        $row->save();
+        return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];
     }
 
     public function delete(int $id): array
     {
-        if (config('integration.config_source', 'mock') === 'real') {
-            $row = Announcement::query()->find($id);
-            if ($row) {
-                $row->delete();
-            }
-            return ['success' => true, 'action' => 'delete', 'id' => $id];
+        $row = Announcement::query()->find($id);
+        if ($row) {
+            $row->delete();
         }
-        (new AnnouncementRepository())->delete($id);
         return ['success' => true, 'action' => 'delete', 'id' => $id];
     }
 }

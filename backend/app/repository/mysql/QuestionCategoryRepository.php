@@ -7,30 +7,7 @@ use support\adapter\MySqlClient;
 
 class QuestionCategoryRepository
 {
-    protected string $file;
-
-    public function __construct()
-    {
-        $this->file = dirname(__DIR__, 3) . '/storage/mock/question_categories.json';
-    }
-
     public function all(): array
-    {
-        return config('integration.question_source', 'mock') === 'real'
-            ? $this->allReal()
-            : $this->allMock();
-    }
-
-    protected function allMock(): array
-    {
-        if (!is_file($this->file)) {
-            return [];
-        }
-        $rows = json_decode((string) file_get_contents($this->file), true);
-        return is_array($rows) ? $rows : [];
-    }
-
-    protected function allReal(): array
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
@@ -40,7 +17,7 @@ class QuestionCategoryRepository
             $stmt = $pdo->query('SELECT id, parent_id, name, sort, status, created_at, updated_at FROM question_categories ORDER BY sort ASC, id ASC');
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {
-            error_log("[QuestionCategoryRepository] allReal failed: " . $e->getMessage());
+            error_log("[QuestionCategoryRepository] all failed: " . $e->getMessage());
             return [];
         }
     }

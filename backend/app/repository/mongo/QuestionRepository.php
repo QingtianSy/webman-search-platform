@@ -12,30 +12,8 @@ class QuestionRepository
         '判断题' => ['code' => 'judgement',   'name' => '判断题'],
         '填空题' => ['code' => 'completion', 'name' => '填空题'],
     ];
-    protected string $file;
-
-    public function __construct()
-    {
-        $this->file = dirname(__DIR__, 3) . '/storage/mock/questions.json';
-    }
 
     protected function all(): array
-    {
-        return config('integration.question_source', 'mock') === 'real'
-            ? $this->allReal()
-            : $this->allMock();
-    }
-
-    protected function allMock(): array
-    {
-        if (!is_file($this->file)) {
-            return [];
-        }
-        $rows = json_decode((string) file_get_contents($this->file), true);
-        return is_array($rows) ? $rows : [];
-    }
-
-    protected function allReal(): array
     {
         $db = MongoClient::connection();
         if (!$db) {
@@ -52,30 +30,12 @@ class QuestionRepository
             }
             return $rows;
         } catch (\Throwable $e) {
-            error_log("[QuestionRepository] allReal failed: " . $e->getMessage());
+            error_log("[QuestionRepository] all failed: " . $e->getMessage());
             return [];
         }
     }
 
-    protected function saveAll(array $rows): void
-    {
-        file_put_contents($this->file, json_encode(array_values($rows), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX);
-    }
-
     public function findByQuestionId(int $questionId): array
-    {
-        if (config('integration.question_source', 'mock') === 'real') {
-            return $this->findByQuestionIdReal($questionId);
-        }
-        foreach ($this->allMock() as $row) {
-            if ((int) ($row['question_id'] ?? 0) === $questionId) {
-                return $row;
-            }
-        }
-        return [];
-    }
-
-    protected function findByQuestionIdReal(int $questionId): array
     {
         $db = MongoClient::connection();
         if (!$db) {
@@ -85,22 +45,12 @@ class QuestionRepository
             $doc = $db->selectCollection('questions')->findOne(['question_id' => $questionId]);
             return $doc ? $this->docToArray($doc) : [];
         } catch (\Throwable $e) {
-            error_log("[QuestionRepository] findByQuestionIdReal failed: " . $e->getMessage());
+            error_log("[QuestionRepository] findByQuestionId failed: " . $e->getMessage());
             return [];
         }
     }
 
     public function findByQuestionIds(array $questionIds): array
-    {
-        if (config('integration.question_source', 'mock') === 'real') {
-            return $this->findByQuestionIdsReal($questionIds);
-        }
-        $rows = $this->allMock();
-        $idSet = array_flip($questionIds);
-        return array_values(array_filter($rows, fn ($row) => isset($idSet[(int) ($row['question_id'] ?? 0)])));
-    }
-
-    protected function findByQuestionIdsReal(array $questionIds): array
     {
         $db = MongoClient::connection();
         if (!$db) {
@@ -116,27 +66,12 @@ class QuestionRepository
             }
             return $rows;
         } catch (\Throwable $e) {
-            error_log("[QuestionRepository] findByQuestionIdsReal failed: " . $e->getMessage());
+            error_log("[QuestionRepository] findByQuestionIds failed: " . $e->getMessage());
             return [];
         }
     }
 
     public function findList(array $filters = []): array
-    {
-        if (config('integration.question_source', 'mock') === 'real') {
-            return $this->findListReal($filters);
-        }
-        $rows = $this->allMock();
-        $stem = trim((string) ($filters['stem'] ?? ''));
-        if ($stem === '') {
-            return $rows;
-        }
-        return array_values(array_filter($rows, function ($row) use ($stem) {
-            return str_contains((string) ($row['stem'] ?? ''), $stem);
-        }));
-    }
-
-    protected function findListReal(array $filters = []): array
     {
         $db = MongoClient::connection();
         if (!$db) {
@@ -158,45 +93,12 @@ class QuestionRepository
             }
             return $rows;
         } catch (\Throwable $e) {
-            error_log("[QuestionRepository] findListReal failed: " . $e->getMessage());
+            error_log("[QuestionRepository] findList failed: " . $e->getMessage());
             return [];
         }
     }
 
     public function search(string $keyword): array
-    {
-        if (config('integration.question_source', 'mock') === 'real') {
-            return $this->searchReal($keyword);
-        }
-        return $this->searchMock($keyword);
-    }
-
-    protected function searchMock(string $keyword): array
-    {
-        $keyword = trim($keyword);
-        if ($keyword === '') {
-            return [];
-        }
-        $result = [];
-        foreach ($this->allMock() as $row) {
-            $haystacks = [
-                (string) ($row['stem'] ?? ''),
-                (string) ($row['answer_text'] ?? ''),
-                implode(' ', array_map(fn ($item) => (string) ($item['text'] ?? ''), $row['options'] ?? [])),
-                implode(' ', $row['keywords'] ?? []),
-            ];
-            foreach ($haystacks as $text) {
-                if ($text !== '' && str_contains($text, $keyword)) {
-                    $row['score'] = 100;
-                    $result[] = $row;
-                    break;
-                }
-            }
-        }
-        return $result;
-    }
-
-    protected function searchReal(string $keyword): array
     {
         $db = MongoClient::connection();
         if (!$db) {
@@ -221,28 +123,12 @@ class QuestionRepository
             }
             return $rows;
         } catch (\Throwable $e) {
-            error_log("[QuestionRepository] searchReal failed: " . $e->getMessage());
+            error_log("[QuestionRepository] search failed: " . $e->getMessage());
             return [];
         }
     }
 
     public function update(int $questionId, array $data): array
-    {
-        if (config('integration.question_source', 'mock') === 'real') {
-            return $this->updateReal($questionId, $data);
-        }
-        $rows = $this->allMock();
-        foreach ($rows as &$row) {
-            if ((int) ($row['question_id'] ?? 0) === $questionId) {
-                $row = array_merge($row, $data);
-                $this->saveAll($rows);
-                return $row;
-            }
-        }
-        return [];
-    }
-
-    protected function updateReal(int $questionId, array $data): array
     {
         $db = MongoClient::connection();
         if (!$db) {
@@ -254,24 +140,14 @@ class QuestionRepository
                 ['question_id' => $questionId],
                 ['$set' => $data]
             );
-            return $this->findByQuestionIdReal($questionId);
+            return $this->findByQuestionId($questionId);
         } catch (\Throwable $e) {
-            error_log("[QuestionRepository] updateReal failed: " . $e->getMessage());
+            error_log("[QuestionRepository] update failed: " . $e->getMessage());
             return [];
         }
     }
 
     public function delete(int $questionId): bool
-    {
-        if (config('integration.question_source', 'mock') === 'real') {
-            return $this->deleteReal($questionId);
-        }
-        $rows = array_values(array_filter($this->allMock(), fn ($row) => (int) ($row['question_id'] ?? 0) !== $questionId));
-        $this->saveAll($rows);
-        return true;
-    }
-
-    protected function deleteReal(int $questionId): bool
     {
         $db = MongoClient::connection();
         if (!$db) {
@@ -281,7 +157,7 @@ class QuestionRepository
             $result = $db->selectCollection('questions')->deleteOne(['question_id' => $questionId]);
             return $result->getDeletedCount() > 0;
         } catch (\Throwable $e) {
-            error_log("[QuestionRepository] deleteReal failed: " . $e->getMessage());
+            error_log("[QuestionRepository] delete failed: " . $e->getMessage());
             return false;
         }
     }

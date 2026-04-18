@@ -1,4 +1,0 @@
-[
-  {"id": 1, "name": "单选题", "code": "single", "sort": 1, "status": 1},
-  {"id": 2, "name": "多选题", "code": "multiple", "sort": 2, "status": 1}
-]

@@ -7,31 +7,7 @@ use support\adapter\MySqlClient;
 
 class LoginLogRepository
 {
-    protected string $file;
-
-    public function __construct()
-    {
-        $this->file = dirname(__DIR__, 3) . '/storage/mock/login_logs.json';
-    }
-
     public function listByUserId(int $userId): array
-    {
-        return config('integration.log_source', 'mock') === 'real'
-            ? $this->listByUserIdReal($userId)
-            : $this->listByUserIdMock($userId);
-    }
-
-    protected function listByUserIdMock(int $userId): array
-    {
-        if (!is_file($this->file)) {
-            return [];
-        }
-        $rows = json_decode((string) file_get_contents($this->file), true);
-        $rows = is_array($rows) ? $rows : [];
-        return array_values(array_filter($rows, fn ($row) => (int) ($row['user_id'] ?? 0) === $userId));
-    }
-
-    protected function listByUserIdReal(int $userId): array
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
@@ -42,31 +18,12 @@ class LoginLogRepository
             $stmt->execute(['user_id' => $userId]);
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {
-            error_log("[LoginLogRepository] listByUserIdReal failed: " . $e->getMessage());
+            error_log("[LoginLogRepository] listByUserId failed: " . $e->getMessage());
             return [];
         }
     }
 
     public function create(array $data): bool
-    {
-        return config('integration.log_source', 'mock') === 'real'
-            ? $this->createReal($data)
-            : $this->createMock($data);
-    }
-
-    protected function createMock(array $data): bool
-    {
-        if (!is_file($this->file)) {
-            file_put_contents($this->file, '[]', LOCK_EX);
-        }
-        $rows = json_decode((string) file_get_contents($this->file), true) ?: [];
-        $data['id'] = count($rows) + 1;
-        $data['created_at'] = date('Y-m-d H:i:s');
-        $rows[] = $data;
-        return file_put_contents($this->file, json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX) !== false;
-    }
-
-    protected function createReal(array $data): bool
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
@@ -81,7 +38,7 @@ class LoginLogRepository
                 'status' => $data['status'] ?? 1,
             ]);
         } catch (\PDOException $e) {
-            error_log("[LoginLogRepository] createReal failed: " . $e->getMessage());
+            error_log("[LoginLogRepository] create failed: " . $e->getMessage());
             return false;
         }
     }

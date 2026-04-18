@@ -3,7 +3,6 @@
 namespace app\service\search;
 
 use app\repository\es\QuestionIndexRepository;
-use app\repository\mongo\QuestionRepository;
 use app\repository\mongo\SearchLogDetailRepository;
 use app\repository\mysql\SearchLogRepository;
 use app\service\log\LogService;
@@ -14,43 +13,11 @@ class SearchService
 {
     public function query(string $keyword, string $info = '', string $split = '###'): array
     {
-        return config('integration.question_source', 'mock') === 'real'
-            ? $this->queryReal($keyword, $info, $split)
-            : $this->queryMock($keyword, $info, $split);
-    }
-
-    protected function queryMock(string $keyword, string $info = '', string $split = '###'): array
-    {
-        $logService = new LogService();
-        $logService->info('search.query.mock', [
-            'keyword' => $keyword,
-            'info' => $info,
-            'split' => $split,
-        ]);
-
-        $repository = new QuestionRepository();
-        $list = $repository->search($keyword);
-        $hitCount = count($list);
-
-        return [
-            'log_no' => 'SL' . date('YmdHis'),
-            'hit_count' => $hitCount,
-            'consume_quota' => $hitCount > 0 ? 1 : 0,
-            'list' => $list,
-            'keyword' => $keyword,
-            'info' => $info,
-            'split' => $split,
-            'mode' => 'mock',
-        ];
-    }
-
-    protected function queryReal(string $keyword, string $info = '', string $split = '###'): array
-    {
         $logService = new LogService();
         $startMs = (int) (microtime(true) * 1000);
         $logNo = 'SL' . date('YmdHis') . mt_rand(1000, 9999);
 
-        $logService->info('search.query.real', [
+        $logService->info('search.query', [
             'keyword' => $keyword,
             'log_no' => $logNo,
         ]);
@@ -97,7 +64,6 @@ class SearchService
             'keyword' => $keyword,
             'info' => $info,
             'split' => $split,
-            'mode' => 'real',
         ];
     }
 

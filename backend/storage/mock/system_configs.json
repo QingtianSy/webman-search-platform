@@ -1,4 +1,0 @@
-[
-  {"id": 1, "group_code": "system", "config_key": "site_name", "config_value": "爱搜题", "value_type": "string"},
-  {"id": 2, "group_code": "search", "config_key": "default_split", "config_value": "###", "value_type": "string"}
-]

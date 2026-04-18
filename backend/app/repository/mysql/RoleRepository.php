@@ -5,65 +5,37 @@ namespace app\repository\mysql;
 use PDO;
 use support\adapter\MySqlClient;
 
-/**
- * RoleRepository
- */
 class RoleRepository
 {
-    protected string $file;
-
-    public function __construct()
-    {
-        $this->file = dirname(__DIR__, 3) . '/storage/mock/roles.json';
-    }
-
     public function all(): array
-    {
-        return config('integration.auth_rbac_source', 'mock') === 'real'
-            ? $this->allReal()
-            : $this->allMock();
-    }
-
-    public function findByIds(array $ids): array
-    {
-        return config('integration.auth_rbac_source', 'mock') === 'real'
-            ? $this->findByIdsReal($ids)
-            : array_values(array_filter($this->allMock(), fn ($row) => in_array((int) ($row['id'] ?? 0), $ids, true)));
-    }
-
-    protected function allMock(): array
-    {
-        if (!is_file($this->file)) {
-            return [];
-        }
-        $rows = json_decode((string) file_get_contents($this->file), true);
-        return is_array($rows) ? $rows : [];
-    }
-
-    protected function allReal(): array
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
             return [];
         }
-            try {
+        try {
             $stmt = $pdo->query('SELECT id, name, code, sort, status, created_at, updated_at FROM roles WHERE status = 1');
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-            } catch (\PDOException $e) {
-                error_log("[RoleRepository] allReal failed: " . $e->getMessage());
-                return [];
-            }
+        } catch (\PDOException $e) {
+            error_log("[RoleRepository] all failed: " . $e->getMessage());
+            return [];
         }
+    }
 
-    protected function findByIdsReal(array $ids): array
+    public function findByIds(array $ids): array
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo || !$ids) {
             return [];
         }
-        $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $stmt = $pdo->prepare("SELECT id, name, code, sort, status, created_at, updated_at FROM roles WHERE id IN ($placeholders)");
-        $stmt->execute(array_values($ids));
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        try {
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $stmt = $pdo->prepare("SELECT id, name, code, sort, status, created_at, updated_at FROM roles WHERE id IN ($placeholders)");
+            $stmt->execute(array_values($ids));
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            error_log("[RoleRepository] findByIds failed: " . $e->getMessage());
+            return [];
+        }
     }
 }

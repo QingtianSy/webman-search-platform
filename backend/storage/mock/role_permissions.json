@@ -1,9 +1,0 @@
-[
-  {"role_id": 1, "permission_code": "portal.access"},
-  {"role_id": 1, "permission_code": "search.query"},
-  {"role_id": 2, "permission_code": "portal.access"},
-  {"role_id": 2, "permission_code": "search.query"},
-  {"role_id": 2, "permission_code": "admin.access"},
-  {"role_id": 2, "permission_code": "question.manage"},
-  {"role_id": 2, "permission_code": "system.config"}
-]

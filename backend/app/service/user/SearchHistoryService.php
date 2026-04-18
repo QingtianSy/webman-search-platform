@@ -3,7 +3,6 @@
 namespace app\service\user;
 
 use app\common\user\UserListBuilder;
-use app\repository\mysql\SearchLogRepository;
 use PDO;
 use support\adapter\MySqlClient;
 
@@ -14,31 +13,6 @@ class SearchHistoryService
         $page = (int) ($query['page'] ?? 1);
         $pageSize = (int) ($query['page_size'] ?? 20);
 
-        if (config('integration.log_source', 'mock') === 'real') {
-            return $this->getListReal($userId, $page, $pageSize);
-        }
-        return $this->getListMock($userId, $page, $pageSize);
-    }
-
-    protected function getListMock(int $userId, int $page, int $pageSize): array
-    {
-        $file = base_path() . '/storage/logs/search_logs.jsonl';
-        if (!is_file($file)) {
-            return UserListBuilder::make([], $page, $pageSize);
-        }
-        $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        $rows = [];
-        foreach (array_reverse($lines ?: []) as $line) {
-            $row = json_decode($line, true);
-            if (is_array($row) && (int) ($row['user_id'] ?? 0) === $userId) {
-                $rows[] = $row;
-            }
-        }
-        return UserListBuilder::make($rows, $page, $pageSize);
-    }
-
-    protected function getListReal(int $userId, int $page, int $pageSize): array
-    {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
             return UserListBuilder::make([], $page, $pageSize);
@@ -63,7 +37,7 @@ class SearchHistoryService
                 'page_size' => $pageSize,
             ];
         } catch (\PDOException $e) {
-            error_log("[SearchHistoryService] getListReal failed: " . $e->getMessage());
+            error_log("[SearchHistoryService] getList failed: " . $e->getMessage());
             return UserListBuilder::make([], $page, $pageSize);
         }
     }
