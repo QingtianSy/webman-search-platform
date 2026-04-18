@@ -2,19 +2,27 @@
 
 namespace app\controller\user;
 
-use app\common\CurrentUser;
-use app\service\user\DashboardService;
-use app\validate\user\DashboardValidate;
-use support\ApiResponse;
-use support\Request;
-
 class DashboardController
 {
-    public function overview(Request $request)
+    public function overview()
     {
-        (new DashboardValidate())->overview($request->get());
-        $userId = CurrentUser::id($request);
-        $service = new DashboardService();
-        return ApiResponse::success($service->overview($userId));
+        return json([
+            'code' => 1,
+            'msg' => 'success',
+            'data' => [
+                'balance' => '0.00',
+                'current_plan' => [
+                    'name' => '无套餐',
+                    'is_unlimited' => 0,
+                    'remain_quota' => 1000,
+                    'expire_at' => null
+                ],
+                'today_usage' => 0,
+                'total_usage' => 0,
+                'announcements' => [],
+                'user_id' => 2
+            ],
+            'request_id' => ''
+        ]);
     }
 }
