@@ -12,13 +12,11 @@
  * @license   http://www.opensource.org/licenses/mit-license.php MIT License
  */
 
-use app\middleware\ExceptionHandlerMiddleware;
 use app\middleware\RequestIdMiddleware;
 
 return [
     // 全局中间件
     '' => [
-        ExceptionHandlerMiddleware::class,
         RequestIdMiddleware::class,
     ],
 ];

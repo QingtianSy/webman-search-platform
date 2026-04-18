@@ -3,17 +3,14 @@
 namespace support\exception;
 
 use Throwable;
+use Webman\Exception\ExceptionHandlerInterface;
 use Webman\Http\Request;
 use Webman\Http\Response;
-use support\ApiResponse;
 
-class Handler
+class Handler implements ExceptionHandlerInterface
 {
-    public $dontReport = [];
-
     public function report(Throwable $exception)
     {
-        // 记录错误日志
         error_log(sprintf(
             "[%s] %s in %s:%d\nStack trace:\n%s",
             get_class($exception),
@@ -26,17 +23,25 @@ class Handler
 
     public function render(Request $request, Throwable $exception): Response
     {
-        // 开发环境返回详细错误
         if (config('app.debug', false)) {
-            return ApiResponse::error(500, $exception->getMessage(), [
-                'exception' => get_class($exception),
-                'file' => $exception->getFile(),
-                'line' => $exception->getLine(),
-                'trace' => explode("\n", $exception->getTraceAsString())
-            ]);
+            return new Response(200, ['Content-Type' => 'application/json'], json_encode([
+                'code' => 500,
+                'msg' => $exception->getMessage(),
+                'data' => [
+                    'exception' => get_class($exception),
+                    'file' => $exception->getFile(),
+                    'line' => $exception->getLine(),
+                    'trace' => explode("\n", $exception->getTraceAsString())
+                ],
+                'request_id' => '',
+            ], JSON_UNESCAPED_UNICODE));
         }
 
-        // 生产环境返回通用错误
-        return ApiResponse::error(500, '服务器内部错误');
+        return new Response(200, ['Content-Type' => 'application/json'], json_encode([
+            'code' => 500,
+            'msg' => '服务器内部错误',
+            'data' => [],
+            'request_id' => '',
+        ], JSON_UNESCAPED_UNICODE));
     }
 }
