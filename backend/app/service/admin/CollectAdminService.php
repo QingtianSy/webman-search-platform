@@ -29,7 +29,15 @@ class CollectAdminService
 
     public function stop(string $taskNo): array
     {
-        (new CollectTaskRepository())->updateStatus($taskNo, 4, '手动停止');
+        $repo = new CollectTaskRepository();
+        $task = $repo->findByTaskNo($taskNo);
+        if ($task && !empty($task['runner_script'])) {
+            $pid = (int) $task['runner_script'];
+            if ($pid > 0) {
+                @exec("kill {$pid} 2>/dev/null");
+            }
+        }
+        $repo->updateStatus($taskNo, 4, '手动停止');
         return [
             'success' => true,
             'action' => 'stop',

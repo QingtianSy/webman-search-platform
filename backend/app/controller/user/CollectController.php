@@ -42,4 +42,14 @@ class CollectController
             '查询成功'
         );
     }
+
+    public function submitCollect(Request $request)
+    {
+        $userId = CurrentUser::id($request);
+        $data = (new CollectValidate())->submitCollect($request->post());
+        return ApiResponse::success(
+            (new CollectService())->submitCollect($userId, $data),
+            '采集任务已提交'
+        );
+    }
 }

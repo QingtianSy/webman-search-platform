@@ -112,4 +112,93 @@ class CollectTaskRepository
             'error_message' => $errorMessage,
         ];
     }
+
+    public function create(array $data): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return [];
+        }
+        $stmt = $pdo->prepare(
+            'INSERT INTO collect_tasks (task_no, user_id, account_id, account_phone, account_password, collect_type, course_ids, course_count, status, created_at, updated_at) '
+            . 'VALUES (:task_no, :user_id, :account_id, :account_phone, :account_password, :collect_type, :course_ids, :course_count, 0, NOW(), NOW())'
+        );
+        $stmt->execute([
+            'task_no' => $data['task_no'],
+            'user_id' => $data['user_id'],
+            'account_id' => $data['account_id'] ?? 0,
+            'account_phone' => $data['account_phone'] ?? '',
+            'account_password' => $data['account_password'] ?? '',
+            'collect_type' => $data['collect_type'] ?? 'courses',
+            'course_ids' => $data['course_ids'] ?? '',
+            'course_count' => $data['course_count'] ?? 0,
+        ]);
+        return $data;
+    }
+
+    public function claimPending(): ?array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return null;
+        }
+        try {
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare('SELECT * FROM collect_tasks WHERE status = 0 ORDER BY id ASC LIMIT 1 FOR UPDATE');
+            $stmt->execute();
+            $task = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$task) {
+                $pdo->commit();
+                return null;
+            }
+            $update = $pdo->prepare('UPDATE collect_tasks SET status = 1, updated_at = NOW() WHERE id = :id');
+            $update->execute(['id' => $task['id']]);
+            $pdo->commit();
+            $task['status'] = 1;
+            return $task;
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            error_log("[CollectTaskRepository] claimPending failed: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function updateRunnerPid(string $taskNo, int $pid): void
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return;
+        }
+        $stmt = $pdo->prepare('UPDATE collect_tasks SET runner_script = :pid, updated_at = NOW() WHERE task_no = :task_no');
+        $stmt->execute(['pid' => (string) $pid, 'task_no' => $taskNo]);
+    }
+
+    public function updateProgress(string $taskNo, int $questionCount, int $successCount, int $failCount): void
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return;
+        }
+        $stmt = $pdo->prepare(
+            'UPDATE collect_tasks SET question_count = :qc, success_count = :sc, fail_count = :fc, updated_at = NOW() WHERE task_no = :task_no'
+        );
+        $stmt->execute([
+            'qc' => $questionCount,
+            'sc' => $successCount,
+            'fc' => $failCount,
+            'task_no' => $taskNo,
+        ]);
+    }
+
+    public function findByTaskNo(string $taskNo): ?array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return null;
+        }
+        $stmt = $pdo->prepare('SELECT * FROM collect_tasks WHERE task_no = :task_no LIMIT 1');
+        $stmt->execute(['task_no' => $taskNo]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
 }

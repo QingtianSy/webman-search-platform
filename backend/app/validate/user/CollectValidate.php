@@ -25,4 +25,29 @@ class CollectValidate
         }
         return compact('account', 'password');
     }
+
+    public function submitCollect(array $data): array
+    {
+        $account = trim((string) ($data['account'] ?? ''));
+        $password = trim((string) ($data['password'] ?? ''));
+        if ($account === '' || $password === '') {
+            throw new BusinessException('账号和密码不能为空', ResponseCode::PARAM_ERROR);
+        }
+
+        $collectType = trim((string) ($data['collect_type'] ?? 'courses'));
+        $allowedTypes = ['courses', 'course', 'chapter', 'exam', 'homework'];
+        if (!in_array($collectType, $allowedTypes, true)) {
+            throw new BusinessException('无效的采集类型', ResponseCode::PARAM_ERROR);
+        }
+
+        $courseIds = trim((string) ($data['course_ids'] ?? ''));
+
+        return [
+            'account' => $account,
+            'password' => $password,
+            'collect_type' => $collectType,
+            'course_ids' => $courseIds,
+            'course_count' => $data['course_count'] ?? 0,
+        ];
+    }
 }

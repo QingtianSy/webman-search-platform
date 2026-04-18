@@ -40,4 +40,20 @@ class CollectService
             'courses' => $courses,
         ];
     }
+
+    public function submitCollect(int $userId, array $data): array
+    {
+        $taskNo = 'CT' . date('Ymd') . '-' . bin2hex(random_bytes(4));
+        (new CollectTaskRepository())->create([
+            'task_no' => $taskNo,
+            'user_id' => $userId,
+            'account_id' => 0,
+            'account_phone' => $data['account'],
+            'account_password' => $data['password'],
+            'collect_type' => $data['collect_type'],
+            'course_ids' => $data['course_ids'],
+            'course_count' => $data['course_count'],
+        ]);
+        return ['task_no' => $taskNo];
+    }
 }
