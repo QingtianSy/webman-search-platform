@@ -11,9 +11,9 @@ class SearchController
 {
     public function query(Request $request)
     {
-        $keyword = trim((string) $request->input('q', ''));
-        $info = (string) $request->input('info', '');
-        $split = (string) $request->input('split', '###');
+        $keyword = trim((string) $request->post('q', ''));
+        $info = (string) $request->post('info', '');
+        $split = (string) $request->post('split', '###');
 
         if ($keyword === '' || mb_strlen($keyword) < 2) {
             return ApiResponse::error(40001, '搜索关键词最少2个字符');

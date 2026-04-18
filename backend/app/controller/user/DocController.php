@@ -11,15 +11,15 @@ class DocController
     public function categories(Request $request)
     {
         $query = [
-            'page' => max(1, (int) $request->input('page', 1)),
-            'page_size' => max(1, min(100, (int) $request->input('page_size', 20))),
+            'page' => max(1, (int) $request->get('page', 1)),
+            'page_size' => max(1, min(100, (int) $request->get('page_size', 20))),
         ];
         return ApiResponse::success((new DocService())->categories($query));
     }
 
     public function detail(Request $request)
     {
-        $slug = (string) $request->input('slug', '');
+        $slug = (string) $request->get('slug', '');
         return ApiResponse::success((new DocService())->detail($slug));
     }
 
