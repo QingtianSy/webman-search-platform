@@ -57,13 +57,13 @@ class BalanceLogRepository
     protected function createMock(array $data): bool
     {
         if (!is_file($this->file)) {
-            file_put_contents($this->file, '[]');
+            file_put_contents($this->file, '[]', LOCK_EX);
         }
         $rows = json_decode((string) file_get_contents($this->file), true) ?: [];
         $data['id'] = count($rows) + 1;
         $data['created_at'] = date('Y-m-d H:i:s');
         $rows[] = $data;
-        return file_put_contents($this->file, json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)) !== false;
+        return file_put_contents($this->file, json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX) !== false;
     }
 
     protected function createReal(array $data): bool

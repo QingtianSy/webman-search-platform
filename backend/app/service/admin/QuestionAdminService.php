@@ -46,7 +46,7 @@ class QuestionAdminService
             $file = base_path() . '/storage/mock/questions.json';
             $rows = is_file($file) ? (json_decode(file_get_contents($file), true) ?: []) : [];
             $rows[] = $data;
-            file_put_contents($file, json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+            file_put_contents($file, json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX);
         }
 
         return [

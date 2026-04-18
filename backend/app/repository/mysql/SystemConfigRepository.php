@@ -56,7 +56,7 @@ class SystemConfigRepository
         foreach ($rows as &$row) {
             if (($row['config_key'] ?? '') === $key) {
                 $row['config_value'] = $value;
-                file_put_contents($this->file, json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+                file_put_contents($this->file, json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX);
                 return $row;
             }
         }

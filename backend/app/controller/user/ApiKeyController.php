@@ -31,7 +31,7 @@ class ApiKeyController
     {
         $userId = CurrentUser::id($request);
         $data = (new ApiKeyValidate())->create($request->post());
-        return ApiResponse::success((new ApiKeyService())->mockCreate($userId, $data['app_name']), '模拟创建成功');
+        return ApiResponse::success((new ApiKeyService())->create($userId, $data['app_name']), '创建成功');
     }
 
     public function toggle(Request $request)

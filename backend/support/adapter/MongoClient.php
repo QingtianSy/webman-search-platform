@@ -20,18 +20,28 @@ class MongoClient
     public static function connection(): ?\MongoDB\Database
     {
         if (self::$database !== null) {
-            return self::$database;
+            try {
+                self::$database->command(['ping' => 1]);
+                return self::$database;
+            } catch (\Throwable) {
+                self::$database = null;
+            }
         }
         if (!self::isConfigured() || !class_exists(\MongoDB\Client::class)) {
             return null;
         }
         try {
             $cfg = self::config();
-            $client = new \MongoDB\Client($cfg['uri']);
+            $client = new \MongoDB\Client($cfg['uri'], [], [
+                'serverSelectionTimeoutMS' => 5000,
+                'connectTimeoutMS' => 5000,
+                'socketTimeoutMS' => 30000,
+            ]);
             self::$database = $client->selectDatabase($cfg['database']);
             return self::$database;
         } catch (\Throwable $e) {
             error_log("[MongoClient] connection failed: " . $e->getMessage());
+            self::$database = null;
             return null;
         }
     }

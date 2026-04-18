@@ -53,7 +53,7 @@ class QuestionRepository
 
     protected function saveAll(array $rows): void
     {
-        file_put_contents($this->file, json_encode(array_values($rows), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+        file_put_contents($this->file, json_encode(array_values($rows), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX);
     }
 
     public function findByQuestionId(int $questionId): array

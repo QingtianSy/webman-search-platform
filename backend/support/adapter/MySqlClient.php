@@ -7,6 +7,8 @@ use PDOException;
 
 class MySqlClient
 {
+    protected static ?PDO $pdo = null;
+
     public static function config(): array
     {
         $config = function_exists('config') ? config('database.connections.mysql', []) : [];
@@ -26,14 +28,28 @@ class MySqlClient
 
     public static function pdo(): ?PDO
     {
+        if (self::$pdo !== null) {
+            try {
+                self::$pdo->query('SELECT 1');
+                return self::$pdo;
+            } catch (\Throwable) {
+                self::$pdo = null;
+            }
+        }
         $c = self::config();
         try {
-            return new PDO(
+            self::$pdo = new PDO(
                 sprintf('mysql:host=%s;port=%s;dbname=%s;charset=%s', $c['host'], $c['port'], $c['database'], $c['charset'] ?? 'utf8mb4'),
                 $c['username'] ?? '',
                 $c['password'] ?? '',
-                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_TIMEOUT => 5,
+                    PDO::MYSQL_ATTR_READ_TIMEOUT => 30,
+                    PDO::MYSQL_ATTR_WRITE_TIMEOUT => 30,
+                ]
             );
+            return self::$pdo;
         } catch (PDOException $e) {
             error_log(sprintf(
                 "[MySqlClient] PDO connection failed: %s (host=%s, database=%s, user=%s)",
@@ -42,6 +58,7 @@ class MySqlClient
                 $c['database'] ?? 'N/A',
                 $c['username'] ?? 'N/A'
             ));
+            self::$pdo = null;
             return null;
         }
     }

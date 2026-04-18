@@ -28,7 +28,7 @@ class SearchLogRepository
             mkdir($dir, 0777, true);
         }
         $line = json_encode($data, JSON_UNESCAPED_UNICODE) . PHP_EOL;
-        return file_put_contents($this->file, $line, FILE_APPEND) !== false;
+        return file_put_contents($this->file, $line, FILE_APPEND | LOCK_EX) !== false;
     }
 
     protected function createReal(array $data): bool

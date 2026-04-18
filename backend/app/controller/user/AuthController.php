@@ -30,7 +30,7 @@ class AuthController
 
         return ApiResponse::success([
             'token' => $token,
-            'expire_at' => time() + (int) env('JWT_EXPIRE', 604800),
+            'expire_at' => time() + (int) config('jwt.expire', 604800),
             'user' => $user,
             'roles' => $payload['roles'],
             'permissions' => $payload['permissions'],
@@ -39,16 +39,19 @@ class AuthController
         ], '登录成功');
     }
 
-    public function profile()
+    public function profile(Request $request)
     {
-        return ApiResponse::success([
-            'id' => 1,
-            'username' => 'demo_user',
-            'nickname' => '测试用户',
-            'avatar' => '',
-            'status' => 1,
-            'roles' => ['user'],
-            'permissions' => ['portal.access', 'search.query'],
-        ]);
+        $jwtService = new JwtService();
+        $token = str_replace('Bearer ', '', (string) $request->header('authorization', ''));
+        $decoded = $jwtService->decode($token);
+        if (empty($decoded['payload']['uid'])) {
+            return ApiResponse::error(40001, '未登录');
+        }
+        $authService = new AuthService();
+        $profile = $authService->profile((int) $decoded['payload']['uid']);
+        if (empty($profile)) {
+            return ApiResponse::error(40004, '用户不存在');
+        }
+        return ApiResponse::success($profile);
     }
 }

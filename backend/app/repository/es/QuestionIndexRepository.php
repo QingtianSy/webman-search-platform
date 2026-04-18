@@ -8,6 +8,7 @@ use support\adapter\ElasticsearchClient;
 
 class QuestionIndexRepository
 {
+    protected static ?Client $client = null;
     public function search(string $keyword): array
     {
         return config('integration.question_source', 'mock') === 'real'
@@ -188,7 +189,10 @@ class QuestionIndexRepository
 
     protected function client(): Client
     {
-        return new Client([
+        if (self::$client !== null) {
+            return self::$client;
+        }
+        self::$client = new Client([
             'base_uri' => ElasticsearchClient::host(),
             'verify' => false,
             'auth' => [
@@ -197,5 +201,6 @@ class QuestionIndexRepository
             ],
             'timeout' => 30,
         ]);
+        return self::$client;
     }
 }

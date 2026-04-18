@@ -45,7 +45,7 @@ class DocArticleRepository
         $rows = $this->allRows();
         $data['id'] = count($rows) + 1;
         $rows[] = $data;
-        file_put_contents($this->file, json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+        file_put_contents($this->file, json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX);
         return $data;
     }
 
@@ -58,7 +58,7 @@ class DocArticleRepository
         foreach ($rows as &$row) {
             if ((int) ($row['id'] ?? 0) === $id) {
                 $row = array_merge($row, $data);
-                file_put_contents($this->file, json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+                file_put_contents($this->file, json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX);
                 return $row;
             }
         }
@@ -150,7 +150,7 @@ class DocArticleRepository
         if (count($filtered) === count($rows)) {
             return false;
         }
-        file_put_contents($this->file, json_encode($filtered, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+        file_put_contents($this->file, json_encode($filtered, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX);
         return true;
     }
 
