@@ -20,6 +20,12 @@ class SystemConfigAdminService
 
     public function update(string $key, string $value): array
     {
-        return (new SystemConfigRepository())->updateByKey($key, $value);
+        $row = (new SystemConfigRepository())->updateByKey($key, $value);
+        return [
+            'success' => true,
+            'action' => 'update',
+            'id' => $row['id'] ?? null,
+            'data' => $row,
+        ];
     }
 }
