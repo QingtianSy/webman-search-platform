@@ -1,0 +1,32 @@
+[
+  {
+    "question_id": 100001,
+    "stem": "中共中央总书记是？",
+    "options": [
+      {"key": "A", "text": "毛泽东"},
+      {"key": "B", "text": "周恩来"},
+      {"key": "C", "text": "刘少奇"}
+    ],
+    "answers": ["A"],
+    "answer_text": "A.毛泽东",
+    "analysis": "示例解析：按当前 mock 数据返回 A。",
+    "type_name": "单选题",
+    "source_name": "本地题库",
+    "keywords": ["中共中央总书记", "毛泽东", "单选题"]
+  },
+  {
+    "question_id": 100002,
+    "stem": "以下哪个属于缓存中间件？",
+    "options": [
+      {"key": "A", "text": "Redis"},
+      {"key": "B", "text": "MySQL"},
+      {"key": "C", "text": "MongoDB"}
+    ],
+    "answers": ["A"],
+    "answer_text": "A.Redis",
+    "analysis": "示例解析：Redis 常用于缓存、限流和会话管理。",
+    "type_name": "单选题",
+    "source_name": "本地题库",
+    "keywords": ["缓存", "Redis", "中间件"]
+  }
+]

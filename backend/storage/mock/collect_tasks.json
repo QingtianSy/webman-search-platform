@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1,
+    "task_no": "CT202604150001",
+    "user_id": 1,
+    "account_id": 1,
+    "collect_type": "whole_account",
+    "course_count": 3,
+    "question_count": 120,
+    "success_count": 120,
+    "fail_count": 0,
+    "status": 2,
+    "error_message": "",
+    "runner_script": "pending://collect-core-script",
+    "next_script": "pending://post-collect-handler",
+    "created_at": "2026-04-15 12:00:00"
+  }
+]

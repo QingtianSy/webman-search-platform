@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS api_sources (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(100) NOT NULL,
+  code VARCHAR(100) NOT NULL,
+  method VARCHAR(20) NOT NULL DEFAULT 'GET',
+  url VARCHAR(255) NOT NULL,
+  timeout INT NOT NULL DEFAULT 10,
+  retry_times INT NOT NULL DEFAULT 0,
+  status TINYINT NOT NULL DEFAULT 1,
+  success_code_field VARCHAR(100) NULL,
+  success_code_value VARCHAR(100) NULL,
+  data_path VARCHAR(255) NULL,
+  remark VARCHAR(500) NULL,
+  created_at DATETIME NULL,
+  updated_at DATETIME NULL
+);

@@ -1,0 +1,57 @@
+{
+  "name": "qingtiansy/webman-search-platform-backend",
+  "type": "project",
+  "description": "Production-grade search platform backend based on Webman + Swoole",
+  "license": "proprietary",
+  "require": {
+    "php": ">=8.2",
+    "workerman/webman-framework": "^2.2",
+    "workerman/workerman": "^5.1",
+    "vlucas/phpdotenv": "^5.6",
+    "monolog/monolog": "^3.8",
+    "guzzlehttp/guzzle": "^7.9",
+    "mongodb/mongodb": "^1.19",
+    "elasticsearch/elasticsearch": "^8.17",
+    "webman/database": "^2.1",
+    "ext-swoole": "*",
+    "ext-redis": "*",
+    "ext-mongodb": "*",
+    "ext-pdo": "*",
+    "ext-pdo_mysql": "*",
+    "ext-curl": "*",
+    "ext-mbstring": "*"
+  },
+  "autoload": {
+    "files": [
+      "app/functions.php",
+      "support/helpers.php"
+    ],
+    "psr-4": {
+      "app\\": "app/",
+      "support\\": "support/"
+    },
+    "exclude-from-classmap": [
+      "vendor/workerman/webman-framework/src/support/Request.php",
+      "vendor/workerman/webman-framework/src/support/Response.php",
+      "vendor/workerman/webman-framework/src/support/exception/Handler.php"
+    ]
+  },
+  "scripts": {
+    "smoke": [
+      "php tests/auth_mock_smoke.php",
+      "php tests/auth_admin_mock_smoke.php",
+      "php tests/search_mock_smoke.php",
+      "php tests/dashboard_mock_smoke.php",
+      "php tests/question_detail_mock_smoke.php",
+      "php tests/apikey_mock_smoke.php",
+      "php tests/doc_config_mock_smoke.php",
+      "php tests/collect_task_detail_mock_smoke.php",
+      "php tests/menu_mock_smoke.php",
+      "php tests/system_config_mock_smoke.php",
+      "php tests/rbac_mock_smoke.php",
+      "php tests/health_mock_smoke.php",
+      "php tests/user_center_mock_smoke.php",
+      "php tests/admin_modules_mock_smoke.php"
+    ]
+  }
+}

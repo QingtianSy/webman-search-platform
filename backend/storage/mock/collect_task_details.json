@@ -1,0 +1,14 @@
+[
+  {
+    "task_no": "CT202604150001",
+    "status_flow": [
+      {"status": "created", "time": "2026-04-15 12:00:00", "message": "任务已创建"},
+      {"status": "completed", "time": "2026-04-15 12:20:00", "message": "任务执行完成"}
+    ],
+    "detail": {
+      "runner_script": "pending://collect-core-script",
+      "next_script": "pending://post-collect-handler",
+      "error_message": ""
+    }
+  }
+]

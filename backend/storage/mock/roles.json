@@ -1,0 +1,4 @@
+[
+  {"id": 1, "code": "user", "name": "普通用户"},
+  {"id": 2, "code": "admin", "name": "管理员"}
+]

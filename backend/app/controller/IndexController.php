@@ -1,0 +1,31 @@
+<?php
+
+namespace app\controller;
+
+use support\Request;
+
+class IndexController
+{
+    public function index(Request $request)
+    {
+        return <<<EOF
+<style>
+  * {
+    padding: 0;
+    margin: 0;
+  }
+  iframe {
+    border: none;
+    overflow: scroll;
+  }
+</style>
+<iframe
+  src="https://www.workerman.net/wellcome"
+  width="100%"
+  height="100%"
+  allow="clipboard-write"
+  sandbox="allow-scripts allow-same-origin allow-popups allow-downloads"
+></iframe>
+EOF;
+    }
+}

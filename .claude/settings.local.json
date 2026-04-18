@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"---EXIST:$?---\")",
+      "Bash(echo \"---EXIT:$?---\")"
+    ]
+  }
+}
