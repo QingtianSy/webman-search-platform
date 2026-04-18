@@ -72,7 +72,7 @@ class SystemConfigRepository
         }
         
         try {
-            $stmt = $pdo->query('SELECT id, config_group, config_key, config_value, config_type, status, created_at, updated_at FROM system_configs ORDER BY id DESC');
+            $stmt = $pdo->query('SELECT id, group_code, config_key, config_value, value_type, status, created_at, updated_at FROM system_configs ORDER BY id DESC');
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {
             error_log("[SystemConfigRepository] Query failed: " . $e->getMessage());
@@ -91,7 +91,7 @@ class SystemConfigRepository
             'config_key' => $key,
             'config_value' => $value,
         ]);
-        $stmt = $pdo->prepare('SELECT id, config_group, config_key, config_value, config_type, status, created_at, updated_at FROM system_configs WHERE config_key = :config_key LIMIT 1');
+        $stmt = $pdo->prepare('SELECT id, group_code, config_key, config_value, value_type, status, created_at, updated_at FROM system_configs WHERE config_key = :config_key LIMIT 1');
         $stmt->execute(['config_key' => $key]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
     }
