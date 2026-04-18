@@ -3,11 +3,12 @@
 Webman 后端代码目录。
 
 ## 当前状态
-当前 backend 已明确下一阶段的后台管理模块演进方向：
-- 运行骨架继续按 Webman 官方
-- 后台管理类 MySQL 模块逐步引入 `webman/database`
-- 后台业务层继续朝 `Model + Service + Validate` 方向演进
-- 搜题/采集/开放平台等复杂多数据源模块仍保留 Repository 模式
+当前 backend 已进入 **运行态稳定优先 + 逐模块回收完整版** 阶段：
+- 核心主线已真实打通
+- 部分模块在服务器运行态下保留稳定优先版 controller
+- 这些模块已统一记录在 `project-docs/62-stable-controller-recovery-plan.md`
 
-## 关键文档
-- `project-docs/55-webman-database-plan.md`
+## 当前原则
+- 先保证接口稳定可用
+- 再逐模块把稳定优先版回收为完整标准链
+- 不再混淆“仓库完整版”和“服务器稳定版”状态

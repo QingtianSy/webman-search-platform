@@ -6,12 +6,8 @@
 - 完成后端多阶段业务骨架
 - 完成宿主机部署模板与脚本
 - 完成生产级 Webman 运行结构准备
-- 新增 Python 巡检脚本（健康检查、服务状态、状态汇总）
 - 收敛为统一用户体系（users + roles + permissions + menus）
-- 完成管理端操作型接口多轮骨架补齐
-- 新增 Mock → Real 替换路线、Migration 规划、Webman 真接入准备文档
-- 新增前端最小骨架与多轮细化
-- auth/rbac 真实主线打通
-- question/search 真实主线打通
-- user-center / docs / config / api_source / collect 外围已逐步进入 real-adoption 阶段
-- 新增服务器最小运行版回收清单，用于后续逐模块回收完整版控制器链路
+- 核心主线（auth/rbac、question/search、user-center 基础）已真实打通
+- 第三优先级模块（config、api-source、docs、collect）已进入 real-adoption 阶段
+- 后台模块化、用户端体系化、ORM 第一阶段已持续推进
+- 当前已建立“稳定优先版 controller”治理清单，后续按模块逐步回收完整链

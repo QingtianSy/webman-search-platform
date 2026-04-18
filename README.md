@@ -3,14 +3,23 @@
 一个按 **Webman + Swoole + MySQL + MongoDB + Elasticsearch + Redis** 方向构建的题库搜题平台项目。
 
 ## 当前阶段
-项目已进入：
-- 后端真实主线已打通（auth/rbac、question/search、user-center 基础）
-- 后端继续按官方 Webman 结构收口
-- 前端已决定推倒重构为 **官方 Vben 完整基座**
+项目当前已进入：
+- 核心主线已真实打通
+- 部分模块已在服务器验证通过
+- 部分模块采用稳定优先版 controller 以保证运行态可用
+- 后端继续按企业级标准逐步回收完整链
 
-## 当前前端策略
-- `frontend/`：官方 Vben 完整基座
-- `frontend-legacy/`：保留旧前端作为业务迁移参考
+## 当前说明
+当前仓库不仅包含：
+- 完整业务结构
+- mock → real 路线
+- scripts / runbook / quality gates
 
-## 当前结论
-后续前端不再在旧骨架上继续修补，而是在官方 Vben 基座上逐步迁业务。
+还明确记录了：
+- 哪些 controller 当前采用稳定优先版
+- 哪些模块后续要继续回收到完整标准链
+
+## 关键文档
+- `project-docs/61-server-minimal-controllers-recovery-checklist.md`
+- `project-docs/62-stable-controller-recovery-plan.md`
+- `project-docs/25-real-integration-master-checklist.md`
