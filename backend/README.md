@@ -3,12 +3,13 @@
 Webman 后端代码目录。
 
 ## 当前状态
-当前 backend 已进入 **运行态稳定优先 + 逐模块回收完整版** 阶段：
-- 核心主线已真实打通
-- 部分模块在服务器运行态下保留稳定优先版 controller
-- 这些模块已统一记录在 `project-docs/62-stable-controller-recovery-plan.md`
+当前 backend 已进入：
+- 核心主线真实打通
+- 后台模块化标准化深入推进
+- 用户端体系化逐步完善
+- 第三优先级模块已进入 real-adoption 阶段
+- 后台模块开发规范已固化
 
-## 当前原则
-- 先保证接口稳定可用
-- 再逐模块把稳定优先版回收为完整标准链
-- 不再混淆“仓库完整版”和“服务器稳定版”状态
+## 关键文档
+- `project-docs/63-admin-module-convention.md`
+- `project-docs/64-admin-module-adoption-status.md`
