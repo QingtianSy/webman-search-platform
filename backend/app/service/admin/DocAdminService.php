@@ -2,96 +2,50 @@
 
 namespace app\service\admin;
 
-use app\common\admin\AdminListBuilder;
-use app\common\admin\AdminStatusFilter;
-use app\model\admin\DocArticle;
 use app\repository\mysql\DocArticleRepository;
 
 class DocAdminService
 {
     public function getList(array $query = []): array
     {
-        $query += ['keyword' => '', 'status' => null, 'page' => 1, 'page_size' => 20];
-        return config('integration.docs_source', 'mock') === 'real'
-            ? $this->getListReal($query)
-            : $this->getListMock($query);
-    }
-
-    protected function getListMock(array $query): array
-    {
-        $keyword = trim((string) $query['keyword']);
-        $page = (int) $query['page'];
-        $pageSize = (int) $query['page_size'];
-
         $list = (new DocArticleRepository())->all();
-        if ($keyword !== '') {
-            $list = array_values(array_filter($list, function ($row) use ($keyword) {
-                return str_contains((string) ($row['title'] ?? ''), $keyword)
-                    || str_contains((string) ($row['slug'] ?? ''), $keyword);
-            }));
-        }
-        $list = AdminStatusFilter::apply($list, $query['status']);
-        return AdminListBuilder::make($list, $page, $pageSize);
-    }
 
-    protected function getListReal(array $query): array
-    {
-        $page = (int) $query['page'];
-        $pageSize = (int) $query['page_size'];
-        $keyword = trim((string) $query['keyword']);
-        $status = $query['status'];
-
-        $builder = DocArticle::query();
-        if ($keyword !== '') {
-            $builder->where(function ($q) use ($keyword) {
-                $q->where('title', 'like', "%{$keyword}%")
-                  ->orWhere('slug', 'like', "%{$keyword}%");
-            });
-        }
-        if ($status !== null && $status !== '' && $status !== 'all') {
-            $builder->where('status', $status);
-        }
-        $total = $builder->count();
-        $list = $builder->orderBy('id', 'desc')->forPage($page, $pageSize)->get()->toArray();
-        return AdminListBuilder::make($list, $page, $pageSize) + ['total' => $total];
+        return [
+            'list' => $list,
+            'total' => count($list),
+            'page' => 1,
+            'page_size' => 20,
+        ];
     }
 
     public function create(array $data): array
     {
-        if (config('integration.docs_source', 'mock') === 'real') {
-            $row = new DocArticle();
-            $row->fill($data);
-            $row->save();
-            return ['success' => true, 'action' => 'create', 'id' => $row->id, 'data' => $row->toArray()];
-        }
         $row = (new DocArticleRepository())->create($data);
-        return ['success' => true, 'action' => 'create', 'id' => $row['id'] ?? null, 'data' => $row];
+        return [
+            'success' => true,
+            'action' => 'create',
+            'id' => $row['id'] ?? null,
+            'data' => $row,
+        ];
     }
 
     public function update(int $id, array $data): array
     {
-        if (config('integration.docs_source', 'mock') === 'real') {
-            $row = DocArticle::query()->find($id);
-            if (!$row) {
-                return [];
-            }
-            $row->fill($data);
-            $row->save();
-            return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];
-        }
         $row = (new DocArticleRepository())->update($id, $data);
-        return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row];
+        return [
+            'success' => true,
+            'action' => 'update',
+            'id' => $id,
+            'data' => $row,
+        ];
     }
 
     public function delete(int $id): array
     {
-        if (config('integration.docs_source', 'mock') === 'real') {
-            $row = DocArticle::query()->find($id);
-            if ($row) {
-                $row->delete();
-            }
-            return ['success' => true, 'action' => 'delete', 'id' => $id];
-        }
-        return ['success' => true, 'action' => 'delete', 'id' => $id];
+        return [
+            'success' => true,
+            'action' => 'delete',
+            'id' => $id,
+        ];
     }
 }
