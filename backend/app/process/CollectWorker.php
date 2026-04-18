@@ -67,7 +67,7 @@ class CollectWorker
         }
 
         $cmd = sprintf(
-            'cd %s && python run.py --account %s --mode %s --output json --task-no %s --concurrency 1',
+            'cd %s && python3 run.py --account %s --mode %s --output json --task-no %s --concurrency 1',
             escapeshellarg($pythonDir),
             escapeshellarg($phone . '----' . $password),
             escapeshellarg($mode),
