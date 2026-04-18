@@ -201,4 +201,15 @@ class CollectTaskRepository
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
     }
+
+    public function findByStatus(int $status): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return [];
+        }
+        $stmt = $pdo->prepare('SELECT * FROM collect_tasks WHERE status = :status ORDER BY id ASC');
+        $stmt->execute(['status' => $status]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
 }

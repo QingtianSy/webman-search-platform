@@ -20,7 +20,25 @@ class CollectWorker
         $this->questionRepo = new QuestionRepository();
         $this->esRepo = new QuestionIndexRepository();
 
+        $this->recoverRunningTasks();
         Timer::add(5, [$this, 'poll']);
+    }
+
+    protected function recoverRunningTasks(): void
+    {
+        $tasks = $this->taskRepo->findByStatus(1);
+        foreach ($tasks as $task) {
+            $taskNo = $task['task_no'] ?? '';
+            $pid = (int) ($task['runner_script'] ?? 0);
+            if ($taskNo === '' || $pid <= 0) {
+                continue;
+            }
+            $this->runningTasks[$taskNo] = [
+                'pid' => $pid,
+                'started_at' => time(),
+            ];
+            error_log("[CollectWorker] recovered task={$taskNo} pid={$pid}");
+        }
     }
 
     public function poll(): void
