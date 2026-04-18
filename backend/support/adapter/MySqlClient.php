@@ -45,8 +45,6 @@ class MySqlClient
                 [
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_TIMEOUT => 5,
-                    PDO::MYSQL_ATTR_READ_TIMEOUT => 30,
-                    PDO::MYSQL_ATTR_WRITE_TIMEOUT => 30,
                 ]
             );
             return self::$pdo;
