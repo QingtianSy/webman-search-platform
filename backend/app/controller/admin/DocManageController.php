@@ -31,7 +31,7 @@ class DocManageController
 
     public function delete(Request $request)
     {
-        $id = AdminId::parse($request->post(), 'id', '文档ID');
+        $id = AdminId::parse($request->get(), 'id', '文档ID');
         return ApiResponse::success((new DocAdminService())->delete($id), '文档删除成功');
     }
 }

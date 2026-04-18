@@ -31,7 +31,7 @@ class AnnouncementController
 
     public function delete(Request $request)
     {
-        $id = AdminId::parse($request->post(), 'id', '公告ID');
+        $id = AdminId::parse($request->get(), 'id', '公告ID');
         return ApiResponse::success((new AnnouncementAdminService())->delete($id), '公告删除骨架已创建');
     }
 }

@@ -17,7 +17,7 @@ class CollectManageController
 
     public function detail(Request $request)
     {
-        $taskNo = (new CollectTaskValidate())->taskNo($request->post());
+        $taskNo = (new CollectTaskValidate())->taskNo($request->get());
         return ApiResponse::success((new CollectAdminService())->detail($taskNo));
     }
 
