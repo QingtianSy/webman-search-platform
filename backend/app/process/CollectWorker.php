@@ -66,8 +66,11 @@ class CollectWorker
             @mkdir($resultsDir, 0755, true);
         }
 
+        $pidFile = '/tmp/collect_' . $taskNo . '.pid';
+        $logFile = $resultsDir . '/' . $taskNo . '.log';
+
         $cmd = sprintf(
-            'cd %s && python3 run.py --account %s --mode %s --output json --task-no %s --concurrency 1',
+            'cd %s && nohup python3 run.py --account %s --mode %s --output json --task-no %s --concurrency 1',
             escapeshellarg($pythonDir),
             escapeshellarg($phone . '----' . $password),
             escapeshellarg($mode),
@@ -78,11 +81,19 @@ class CollectWorker
             $cmd .= ' --course-ids ' . escapeshellarg($courseIds);
         }
 
-        $cmd .= ' > /dev/null 2>&1 & echo $!';
+        $cmd .= sprintf(' > %s 2>&1 & echo $! > %s',
+            escapeshellarg($logFile),
+            escapeshellarg($pidFile)
+        );
 
-        $output = [];
-        exec($cmd, $output);
-        $pid = (int) ($output[0] ?? 0);
+        shell_exec($cmd);
+        usleep(200000);
+
+        if (!is_file($pidFile)) {
+            return 0;
+        }
+        $pid = (int) trim((string) file_get_contents($pidFile));
+        @unlink($pidFile);
         return $pid;
     }
 
