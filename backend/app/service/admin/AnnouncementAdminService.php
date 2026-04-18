@@ -92,9 +92,10 @@ class AnnouncementAdminService
             $row = new Announcement();
             $row->fill($data);
             $row->save();
-            return $row->toArray();
+            return ['success' => true, 'action' => 'create', 'id' => $row->id, 'data' => $row->toArray()];
         }
-        return (new AnnouncementRepository())->create($data);
+        $row = (new AnnouncementRepository())->create($data);
+        return ['success' => true, 'action' => 'create', 'id' => $row['id'] ?? null, 'data' => $row];
     }
 
     public function update(int $id, array $data): array
@@ -106,9 +107,10 @@ class AnnouncementAdminService
             }
             $row->fill($data);
             $row->save();
-            return $row->toArray();
+            return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];
         }
-        return (new AnnouncementRepository())->update($id, $data);
+        $row = (new AnnouncementRepository())->update($id, $data);
+        return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row];
     }
 
     public function delete(int $id): array
@@ -118,8 +120,8 @@ class AnnouncementAdminService
             if ($row) {
                 $row->delete();
             }
-            return ['deleted' => true, 'id' => $id];
+            return ['success' => true, 'action' => 'delete', 'id' => $id];
         }
-        return ['deleted' => true, 'id' => $id];
+        return ['success' => true, 'action' => 'delete', 'id' => $id];
     }
 }

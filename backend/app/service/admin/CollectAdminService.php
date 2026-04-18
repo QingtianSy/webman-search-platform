@@ -71,9 +71,10 @@ class CollectAdminService
                 $row->error_message = '手动停止';
                 $row->save();
             }
-            return ['stopped' => true, 'task_no' => $taskNo];
+            return ['success' => true, 'action' => 'stop', 'task_no' => $taskNo];
         }
-        return (new CollectTaskRepository())->updateStatus($taskNo, 4, '手动停止');
+        (new CollectTaskRepository())->updateStatus($taskNo, 4, '手动停止');
+        return ['success' => true, 'action' => 'stop', 'task_no' => $taskNo];
     }
 
     public function retry(string $taskNo): array
@@ -85,8 +86,9 @@ class CollectAdminService
                 $row->error_message = '';
                 $row->save();
             }
-            return ['retried' => true, 'task_no' => $taskNo];
+            return ['success' => true, 'action' => 'retry', 'task_no' => $taskNo];
         }
-        return (new CollectTaskRepository())->updateStatus($taskNo, 1, '');
+        (new CollectTaskRepository())->updateStatus($taskNo, 1, '');
+        return ['success' => true, 'action' => 'retry', 'task_no' => $taskNo];
     }
 }

@@ -62,9 +62,10 @@ class DocAdminService
             $row = new DocArticle();
             $row->fill($data);
             $row->save();
-            return $row->toArray();
+            return ['success' => true, 'action' => 'create', 'id' => $row->id, 'data' => $row->toArray()];
         }
-        return (new DocArticleRepository())->create($data);
+        $row = (new DocArticleRepository())->create($data);
+        return ['success' => true, 'action' => 'create', 'id' => $row['id'] ?? null, 'data' => $row];
     }
 
     public function update(int $id, array $data): array
@@ -76,9 +77,10 @@ class DocAdminService
             }
             $row->fill($data);
             $row->save();
-            return $row->toArray();
+            return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];
         }
-        return (new DocArticleRepository())->update($id, $data);
+        $row = (new DocArticleRepository())->update($id, $data);
+        return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row];
     }
 
     public function delete(int $id): array
@@ -88,8 +90,8 @@ class DocAdminService
             if ($row) {
                 $row->delete();
             }
-            return ['deleted' => true, 'id' => $id];
+            return ['success' => true, 'action' => 'delete', 'id' => $id];
         }
-        return ['deleted' => true, 'id' => $id];
+        return ['success' => true, 'action' => 'delete', 'id' => $id];
     }
 }
