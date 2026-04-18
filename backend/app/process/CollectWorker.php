@@ -104,8 +104,9 @@ class CollectWorker
             escapeshellarg($pidFile)
         );
 
-        shell_exec($cmd);
-        usleep(200000);
+        $output = [];
+        @exec($cmd, $output);
+        usleep(500000);
 
         if (!is_file($pidFile)) {
             return 0;
@@ -167,14 +168,16 @@ class CollectWorker
         if ($pid <= 0) {
             return false;
         }
-        $result = shell_exec("kill -0 {$pid} 2>/dev/null; echo \$?");
-        return trim($result) === '0';
+        $output = [];
+        @exec("kill -0 {$pid} 2>/dev/null; echo \$?", $output);
+        return isset($output[0]) && trim($output[0]) === '0';
     }
 
     protected function killProcess(int $pid): void
     {
         if ($pid > 0) {
-            @exec("kill {$pid} 2>/dev/null");
+            $output = [];
+            @exec("kill {$pid} 2>/dev/null", $output);
         }
     }
 }
