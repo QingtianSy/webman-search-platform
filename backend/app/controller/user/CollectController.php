@@ -33,4 +33,13 @@ class CollectController
         $taskNo = (new CollectValidate())->taskNo($request->get());
         return ApiResponse::success((new CollectService())->detail($taskNo));
     }
+
+    public function queryCourses(Request $request)
+    {
+        $data = (new CollectValidate())->queryCourses($request->post());
+        return ApiResponse::success(
+            (new CollectService())->queryCourses($data['account'], $data['password']),
+            '查询成功'
+        );
+    }
 }

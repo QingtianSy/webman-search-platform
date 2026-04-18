@@ -72,6 +72,7 @@ Route::group('/api/v1/user', function () {
     Route::get('/doc/config', [DocController::class, 'config']);
     Route::get('/collect/task/list', [CollectController::class, 'tasks']);
     Route::get('/collect/task/detail', [CollectController::class, 'detail']);
+    Route::post('/collect/query-courses', [CollectController::class, 'queryCourses']);
     Route::get('/log/balance', [LogController::class, 'balance']);
     Route::get('/log/payment', [LogController::class, 'payment']);
     Route::get('/log/login', [LogController::class, 'login']);
