@@ -29,7 +29,12 @@
     "psr-4": {
       "app\\": "app/",
       "support\\": "support/"
-    }
+    },
+    "exclude-from-classmap": [
+      "vendor/workerman/webman-framework/src/support/Request.php",
+      "vendor/workerman/webman-framework/src/support/Response.php",
+      "vendor/workerman/webman-framework/src/support/exception/Handler.php"
+    ]
   },
   "scripts": {
     "smoke": [
