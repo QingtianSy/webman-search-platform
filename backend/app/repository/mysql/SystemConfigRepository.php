@@ -22,6 +22,22 @@ class SystemConfigRepository
         }
     }
 
+    public function getByGroup(string $groupCode): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return [];
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT id, group_code, config_key, config_value, value_type, status, created_at, updated_at FROM system_configs WHERE group_code = :group_code ORDER BY id ASC');
+            $stmt->execute(['group_code' => $groupCode]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            error_log("[SystemConfigRepository] getByGroup failed: " . $e->getMessage());
+            return [];
+        }
+    }
+
     public function updateByKey(string $key, string $value): array
     {
         $pdo = MySqlClient::pdo();

@@ -42,6 +42,8 @@ use app\controller\admin\RoleController;
 use app\controller\admin\SearchLogController;
 use app\controller\admin\SystemConfigController;
 use app\controller\admin\UserController;
+use app\controller\user\PaymentController;
+use app\controller\PaymentCallbackController;
 use app\controller\open\HealthController as OpenHealthController;
 use app\controller\open\SearchController as OpenSearchController;
 
@@ -80,6 +82,8 @@ Route::group('/api/v1/user', function () {
     Route::get('/log/operate', [LogController::class, 'operate']);
     Route::post('/search/query', [UserSearchController::class, 'query']);
     Route::get('/search/logs', [UserSearchController::class, 'logs']);
+    Route::post('/order/create', [PaymentController::class, 'create']);
+    Route::get('/order/list', [PaymentController::class, 'list']);
 })->middleware([UserAuthMiddleware::class]);
 
 // 管理端路由（需要管理员认证）
@@ -125,3 +129,7 @@ Route::group('/open/v1', function () {
 })->middleware([OpenApiAuthMiddleware::class]);
 // 开放平台健康检查（无需认证）
 Route::get('/open/v1/health', [OpenHealthController::class, 'index']);
+
+// 支付回调（无需认证）
+Route::get('/callback/epay/notify', [PaymentCallbackController::class, 'notify']);
+Route::get('/callback/epay/return', [PaymentCallbackController::class, 'returnUrl']);
