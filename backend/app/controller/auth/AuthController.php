@@ -11,8 +11,8 @@ class AuthController
 {
     public function login(Request $request)
     {
-                $username = (string) $request->input('username', '');
-        $password = (string) $request->input('password', '');
+        $username = (string) $request->post('username', '');
+        $password = (string) $request->post('password', '');
 
         $authService = new AuthService();
         $jwtService = new JwtService();
