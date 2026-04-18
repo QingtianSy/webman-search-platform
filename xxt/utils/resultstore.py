@@ -2,8 +2,6 @@ import json
 import threading
 from pathlib import Path
 
-from utils.insertdata import insert_data
-
 
 _INVALID_FILENAME_CHARS = '<>:"/\\|?*'
 _FILENAME_TRANSLATION = str.maketrans({char: "_" for char in _INVALID_FILENAME_CHARS})
@@ -58,6 +56,7 @@ def persist_questions(self, mobile, questions_and_options_and_answers, filename_
     elif self.output_mode == "3":
         _persist_jsonl(self, questions_and_options_and_answers, course_id, course_name)
     else:
+        from utils.insertdata import insert_data
         insert_data(self, questions_and_options_and_answers, course_id, course_name)
 
     return True
