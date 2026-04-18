@@ -1,0 +1,3 @@
+INSERT INTO `system_configs` (`group_code`, `config_key`, `config_value`, `value_type`, `status`, `created_at`, `updated_at`)
+VALUES ('doc', 'doc_config', '{"api_key":"未配置","multimodal_model":"doubao-seed-1-8-251228","text_model":"doubao-1-5-pro-32k-250115","providers":[{"name":"Doubao Seed 1.8","value":"doubao-seed-1-8-251228","desc":"推荐，支持多模态"},{"name":"Doubao 1.5 Pro 32k","value":"doubao-1-5-pro-32k-250115","desc":"推荐，纯文本，速度快"},{"name":"GLM 4.7","value":"glm-4-7-251222","desc":"智谱模型"}]}', 'json', 1, NOW(), NOW())
+ON DUPLICATE KEY UPDATE config_value = VALUES(config_value), updated_at = NOW();
