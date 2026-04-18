@@ -10,6 +10,12 @@
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
+// Load .env so env() can read database credentials
+$envPath = __DIR__ . '/../../';
+if (class_exists(\Dotenv\Dotenv::class) && is_file($envPath . '.env')) {
+    \Dotenv\Dotenv::createMutable($envPath)->safeLoad();
+}
+
 $configPath = __DIR__ . '/../../config/database.php';
 $config = require $configPath;
 $c = $config['connections']['mysql'] ?? [];
