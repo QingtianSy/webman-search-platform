@@ -23,7 +23,22 @@ class SearchController
         $searchService = new SearchService();
         $result = $searchService->query($keyword, $info, $split);
 
-        return ApiResponse::success($result['list'][0]['answer_text'] ?? 'TODO_ANSWER', 'success');
+        if (empty($result['list'])) {
+            return ApiResponse::error(40004, '未找到匹配结果');
+        }
+
+        return ApiResponse::success([
+            'log_no' => $result['log_no'] ?? '',
+            'hit_count' => $result['hit_count'] ?? 0,
+            'consume_quota' => $result['consume_quota'] ?? 0,
+            'list' => array_map(fn ($item) => [
+                'question_id' => $item['question_id'] ?? null,
+                'stem' => $item['stem'] ?? '',
+                'answer_text' => $item['answer_text'] ?? '',
+                'type_name' => $item['type_name'] ?? '',
+                'score' => $item['score'] ?? null,
+            ], $result['list']),
+        ]);
     }
 
     public function quotaDetail(Request $request)

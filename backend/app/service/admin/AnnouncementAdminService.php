@@ -122,6 +122,7 @@ class AnnouncementAdminService
             }
             return ['success' => true, 'action' => 'delete', 'id' => $id];
         }
+        (new AnnouncementRepository())->delete($id);
         return ['success' => true, 'action' => 'delete', 'id' => $id];
     }
 }

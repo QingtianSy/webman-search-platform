@@ -42,6 +42,7 @@ class DocAdminService
 
     public function delete(int $id): array
     {
+        (new DocArticleRepository())->delete($id);
         return [
             'success' => true,
             'action' => 'delete',

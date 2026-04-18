@@ -5,6 +5,7 @@ namespace app\service\admin;
 use app\common\admin\AdminListBuilder;
 use app\service\question\QuestionService;
 use app\repository\mongo\QuestionRepository;
+use app\service\question\QuestionIndexService;
 
 class QuestionAdminService
 {
@@ -29,6 +30,25 @@ class QuestionAdminService
 
     public function create(array $data): array
     {
+        $repo = new QuestionRepository();
+        $data['question_id'] = $data['question_id'] ?? (int) (microtime(true) * 1000);
+        $data['created_at'] = date('Y-m-d H:i:s');
+        $data['updated_at'] = date('Y-m-d H:i:s');
+        $data['status'] = $data['status'] ?? 1;
+
+        if (config('integration.question_source', 'mock') === 'real') {
+            $db = \support\adapter\MongoClient::connection();
+            if ($db) {
+                $db->selectCollection('questions')->insertOne($data);
+            }
+            (new QuestionIndexService())->sync($data['question_id']);
+        } else {
+            $file = base_path() . '/storage/mock/questions.json';
+            $rows = is_file($file) ? (json_decode(file_get_contents($file), true) ?: []) : [];
+            $rows[] = $data;
+            file_put_contents($file, json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+        }
+
         return [
             'created' => true,
             'data' => $data,
@@ -37,11 +57,19 @@ class QuestionAdminService
 
     public function update(int $id, array $data): array
     {
-        return (new QuestionRepository())->update($id, $data);
+        $result = (new QuestionRepository())->update($id, $data);
+        if (config('integration.question_source', 'mock') === 'real' && !empty($result)) {
+            (new QuestionIndexService())->sync($id);
+        }
+        return $result;
     }
 
     public function delete(int $id): array
     {
-        return ['deleted' => (new QuestionRepository())->delete($id)];
+        $deleted = (new QuestionRepository())->delete($id);
+        if (config('integration.question_source', 'mock') === 'real') {
+            (new QuestionIndexService())->delete($id);
+        }
+        return ['deleted' => $deleted];
     }
 }

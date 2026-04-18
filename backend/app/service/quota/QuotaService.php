@@ -2,6 +2,10 @@
 
 namespace app\service\quota;
 
+use app\repository\redis\QuotaCacheRepository;
+use PDO;
+use support\adapter\MySqlClient;
+
 class QuotaService
 {
     public function getUserQuota(int $userId): int
@@ -22,22 +26,66 @@ class QuotaService
 
     protected function getUserQuotaReal(int $userId): int
     {
-        /**
-         * 未来真实实现说明：
-         * - 优先从 Redis quota:user:{id} 读取
-         * - 没有则从 MySQL user_subscriptions / quota_logs 聚合
-         */
-        return 0;
+        $cache = new QuotaCacheRepository();
+        $cached = $cache->getUserQuota($userId);
+        if ($cached >= 0) {
+            return $cached;
+        }
+
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return 0;
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT is_unlimited, remain_quota FROM user_subscriptions WHERE user_id = :user_id AND (expire_at IS NULL OR expire_at > NOW()) ORDER BY id DESC LIMIT 1');
+            $stmt->execute(['user_id' => $userId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row) {
+                return 0;
+            }
+            if ((int) $row['is_unlimited'] === 1) {
+                $cache->setUserQuota($userId, 999999);
+                return 999999;
+            }
+            $quota = (int) $row['remain_quota'];
+            $cache->setUserQuota($userId, $quota);
+            return $quota;
+        } catch (\PDOException $e) {
+            error_log("[QuotaService] getUserQuotaReal failed: " . $e->getMessage());
+            return 0;
+        }
     }
 
     protected function consumeReal(int $userId, int $amount): bool
     {
-        /**
-         * 未来真实实现说明：
-         * - Redis 原子扣减
-         * - 失败回退/拒绝
-         * - 同步写 quota_logs
-         */
-        return $amount > 0;
+        if ($amount <= 0) {
+            return false;
+        }
+
+        $cache = new QuotaCacheRepository();
+        $remaining = $cache->decrementQuota($userId);
+
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return $remaining >= 0;
+        }
+        try {
+            $stmt = $pdo->prepare('UPDATE user_subscriptions SET remain_quota = remain_quota - :amount, used_quota = used_quota + :amount2, updated_at = NOW() WHERE user_id = :user_id AND remain_quota >= :check AND (expire_at IS NULL OR expire_at > NOW()) ORDER BY id DESC LIMIT 1');
+            $ok = $stmt->execute([
+                'amount' => $amount,
+                'amount2' => $amount,
+                'user_id' => $userId,
+                'check' => $amount,
+            ]);
+            if ($ok && $stmt->rowCount() === 0) {
+                $cache->deleteUserQuota($userId);
+                return false;
+            }
+            return $ok;
+        } catch (\PDOException $e) {
+            error_log("[QuotaService] consumeReal failed: " . $e->getMessage());
+            $cache->deleteUserQuota($userId);
+            return false;
+        }
     }
 }

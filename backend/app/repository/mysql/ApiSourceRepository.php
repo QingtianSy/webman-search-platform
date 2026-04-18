@@ -34,12 +34,29 @@ class ApiSourceRepository
         if (!$row) {
             return [];
         }
-        return [
-            'id' => $id,
-            'status' => 'success',
-            'message' => '模拟测试成功',
-            'tested_at' => date('Y-m-d H:i:s'),
-        ];
+        $url = $row['url'] ?? '';
+        if ($url === '') {
+            return ['id' => $id, 'status' => 'error', 'message' => 'URL为空', 'tested_at' => date('Y-m-d H:i:s')];
+        }
+        try {
+            $client = new \GuzzleHttp\Client(['timeout' => (int) ($row['timeout'] ?? 10), 'verify' => false]);
+            $method = strtoupper($row['method'] ?? 'GET');
+            $response = $client->request($method, $url);
+            $code = $response->getStatusCode();
+            return [
+                'id' => $id,
+                'status' => $code >= 200 && $code < 400 ? 'success' : 'error',
+                'message' => "HTTP {$code}",
+                'tested_at' => date('Y-m-d H:i:s'),
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'id' => $id,
+                'status' => 'error',
+                'message' => $e->getMessage(),
+                'tested_at' => date('Y-m-d H:i:s'),
+            ];
+        }
     }
 
     protected function allMock(): array

@@ -21,9 +21,16 @@ class QuestionService
 
     public function findManyByIds(array $ids): array
     {
+        if (empty($ids)) {
+            return [];
+        }
+        $repo = new QuestionRepository();
+        if (config('integration.question_source', 'mock') === 'real') {
+            return $repo->findByQuestionIds($ids);
+        }
         $list = [];
         foreach ($ids as $id) {
-            $row = (new QuestionRepository())->findByQuestionId((int) $id);
+            $row = $repo->findByQuestionId((int) $id);
             if ($row) {
                 $list[] = $row;
             }

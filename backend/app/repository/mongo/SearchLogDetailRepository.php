@@ -32,14 +32,17 @@ class SearchLogDetailRepository
 
     protected function createReal(array $data): bool
     {
-        if (!MongoClient::isConfigured()) {
-            return false;
+        $db = MongoClient::connection();
+        if (!$db) {
+            return $this->createMock($data);
         }
-
-        /**
-         * 未来真实写入示意：
-         * db.search_log_details.insertOne({...})
-         */
-        return true;
+        try {
+            $data['created_at'] = date('Y-m-d H:i:s');
+            $db->selectCollection('search_log_details')->insertOne($data);
+            return true;
+        } catch (\Throwable $e) {
+            error_log("[SearchLogDetailRepository] createReal failed: " . $e->getMessage());
+            return $this->createMock($data);
+        }
     }
 }

@@ -119,4 +119,39 @@ class AnnouncementRepository
         ]);
         return ['id' => $id] + $data;
     }
+
+    public function delete(int $id): bool
+    {
+        if (config('integration.user_center_source', 'mock') === 'real') {
+            return $this->deleteReal($id);
+        }
+        return $this->deleteMock($id);
+    }
+
+    protected function deleteMock(int $id): bool
+    {
+        $rows = $this->allRows();
+        $filtered = array_values(array_filter($rows, fn ($row) => (int) ($row['id'] ?? 0) !== $id));
+        if (count($filtered) === count($rows)) {
+            return false;
+        }
+        file_put_contents($this->file, json_encode($filtered, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+        return true;
+    }
+
+    protected function deleteReal(int $id): bool
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return false;
+        }
+        try {
+            $stmt = $pdo->prepare('DELETE FROM announcements WHERE id = :id');
+            $stmt->execute(['id' => $id]);
+            return $stmt->rowCount() > 0;
+        } catch (\PDOException $e) {
+            error_log("[AnnouncementRepository] deleteReal failed: " . $e->getMessage());
+            return false;
+        }
+    }
 }
