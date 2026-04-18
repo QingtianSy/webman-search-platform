@@ -36,7 +36,12 @@ class DocCategoryRepository
         if (!$pdo) {
             return [];
         }
-        $stmt = $pdo->query('SELECT id, parent_id, name, sort, status, created_at, updated_at FROM docs_categories ORDER BY sort ASC, id ASC');
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    }
+            try {
+            $stmt = $pdo->query('SELECT id, parent_id, name, sort, status, created_at, updated_at FROM docs_categories ORDER BY sort ASC, id ASC');
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (\PDOException $e) {
+                error_log("[DocCategoryRepository] allReal failed: " . $e->getMessage());
+                return [];
+            }
+        }
 }

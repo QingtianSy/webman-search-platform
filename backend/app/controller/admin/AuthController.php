@@ -39,16 +39,16 @@ class AuthController
         ], '登录成功');
     }
 
-    public function profile()
+    public function profile(Request $request)
     {
-        return ApiResponse::success([
-            'id' => 2,
-            'username' => 'admin',
-            'nickname' => '超级管理员',
-            'avatar' => '',
-            'status' => 1,
-            'roles' => ['admin'],
-            'permissions' => ['portal.access', 'search.query', 'admin.access', 'question.manage', 'system.config'],
-        ]);
+        $authorization = (string) $request->header('Authorization', '');
+        $token = trim(str_replace('Bearer', '', $authorization));
+        $decoded = (new JwtService())->decode($token);
+        $userId = (int) (($decoded['payload']['uid'] ?? 0));
+        $payload = (new AuthService())->profile($userId);
+        if (!$payload) {
+            return ApiResponse::error(40002, '未登录或用户不存在');
+        }
+        return ApiResponse::success($payload);
     }
 }

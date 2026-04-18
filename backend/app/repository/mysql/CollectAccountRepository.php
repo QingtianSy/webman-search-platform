@@ -37,8 +37,13 @@ class CollectAccountRepository
         if (!$pdo) {
             return [];
         }
-        $stmt = $pdo->prepare('SELECT id, user_id, platform, account, cookie_text, token_text, status, remark, created_at, updated_at FROM collect_accounts WHERE user_id = :user_id ORDER BY id DESC');
-        $stmt->execute(['user_id' => $userId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    }
+            try {
+            $stmt = $pdo->prepare('SELECT id, user_id, platform, account, cookie_text, token_text, status, remark, created_at, updated_at FROM collect_accounts WHERE user_id = :user_id ORDER BY id DESC');
+            $stmt->execute(['user_id' => $userId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (\PDOException $e) {
+                error_log("[CollectAccountRepository] listByUserIdReal failed: " . $e->getMessage());
+                return [];
+            }
+        }
 }

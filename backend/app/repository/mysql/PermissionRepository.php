@@ -39,7 +39,12 @@ class PermissionRepository
         if (!$pdo) {
             return [];
         }
-        $stmt = $pdo->query('SELECT id, name, code, type, created_at, updated_at FROM permissions');
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    }
+            try {
+            $stmt = $pdo->query('SELECT id, name, code, type, created_at, updated_at FROM permissions');
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (\PDOException $e) {
+                error_log("[PermissionRepository] allReal failed: " . $e->getMessage());
+                return [];
+            }
+        }
 }

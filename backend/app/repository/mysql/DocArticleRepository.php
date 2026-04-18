@@ -81,9 +81,14 @@ class DocArticleRepository
         if (!$pdo) {
             return [];
         }
-        $stmt = $pdo->query('SELECT id, category_id, slug, title, summary, content_md, status, created_at, updated_at FROM docs_articles ORDER BY id DESC');
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    }
+            try {
+            $stmt = $pdo->query('SELECT id, category_id, slug, title, summary, content_md, status, created_at, updated_at FROM docs_articles ORDER BY id DESC');
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (\PDOException $e) {
+                error_log("[DocArticleRepository] allReal failed: " . $e->getMessage());
+                return [];
+            }
+        }
 
     protected function findBySlugReal(string $slug): array
     {

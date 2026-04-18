@@ -68,10 +68,15 @@ class ApiKeyRepository
         if (!$pdo) {
             return [];
         }
-        $stmt = $pdo->prepare('SELECT id, user_id, app_name, api_key, api_secret_hash, status, expire_at, created_at, updated_at FROM user_api_keys WHERE api_key = :api_key LIMIT 1');
-        $stmt->execute(['api_key' => $apiKey]);
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
-    }
+            try {
+            $stmt = $pdo->prepare('SELECT id, user_id, app_name, api_key, api_secret_hash, status, expire_at, created_at, updated_at FROM user_api_keys WHERE api_key = :api_key LIMIT 1');
+            $stmt->execute(['api_key' => $apiKey]);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            } catch (\PDOException $e) {
+                error_log("[ApiKeyRepository] findByApiKeyReal failed: " . $e->getMessage());
+                return [];
+            }
+        }
 
     protected function findByUserIdReal(int $userId): array
     {

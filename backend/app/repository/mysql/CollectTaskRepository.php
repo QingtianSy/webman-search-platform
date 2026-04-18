@@ -62,10 +62,15 @@ class CollectTaskRepository
         if (!$pdo) {
             return [];
         }
-        $stmt = $pdo->prepare('SELECT id, task_no, user_id, account_id, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks WHERE user_id = :user_id ORDER BY id DESC');
-        $stmt->execute(['user_id' => $userId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    }
+            try {
+            $stmt = $pdo->prepare('SELECT id, task_no, user_id, account_id, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks WHERE user_id = :user_id ORDER BY id DESC');
+            $stmt->execute(['user_id' => $userId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (\PDOException $e) {
+                error_log("[CollectTaskRepository] listByUserIdReal failed: " . $e->getMessage());
+                return [];
+            }
+        }
 
     protected function updateStatusReal(string $taskNo, int $status, string $errorMessage = ''): array
     {

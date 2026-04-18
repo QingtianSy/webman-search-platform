@@ -46,9 +46,14 @@ class RoleRepository
         if (!$pdo) {
             return [];
         }
-        $stmt = $pdo->query('SELECT id, name, code, sort, status, created_at, updated_at FROM roles WHERE status = 1');
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    }
+            try {
+            $stmt = $pdo->query('SELECT id, name, code, sort, status, created_at, updated_at FROM roles WHERE status = 1');
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (\PDOException $e) {
+                error_log("[RoleRepository] allReal failed: " . $e->getMessage());
+                return [];
+            }
+        }
 
     protected function findByIdsReal(array $ids): array
     {

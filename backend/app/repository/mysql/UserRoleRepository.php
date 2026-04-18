@@ -46,8 +46,13 @@ class UserRoleRepository
         if (!$pdo) {
             return [];
         }
-        $stmt = $pdo->prepare('SELECT role_id FROM user_role WHERE user_id = :user_id');
-        $stmt->execute(['user_id' => $userId]);
-        return array_map('intval', array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'role_id'));
-    }
+            try {
+            $stmt = $pdo->prepare('SELECT role_id FROM user_role WHERE user_id = :user_id');
+            $stmt->execute(['user_id' => $userId]);
+            return array_map('intval', array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'role_id'));
+            } catch (\PDOException $e) {
+                error_log("[UserRoleRepository] roleIdsByUserIdReal failed: " . $e->getMessage());
+                return [];
+            }
+        }
 }

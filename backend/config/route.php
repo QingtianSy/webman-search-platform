@@ -15,6 +15,7 @@
 use Webman\Route;
 use app\middleware\UserAuthMiddleware;
 use app\middleware\AdminAuthMiddleware;
+use app\middleware\OpenApiAuthMiddleware;
 use app\controller\HealthController;
 use app\controller\IndexController;
 use app\controller\auth\AuthController as UnifiedAuthController;
@@ -49,11 +50,12 @@ Route::get('/', [IndexController::class, 'index']);
 Route::get('/health', [HealthController::class, 'health']);
 Route::get('/ready', [HealthController::class, 'ready']);
 
-// 认证路由（无需认证）
+// 认证路由
 Route::post('/api/v1/auth/login', [UnifiedAuthController::class, 'login']);
-Route::get('/api/v1/auth/profile', [UnifiedAuthController::class, 'profile']);
-Route::get('/api/v1/auth/menus', [UnifiedAuthController::class, 'menus']);
-Route::get('/api/v1/auth/permissions', [UnifiedAuthController::class, 'permissions']);
+// profile/menus/permissions 需要登录后才能访问
+Route::get('/api/v1/auth/profile', [UnifiedAuthController::class, 'profile'])->middleware([UserAuthMiddleware::class]);
+Route::get('/api/v1/auth/menus', [UnifiedAuthController::class, 'menus'])->middleware([UserAuthMiddleware::class]);
+Route::get('/api/v1/auth/permissions', [UnifiedAuthController::class, 'permissions'])->middleware([UserAuthMiddleware::class]);
 
 // 用户端路由（需要用户认证）
 Route::group('/api/v1/user', function () {
@@ -114,7 +116,10 @@ Route::group('/api/v1/admin', function () {
     Route::post('/system-config/update', [SystemConfigController::class, 'update']);
 })->middleware([AdminAuthMiddleware::class]);
 
-// 开放 API 路由（无需认证或使用 API Key 认证）
-Route::post('/open/v1/search/query', [OpenSearchController::class, 'query']);
-Route::get('/open/v1/quota/detail', [OpenSearchController::class, 'quotaDetail']);
+// 开放 API 路由（API Key 认证）
+Route::group('/open/v1', function () {
+    Route::post('/search/query', [OpenSearchController::class, 'query']);
+    Route::get('/quota/detail', [OpenSearchController::class, 'quotaDetail']);
+})->middleware([OpenApiAuthMiddleware::class]);
+// 开放平台健康检查（无需认证）
 Route::get('/open/v1/health', [OpenHealthController::class, 'index']);

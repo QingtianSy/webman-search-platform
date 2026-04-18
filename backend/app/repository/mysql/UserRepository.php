@@ -70,9 +70,14 @@ class UserRepository
         if (!$pdo) {
             return [];
         }
-        $stmt = $pdo->query('SELECT * FROM users ORDER BY id DESC');
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    }
+            try {
+            $stmt = $pdo->query('SELECT * FROM users ORDER BY id DESC');
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (\PDOException $e) {
+                error_log("[UserRepository] allReal failed: " . $e->getMessage());
+                return [];
+            }
+        }
 
     protected function findByUsernameReal(string $username): ?array
     {
