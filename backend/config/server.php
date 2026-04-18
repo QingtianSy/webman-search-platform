@@ -9,7 +9,7 @@ return [
     'user' => '',
     'group' => '',
     'reusePort' => false,
-    'event_loop' => extension_loaded('swoole') ? \Workerman\Events\Swoole::class : '',
+    'event_loop' => '',
     'stop_timeout' => 2,
     'pid_file' => runtime_path() . '/webman.pid',
     'status_file' => runtime_path() . '/webman.status',
