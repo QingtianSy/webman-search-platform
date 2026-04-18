@@ -9,27 +9,10 @@ use support\Request;
 
 class CollectManageController
 {
-    public function tasks()
+    public function tasks(Request $request)
     {
-        return json([
-            'code' => 1,
-            'msg' => 'success',
-            'data' => [
-                'list' => [
-                    [
-                        'task_no' => 'CT202604150001',
-                        'status' => 2,
-                        'course_count' => 1,
-                        'question_count' => 2,
-                        'runner_script' => 'pending://collect-core-script'
-                    ]
-                ],
-                'total' => 1,
-                'page' => 1,
-                'page_size' => 20
-            ],
-            'request_id' => ''
-        ]);
+        $query = (new \app\validate\admin\AdminQueryValidate())->list($request->get());
+        return ApiResponse::success((new CollectAdminService())->getList($query));
     }
 
     public function detail(Request $request)

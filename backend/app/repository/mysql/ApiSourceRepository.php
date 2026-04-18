@@ -45,10 +45,23 @@ class ApiSourceRepository
     protected function allMock(): array
     {
         if (!is_file($this->file)) {
+            error_log("[ApiSourceRepository] Mock file not found: {$this->file}");
             return [];
         }
-        $rows = json_decode((string) file_get_contents($this->file), true);
-        return is_array($rows) ? $rows : [];
+        
+        $content = @file_get_contents($this->file);
+        if ($content === false) {
+            error_log("[ApiSourceRepository] Failed to read mock file: {$this->file}");
+            return [];
+        }
+        
+        $rows = json_decode($content, true);
+        if (!is_array($rows)) {
+            error_log("[ApiSourceRepository] Invalid JSON in mock file: {$this->file}");
+            return [];
+        }
+        
+        return $rows;
     }
 
     protected function findByIdMock(int $id): array
@@ -65,10 +78,17 @@ class ApiSourceRepository
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
+            error_log("[ApiSourceRepository] Database connection failed");
             return [];
         }
-        $stmt = $pdo->query('SELECT id, name, code, method, url, timeout, retry_times, status, success_code_field, success_code_value, data_path, remark, created_at, updated_at FROM api_sources ORDER BY id DESC');
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        
+        try {
+            $stmt = $pdo->query('SELECT id, name, code, method, url, timeout, retry_times, status, success_code_field, success_code_value, data_path, remark, created_at, updated_at FROM api_sources ORDER BY id DESC');
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            error_log("[ApiSourceRepository] Query failed: " . $e->getMessage());
+            return [];
+        }
     }
 
     protected function findByIdReal(int $id): array

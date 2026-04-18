@@ -34,7 +34,14 @@ class MySqlClient
                 $c['password'] ?? '',
                 [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
             );
-        } catch (PDOException) {
+        } catch (PDOException $e) {
+            error_log(sprintf(
+                "[MySqlClient] PDO connection failed: %s (host=%s, database=%s, user=%s)",
+                $e->getMessage(),
+                $c['host'] ?? 'N/A',
+                $c['database'] ?? 'N/A',
+                $c['username'] ?? 'N/A'
+            ));
             return null;
         }
     }

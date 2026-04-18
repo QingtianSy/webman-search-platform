@@ -13,6 +13,8 @@
  */
 
 use Webman\Route;
+use app\middleware\UserAuthMiddleware;
+use app\middleware\AdminAuthMiddleware;
 use app\controller\HealthController;
 use app\controller\IndexController;
 use app\controller\auth\AuthController as UnifiedAuthController;
@@ -42,68 +44,77 @@ use app\controller\admin\UserController;
 use app\controller\open\HealthController as OpenHealthController;
 use app\controller\open\SearchController as OpenSearchController;
 
+// 公共路由（无需认证）
 Route::get('/', [IndexController::class, 'index']);
 Route::get('/health', [HealthController::class, 'health']);
 Route::get('/ready', [HealthController::class, 'ready']);
 
+// 认证路由（无需认证）
 Route::post('/api/v1/auth/login', [UnifiedAuthController::class, 'login']);
 Route::get('/api/v1/auth/profile', [UnifiedAuthController::class, 'profile']);
 Route::get('/api/v1/auth/menus', [UnifiedAuthController::class, 'menus']);
 Route::get('/api/v1/auth/permissions', [UnifiedAuthController::class, 'permissions']);
 
-Route::get('/api/v1/user/dashboard/overview', [DashboardController::class, 'overview']);
-Route::get('/api/v1/user/api-key/list', [ApiKeyController::class, 'index']);
-Route::get('/api/v1/user/api-key/detail', [ApiKeyController::class, 'detail']);
-Route::post('/api/v1/user/api-key/create', [ApiKeyController::class, 'create']);
-Route::post('/api/v1/user/api-key/toggle', [ApiKeyController::class, 'toggle']);
-Route::delete('/api/v1/user/api-key/delete', [ApiKeyController::class, 'delete']);
-Route::get('/api/v1/user/wallet/detail', [BillingController::class, 'wallet']);
-Route::get('/api/v1/user/plan/current', [BillingController::class, 'currentPlan']);
-Route::get('/api/v1/user/doc/category/list', [DocController::class, 'categories']);
-Route::get('/api/v1/user/doc/article/detail', [DocController::class, 'detail']);
-Route::get('/api/v1/user/doc/config', [DocController::class, 'config']);
-Route::get('/api/v1/user/collect/task/list', [CollectController::class, 'tasks']);
-Route::get('/api/v1/user/collect/task/detail', [CollectController::class, 'detail']);
-Route::get('/api/v1/user/log/balance', [LogController::class, 'balance']);
-Route::get('/api/v1/user/log/payment', [LogController::class, 'payment']);
-Route::get('/api/v1/user/log/login', [LogController::class, 'login']);
-Route::get('/api/v1/user/log/operate', [LogController::class, 'operate']);
-Route::post('/api/v1/user/search/query', [UserSearchController::class, 'query']);
-Route::get('/api/v1/user/search/logs', [UserSearchController::class, 'logs']);
+// 用户端路由（需要用户认证）
+Route::group('/api/v1/user', function () {
+    Route::get('/dashboard/overview', [DashboardController::class, 'overview']);
+    Route::get('/api-key/list', [ApiKeyController::class, 'index']);
+    Route::get('/api-key/detail', [ApiKeyController::class, 'detail']);
+    Route::post('/api-key/create', [ApiKeyController::class, 'create']);
+    Route::post('/api-key/toggle', [ApiKeyController::class, 'toggle']);
+    Route::delete('/api-key/delete', [ApiKeyController::class, 'delete']);
+    Route::get('/wallet/detail', [BillingController::class, 'wallet']);
+    Route::get('/plan/current', [BillingController::class, 'currentPlan']);
+    Route::get('/doc/category/list', [DocController::class, 'categories']);
+    Route::get('/doc/article/detail', [DocController::class, 'detail']);
+    Route::get('/doc/config', [DocController::class, 'config']);
+    Route::get('/collect/task/list', [CollectController::class, 'tasks']);
+    Route::get('/collect/task/detail', [CollectController::class, 'detail']);
+    Route::get('/log/balance', [LogController::class, 'balance']);
+    Route::get('/log/payment', [LogController::class, 'payment']);
+    Route::get('/log/login', [LogController::class, 'login']);
+    Route::get('/log/operate', [LogController::class, 'operate']);
+    Route::post('/search/query', [UserSearchController::class, 'query']);
+    Route::get('/search/logs', [UserSearchController::class, 'logs']);
+})->middleware([UserAuthMiddleware::class]);
 
-Route::get('/api/v1/admin/question/list', [QuestionController::class, 'index']);
-Route::get('/api/v1/admin/question/detail', [QuestionController::class, 'detail']);
-Route::post('/api/v1/admin/question/create', [QuestionController::class, 'create']);
-Route::put('/api/v1/admin/question/update', [QuestionController::class, 'update']);
-Route::delete('/api/v1/admin/question/delete', [QuestionController::class, 'delete']);
-Route::get('/api/v1/admin/question-category/list', [QuestionCategoryController::class, 'index']);
-Route::get('/api/v1/admin/question-type/list', [QuestionTypeController::class, 'index']);
-Route::get('/api/v1/admin/question-source/list', [QuestionSourceController::class, 'index']);
-Route::get('/api/v1/admin/question-tag/list', [QuestionTagController::class, 'index']);
-Route::get('/api/v1/admin/user/list', [UserController::class, 'index']);
-Route::get('/api/v1/admin/role/list', [RoleController::class, 'index']);
-Route::get('/api/v1/admin/permission/list', [PermissionController::class, 'index']);
-Route::get('/api/v1/admin/menu/list', [MenuController::class, 'index']);
-Route::get('/api/v1/admin/plan/list', [PlanController::class, 'index']);
-Route::get('/api/v1/admin/announcement/list', [AnnouncementController::class, 'index']);
-Route::post('/api/v1/admin/announcement/create', [AnnouncementController::class, 'create']);
-Route::put('/api/v1/admin/announcement/update', [AnnouncementController::class, 'update']);
-Route::delete('/api/v1/admin/announcement/delete', [AnnouncementController::class, 'delete']);
-Route::get('/api/v1/admin/log/search/list', [SearchLogController::class, 'index']);
-Route::get('/api/v1/admin/doc/article/list', [DocManageController::class, 'articles']);
-Route::post('/api/v1/admin/doc/article/create', [DocManageController::class, 'create']);
-Route::put('/api/v1/admin/doc/article/update', [DocManageController::class, 'update']);
-Route::delete('/api/v1/admin/doc/article/delete', [DocManageController::class, 'delete']);
-Route::get('/api/v1/admin/collect/task/list', [CollectManageController::class, 'tasks']);
-Route::get('/api/v1/admin/collect/task/detail', [CollectManageController::class, 'detail']);
-Route::post('/api/v1/admin/collect/task/stop', [CollectManageController::class, 'stop']);
-Route::post('/api/v1/admin/collect/task/retry', [CollectManageController::class, 'retry']);
-Route::get('/api/v1/admin/api-source/list', [ApiSourceManageController::class, 'index']);
-Route::get('/api/v1/admin/api-source/detail', [ApiSourceManageController::class, 'detail']);
-Route::post('/api/v1/admin/api-source/test', [ApiSourceManageController::class, 'test']);
-Route::get('/api/v1/admin/system-config/list', [SystemConfigController::class, 'index']);
-Route::post('/api/v1/admin/system-config/update', [SystemConfigController::class, 'update']);
+// 管理端路由（需要管理员认证）
+Route::group('/api/v1/admin', function () {
+    Route::get('/question/list', [QuestionController::class, 'index']);
+    Route::get('/question/detail', [QuestionController::class, 'detail']);
+    Route::post('/question/create', [QuestionController::class, 'create']);
+    Route::put('/question/update', [QuestionController::class, 'update']);
+    Route::delete('/question/delete', [QuestionController::class, 'delete']);
+    Route::get('/question-category/list', [QuestionCategoryController::class, 'index']);
+    Route::get('/question-type/list', [QuestionTypeController::class, 'index']);
+    Route::get('/question-source/list', [QuestionSourceController::class, 'index']);
+    Route::get('/question-tag/list', [QuestionTagController::class, 'index']);
+    Route::get('/user/list', [UserController::class, 'index']);
+    Route::get('/role/list', [RoleController::class, 'index']);
+    Route::get('/permission/list', [PermissionController::class, 'index']);
+    Route::get('/menu/list', [MenuController::class, 'index']);
+    Route::get('/plan/list', [PlanController::class, 'index']);
+    Route::get('/announcement/list', [AnnouncementController::class, 'index']);
+    Route::post('/announcement/create', [AnnouncementController::class, 'create']);
+    Route::put('/announcement/update', [AnnouncementController::class, 'update']);
+    Route::delete('/announcement/delete', [AnnouncementController::class, 'delete']);
+    Route::get('/log/search/list', [SearchLogController::class, 'index']);
+    Route::get('/doc/article/list', [DocManageController::class, 'articles']);
+    Route::post('/doc/article/create', [DocManageController::class, 'create']);
+    Route::put('/doc/article/update', [DocManageController::class, 'update']);
+    Route::delete('/doc/article/delete', [DocManageController::class, 'delete']);
+    Route::get('/collect/task/list', [CollectManageController::class, 'tasks']);
+    Route::get('/collect/task/detail', [CollectManageController::class, 'detail']);
+    Route::post('/collect/task/stop', [CollectManageController::class, 'stop']);
+    Route::post('/collect/task/retry', [CollectManageController::class, 'retry']);
+    Route::get('/api-source/list', [ApiSourceManageController::class, 'index']);
+    Route::get('/api-source/detail', [ApiSourceManageController::class, 'detail']);
+    Route::post('/api-source/test', [ApiSourceManageController::class, 'test']);
+    Route::get('/system-config/list', [SystemConfigController::class, 'index']);
+    Route::post('/system-config/update', [SystemConfigController::class, 'update']);
+})->middleware([AdminAuthMiddleware::class]);
 
+// 开放 API 路由（无需认证或使用 API Key 认证）
 Route::post('/open/v1/search/query', [OpenSearchController::class, 'query']);
 Route::get('/open/v1/quota/detail', [OpenSearchController::class, 'quotaDetail']);
 Route::get('/open/v1/health', [OpenHealthController::class, 'index']);

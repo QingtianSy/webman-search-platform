@@ -4,13 +4,15 @@ namespace app\middleware;
 
 use app\service\auth\JwtService;
 use support\ApiResponse;
-use support\Request;
+use Webman\MiddlewareInterface;
+use Webman\Http\Response;
+use Webman\Http\Request;
 
-class AdminAuthMiddleware
+class AdminAuthMiddleware implements MiddlewareInterface
 {
-    public function process(?Request $request, callable $handler): mixed
+    public function process(Request $request, callable $handler): Response
     {
-                $authorization = (string) $request->header('Authorization', '');
+        $authorization = (string) $request->header('Authorization', '');
         if ($authorization === '') {
             return ApiResponse::error(40002, '未登录');
         }

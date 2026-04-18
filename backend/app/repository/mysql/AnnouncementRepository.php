@@ -17,10 +17,23 @@ class AnnouncementRepository
     protected function allRows(): array
     {
         if (!is_file($this->file)) {
+            error_log("[AnnouncementRepository] Mock file not found: {$this->file}");
             return [];
         }
-        $rows = json_decode((string) file_get_contents($this->file), true);
-        return is_array($rows) ? $rows : [];
+        
+        $content = @file_get_contents($this->file);
+        if ($content === false) {
+            error_log("[AnnouncementRepository] Failed to read mock file: {$this->file}");
+            return [];
+        }
+        
+        $rows = json_decode($content, true);
+        if (!is_array($rows)) {
+            error_log("[AnnouncementRepository] Invalid JSON in mock file: {$this->file}");
+            return [];
+        }
+        
+        return $rows;
     }
 
     public function latest(): array
@@ -62,10 +75,17 @@ class AnnouncementRepository
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
+            error_log("[AnnouncementRepository] Database connection failed");
             return [];
         }
-        $stmt = $pdo->query('SELECT id, title, content, type, status, publish_at, created_at, updated_at FROM announcements ORDER BY id DESC');
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        
+        try {
+            $stmt = $pdo->query('SELECT id, title, content, type, status, publish_at, created_at, updated_at FROM announcements ORDER BY id DESC');
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            error_log("[AnnouncementRepository] Query failed: " . $e->getMessage());
+            return [];
+        }
     }
 
     protected function createReal(array $data): array

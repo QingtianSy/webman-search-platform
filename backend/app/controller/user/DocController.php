@@ -9,26 +9,18 @@ use support\Request;
 
 class DocController
 {
-    public function categories()
+    public function categories(Request $request)
     {
-        return json([
-            'code' => 1,
-            'msg' => 'success',
-            'data' => [
-                'list' => [
-                    [
-                        'id' => 1,
-                        'name' => '平台文档',
-                        'slug' => 'platform-docs',
-                        'sort' => 1,
-                        'status' => 1
-                    ]
-                ],
-                'total' => 1,
-                'page' => 1,
-                'page_size' => 20
-            ],
-            'request_id' => ''
+        $page = max(1, (int) $request->input('page', 1));
+        $pageSize = max(1, min(100, (int) $request->input('page_size', 20)));
+        
+        $categories = (new \app\repository\mysql\DocCategoryRepository())->all();
+        
+        return ApiResponse::success([
+            'list' => $categories,
+            'total' => count($categories),
+            'page' => $page,
+            'page_size' => $pageSize
         ]);
     }
 

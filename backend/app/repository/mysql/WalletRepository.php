@@ -24,12 +24,22 @@ class WalletRepository
     protected function findByUserIdMock(int $userId): array
     {
         if (!is_file($this->file)) {
+            error_log("[WalletRepository] Mock file not found: {$this->file}");
             return [];
         }
-        $rows = json_decode((string) file_get_contents($this->file), true);
+        
+        $content = @file_get_contents($this->file);
+        if ($content === false) {
+            error_log("[WalletRepository] Failed to read mock file: {$this->file}");
+            return [];
+        }
+        
+        $rows = json_decode($content, true);
         if (!is_array($rows)) {
+            error_log("[WalletRepository] Invalid JSON in mock file: {$this->file}");
             return [];
         }
+        
         foreach ($rows as $row) {
             if ((int) ($row['user_id'] ?? 0) === $userId) {
                 return $row;
@@ -42,10 +52,17 @@ class WalletRepository
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
+            error_log("[WalletRepository] Database connection failed");
             return [];
         }
-        $stmt = $pdo->prepare('SELECT id, user_id, balance, frozen_balance, total_recharge, total_consume, created_at, updated_at FROM wallets WHERE user_id = :user_id LIMIT 1');
-        $stmt->execute(['user_id' => $userId]);
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        
+        try {
+            $stmt = $pdo->prepare('SELECT id, user_id, balance, frozen_balance, total_recharge, total_consume, created_at, updated_at FROM wallets WHERE user_id = :user_id LIMIT 1');
+            $stmt->execute(['user_id' => $userId]);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            error_log("[WalletRepository] Query failed: " . $e->getMessage());
+            return [];
+        }
     }
 }

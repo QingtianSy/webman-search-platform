@@ -17,10 +17,23 @@ class SystemConfigRepository
     protected function allRows(): array
     {
         if (!is_file($this->file)) {
+            error_log("[SystemConfigRepository] Mock file not found: {$this->file}");
             return [];
         }
-        $rows = json_decode((string) file_get_contents($this->file), true);
-        return is_array($rows) ? $rows : [];
+        
+        $content = @file_get_contents($this->file);
+        if ($content === false) {
+            error_log("[SystemConfigRepository] Failed to read mock file: {$this->file}");
+            return [];
+        }
+        
+        $rows = json_decode($content, true);
+        if (!is_array($rows)) {
+            error_log("[SystemConfigRepository] Invalid JSON in mock file: {$this->file}");
+            return [];
+        }
+        
+        return $rows;
     }
 
     public function all(): array
@@ -54,10 +67,17 @@ class SystemConfigRepository
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
+            error_log("[SystemConfigRepository] Database connection failed");
             return [];
         }
-        $stmt = $pdo->query('SELECT id, config_group, config_key, config_value, config_type, status, created_at, updated_at FROM system_configs ORDER BY id DESC');
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        
+        try {
+            $stmt = $pdo->query('SELECT id, config_group, config_key, config_value, config_type, status, created_at, updated_at FROM system_configs ORDER BY id DESC');
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            error_log("[SystemConfigRepository] Query failed: " . $e->getMessage());
+            return [];
+        }
     }
 
     protected function updateByKeyReal(string $key, string $value): array
