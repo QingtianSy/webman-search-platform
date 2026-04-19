@@ -8,34 +8,36 @@ class OrderService
 {
     public static function generateOrderNo(): string
     {
-        return 'P' . date('YmdHis') . mt_rand(1000, 9999);
+        return 'P' . date('YmdHis') . bin2hex(random_bytes(6));
     }
 
     public function create(int $userId, int $type, string $amount, string $payType, ?int $planId = null): array
     {
-        $orderNo = self::generateOrderNo();
         $repo = new OrderRepository();
-        $id = $repo->create([
-            'order_no' => $orderNo,
-            'user_id' => $userId,
-            'type' => $type,
-            'plan_id' => $planId,
-            'amount' => $amount,
-            'pay_type' => $payType,
-        ]);
-        if ($id <= 0) {
-            return [];
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            $orderNo = self::generateOrderNo();
+            $id = $repo->create([
+                'order_no' => $orderNo,
+                'user_id' => $userId,
+                'type' => $type,
+                'plan_id' => $planId,
+                'amount' => $amount,
+                'pay_type' => $payType,
+            ]);
+            if ($id > 0) {
+                return [
+                    'id' => $id,
+                    'order_no' => $orderNo,
+                    'user_id' => $userId,
+                    'type' => $type,
+                    'plan_id' => $planId,
+                    'amount' => $amount,
+                    'pay_type' => $payType,
+                    'status' => 0,
+                ];
+            }
         }
-        return [
-            'id' => $id,
-            'order_no' => $orderNo,
-            'user_id' => $userId,
-            'type' => $type,
-            'plan_id' => $planId,
-            'amount' => $amount,
-            'pay_type' => $payType,
-            'status' => 0,
-        ];
+        return [];
     }
 
     public function listByUserId(int $userId, array $query = []): array

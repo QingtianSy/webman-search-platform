@@ -2,20 +2,16 @@
 
 namespace app\service\admin;
 
+use app\common\admin\AdminListBuilder;
 use app\repository\mysql\SystemConfigRepository;
 
 class SystemConfigAdminService
 {
     public function getList(array $query = []): array
     {
+        $query += ['page' => 1, 'page_size' => 20];
         $list = (new SystemConfigRepository())->all();
-
-        return [
-            'list' => $list,
-            'total' => count($list),
-            'page' => 1,
-            'page_size' => 20,
-        ];
+        return AdminListBuilder::make($list, (int) $query['page'], (int) $query['page_size']);
     }
 
     public function update(string $key, string $value): array

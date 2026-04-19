@@ -24,9 +24,9 @@ class CollectService
         return (new CollectTaskRepository())->listByUserId($userId);
     }
 
-    public function detail(string $taskNo): array
+    public function detail(int $userId, string $taskNo): array
     {
-        return (new CollectTaskDetailRepository())->findByTaskNo($taskNo);
+        return (new CollectTaskDetailRepository())->findByTaskNo($taskNo, $userId);
     }
 
     public function queryCourses(string $account, string $password): array

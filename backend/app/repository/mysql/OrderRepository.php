@@ -65,6 +65,22 @@ class OrderRepository
         }
     }
 
+    public function revertPaid(string $orderNo): bool
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return false;
+        }
+        try {
+            $stmt = $pdo->prepare('UPDATE `order` SET status = 0, trade_no = NULL, paid_at = NULL WHERE order_no = :order_no AND status = 1');
+            $stmt->execute(['order_no' => $orderNo]);
+            return $stmt->rowCount() > 0;
+        } catch (\PDOException $e) {
+            error_log("[OrderRepository] revertPaid failed: " . $e->getMessage());
+            return false;
+        }
+    }
+
     public function listByUserId(int $userId, int $page = 1, int $pageSize = 20, array $filters = []): array
     {
         $pdo = MySqlClient::pdo();

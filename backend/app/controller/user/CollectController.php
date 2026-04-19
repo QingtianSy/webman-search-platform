@@ -29,8 +29,9 @@ class CollectController
 
     public function detail(Request $request)
     {
+        $userId = (int) ($request->userId ?? 0);
         $taskNo = (new CollectValidate())->taskNo($request->get());
-        return ApiResponse::success((new CollectService())->detail($taskNo));
+        return ApiResponse::success((new CollectService())->detail($userId, $taskNo));
     }
 
     public function queryCourses(Request $request)

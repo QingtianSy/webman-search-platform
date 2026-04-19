@@ -55,13 +55,13 @@ class ApiKeyService
         }
     }
 
-    public function toggle(int $id, int $status): bool
+    public function toggle(int $userId, int $id, int $status): bool
     {
-        return (new ApiKeyRepository())->toggle($id, $status);
+        return (new ApiKeyRepository())->toggle($userId, $id, $status);
     }
 
-    public function delete(int $id): bool
+    public function delete(int $userId, int $id): bool
     {
-        return (new ApiKeyRepository())->delete($id);
+        return (new ApiKeyRepository())->delete($userId, $id);
     }
 }

@@ -2,7 +2,6 @@
 
 namespace app\controller\open;
 
-use app\service\quota\QuotaService;
 use app\service\search\SearchService;
 use support\ApiResponse;
 use support\Request;
@@ -24,11 +23,6 @@ class SearchController
 
         if ($userId <= 0) {
             return ApiResponse::error(40008, 'API Key 未关联用户');
-        }
-
-        $remainQuota = (new QuotaService())->getUserQuota($userId);
-        if ($remainQuota <= 0) {
-            return ApiResponse::error(40006, '额度不足');
         }
 
         $result = (new SearchService())->query($userId, $keyword, $info, $split, $apiKeyId);

@@ -24,4 +24,25 @@ class RolePermissionRepository
             return [];
         }
     }
+
+    public function permissionCodesByRoleCodes(array $roleCodes): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo || empty($roleCodes)) {
+            return [];
+        }
+        try {
+            $placeholders = implode(',', array_fill(0, count($roleCodes), '?'));
+            $sql = "SELECT DISTINCT p.code FROM permissions p "
+                . "INNER JOIN role_permission rp ON rp.permission_id = p.id "
+                . "INNER JOIN roles r ON r.id = rp.role_id "
+                . "WHERE r.code IN ({$placeholders}) AND r.status = 1";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(array_values($roleCodes));
+            return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        } catch (\PDOException $e) {
+            error_log("[RolePermissionRepository] permissionCodesByRoleCodes failed: " . $e->getMessage());
+            return [];
+        }
+    }
 }

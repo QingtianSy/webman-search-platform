@@ -20,6 +20,9 @@ class ApiKeyService
         if ((int) ($record['status'] ?? 0) !== 1) {
             return false;
         }
+        if (!empty($record['expire_at']) && strtotime($record['expire_at']) < time()) {
+            return false;
+        }
         if (!empty($record['api_secret_hash'])) {
             return password_verify($apiSecret, $record['api_secret_hash']);
         }

@@ -47,10 +47,17 @@ class CallbackService
         }
 
         $type = (int) $order['type'];
+        $fulfilled = false;
         if ($type === 1) {
-            (new WalletService())->recharge((int) $order['user_id'], $order['amount'], $orderNo);
+            $fulfilled = (new WalletService())->recharge((int) $order['user_id'], $order['amount'], $orderNo);
         } elseif ($type === 2) {
-            (new SubscriptionService())->activate((int) $order['user_id'], (int) $order['plan_id'], $orderNo);
+            $fulfilled = (new SubscriptionService())->activate((int) $order['user_id'], (int) $order['plan_id'], $orderNo);
+        }
+
+        if (!$fulfilled) {
+            error_log("[CallbackService] fulfillment failed for order={$orderNo}, reverting paid status");
+            $repo->revertPaid($orderNo);
+            return false;
         }
 
         (new PaymentLogRepository())->create([

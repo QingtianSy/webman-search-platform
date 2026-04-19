@@ -15,10 +15,13 @@ class SubscriptionService
             return false;
         }
         try {
+            $pdo->beginTransaction();
+
             $stmt = $pdo->prepare('SELECT id, name, duration, quota, is_unlimited FROM plans WHERE id = :id AND status = 1 LIMIT 1');
             $stmt->execute(['id' => $planId]);
             $plan = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$plan) {
+                $pdo->rollBack();
                 error_log("[SubscriptionService] plan not found: $planId");
                 return false;
             }
@@ -56,8 +59,12 @@ class SubscriptionService
 
             (new QuotaCacheRepository())->deleteUserQuota($userId);
 
+            $pdo->commit();
             return true;
         } catch (\PDOException $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             error_log("[SubscriptionService] activate failed: " . $e->getMessage());
             return false;
         }

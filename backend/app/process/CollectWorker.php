@@ -187,13 +187,15 @@ class CollectWorker
 
         try {
             $imported = $this->questionRepo->importFromJsonl($jsonlFile, $taskNo);
+            $esIndexed = 0;
             if ($imported > 0) {
                 $questions = $this->questionRepo->findByTaskNo($taskNo);
-                $this->esRepo->bulkIndex($questions);
+                $esIndexed = $this->esRepo->bulkIndex($questions);
             }
-            $this->taskRepo->updateProgress($taskNo, $imported, $imported, 0);
+            $esFailed = $imported - $esIndexed;
+            $this->taskRepo->updateProgress($taskNo, $imported, $esIndexed, $esFailed);
             $this->taskRepo->updateStatus($taskNo, 2);
-            error_log("[CollectWorker] imported task={$taskNo} questions={$imported}");
+            error_log("[CollectWorker] imported task={$taskNo} mongo={$imported} es_ok={$esIndexed} es_fail={$esFailed}");
         } catch (\Throwable $e) {
             $this->taskRepo->updateStatus($taskNo, 3, '导入失败: ' . $e->getMessage());
             error_log("[CollectWorker] import failed task={$taskNo}: " . $e->getMessage());

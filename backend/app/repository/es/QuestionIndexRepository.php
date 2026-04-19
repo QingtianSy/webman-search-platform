@@ -85,7 +85,15 @@ class QuestionIndexRepository
             ]);
             $result = json_decode((string) $response->getBody(), true);
             if (!empty($result['errors'])) {
-                error_log("[QuestionIndexRepository] bulkIndex had errors");
+                $errorCount = 0;
+                foreach ($result['items'] ?? [] as $item) {
+                    $action = $item['index'] ?? $item['create'] ?? [];
+                    if (isset($action['error'])) {
+                        $errorCount++;
+                    }
+                }
+                error_log("[QuestionIndexRepository] bulkIndex had {$errorCount} errors out of " . count($questions));
+                return count($questions) - $errorCount;
             }
             return count($questions);
         } catch (Throwable $e) {
@@ -140,7 +148,7 @@ class QuestionIndexRepository
         }
     }
 
-    public function deleteQuestion(int $questionId): bool
+    public function deleteQuestion(string $questionId): bool
     {
         if (!ElasticsearchClient::isConfigured()) {
             return false;

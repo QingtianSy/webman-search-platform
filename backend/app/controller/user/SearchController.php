@@ -3,7 +3,6 @@
 namespace app\controller\user;
 
 use app\common\user\UserQuery;
-use app\service\quota\QuotaService;
 use app\service\search\SearchService;
 use app\service\user\SearchHistoryService;
 use app\validate\user\SearchValidate;
@@ -16,11 +15,6 @@ class SearchController
     {
         $userId = (int) ($request->userId ?? 0);
         $payload = (new SearchValidate())->query($request->post());
-
-        $remainQuota = (new QuotaService())->getUserQuota($userId);
-        if ($remainQuota <= 0) {
-            return ApiResponse::error(40006, '额度不足');
-        }
 
         $result = (new SearchService())->query($userId, $payload['q'], $payload['info'], $payload['split']);
 

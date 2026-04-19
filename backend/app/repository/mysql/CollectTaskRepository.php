@@ -62,6 +62,20 @@ class CollectTaskRepository
         }
     }
 
+    public function clearRunnerScript(string $taskNo): void
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return;
+        }
+        try {
+            $stmt = $pdo->prepare('UPDATE collect_tasks SET runner_script = NULL, next_script = NULL WHERE task_no = :task_no');
+            $stmt->execute(['task_no' => $taskNo]);
+        } catch (\PDOException $e) {
+            error_log("[CollectTaskRepository] clearRunnerScript failed: " . $e->getMessage());
+        }
+    }
+
     public function create(array $data): array
     {
         $pdo = MySqlClient::pdo();

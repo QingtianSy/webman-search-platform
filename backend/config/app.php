@@ -15,7 +15,7 @@
 use support\Request;
 
 return [
-    'debug' => (bool) (function_exists('env') ? env('APP_DEBUG', false) : false),
+    'debug' => filter_var(function_exists('env') ? env('APP_DEBUG', false) : false, FILTER_VALIDATE_BOOLEAN),
     'error_reporting' => E_ALL,
     'default_timezone' => 'Asia/Shanghai',
     'request_class' => Request::class,

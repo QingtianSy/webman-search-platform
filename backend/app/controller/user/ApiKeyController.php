@@ -35,13 +35,15 @@ class ApiKeyController
 
     public function toggle(Request $request)
     {
+        $userId = (int) ($request->userId ?? 0);
         $data = (new ApiKeyValidate())->toggle($request->post());
-        return ApiResponse::success((new ApiKeyService())->toggle($data['id'], $data['status']), '状态已切换');
+        return ApiResponse::success((new ApiKeyService())->toggle($userId, $data['id'], $data['status']), '状态已切换');
     }
 
     public function delete(Request $request)
     {
+        $userId = (int) ($request->userId ?? 0);
         $id = (new ApiKeyValidate())->id($request->get());
-        return ApiResponse::success((new ApiKeyService())->delete($id), '删除成功');
+        return ApiResponse::success((new ApiKeyService())->delete($userId, $id), '删除成功');
     }
 }

@@ -39,30 +39,30 @@ class ApiKeyRepository
         }
     }
 
-    public function delete(int $id): bool
+    public function delete(int $userId, int $id): bool
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
             return false;
         }
         try {
-            $stmt = $pdo->prepare('DELETE FROM user_api_keys WHERE id = :id');
-            return $stmt->execute(['id' => $id]);
+            $stmt = $pdo->prepare('DELETE FROM user_api_keys WHERE id = :id AND user_id = :user_id');
+            return $stmt->execute(['id' => $id, 'user_id' => $userId]);
         } catch (\PDOException $e) {
             error_log("[ApiKeyRepository] delete failed: " . $e->getMessage());
             return false;
         }
     }
 
-    public function toggle(int $id, int $status): bool
+    public function toggle(int $userId, int $id, int $status): bool
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
             return false;
         }
         try {
-            $stmt = $pdo->prepare('UPDATE user_api_keys SET status = :status, updated_at = NOW() WHERE id = :id');
-            return $stmt->execute(['status' => $status, 'id' => $id]);
+            $stmt = $pdo->prepare('UPDATE user_api_keys SET status = :status, updated_at = NOW() WHERE id = :id AND user_id = :user_id');
+            return $stmt->execute(['status' => $status, 'id' => $id, 'user_id' => $userId]);
         } catch (\PDOException $e) {
             error_log("[ApiKeyRepository] toggle failed: " . $e->getMessage());
             return false;

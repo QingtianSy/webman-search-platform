@@ -20,9 +20,9 @@ class HealthController
     {
         $service = new HealthService();
         $detail = $service->detail();
-        $ready = !in_array(false, $detail['services'], true);
+        $allOk = !empty($detail['services']) && empty(array_filter($detail['services'], fn ($s) => $s !== 'ok' && $s !== 'not_configured'));
         return ApiResponse::success([
-            'ready' => $ready,
+            'ready' => $allOk,
             'services' => $detail['services'],
         ]);
     }

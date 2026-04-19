@@ -7,19 +7,26 @@ use support\adapter\MySqlClient;
 
 class OperateLogRepository
 {
-    public function listByUserId(int $userId): array
+    public function listByUserId(int $userId, int $page = 1, int $pageSize = 20): array
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
-            return [];
+            return ['list' => [], 'total' => 0, 'page' => $page, 'page_size' => $pageSize];
         }
         try {
-            $stmt = $pdo->prepare('SELECT id, user_id, module, action, content, ip, created_at FROM operate_logs WHERE user_id = :user_id ORDER BY created_at DESC');
+            $countStmt = $pdo->prepare('SELECT COUNT(*) FROM operate_logs WHERE user_id = :user_id');
+            $countStmt->execute(['user_id' => $userId]);
+            $total = (int) $countStmt->fetchColumn();
+
+            $offset = ($page - 1) * $pageSize;
+            $stmt = $pdo->prepare("SELECT id, user_id, module, action, content, ip, created_at FROM operate_logs WHERE user_id = :user_id ORDER BY created_at DESC LIMIT {$pageSize} OFFSET {$offset}");
             $stmt->execute(['user_id' => $userId]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $list = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            return ['list' => $list, 'total' => $total, 'page' => $page, 'page_size' => $pageSize];
         } catch (\PDOException $e) {
             error_log("[OperateLogRepository] listByUserId failed: " . $e->getMessage());
-            return [];
+            return ['list' => [], 'total' => 0, 'page' => $page, 'page_size' => $pageSize];
         }
     }
 

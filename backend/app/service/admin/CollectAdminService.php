@@ -2,6 +2,7 @@
 
 namespace app\service\admin;
 
+use app\common\admin\AdminListBuilder;
 use app\repository\mysql\CollectTaskDetailRepository;
 use app\repository\mysql\CollectTaskRepository;
 
@@ -9,17 +10,13 @@ class CollectAdminService
 {
     public function getList(array $query = []): array
     {
+        $query += ['page' => 1, 'page_size' => 20];
         $repo = new CollectTaskRepository();
         $list = isset($query['user_id']) && $query['user_id'] > 0
             ? $repo->listByUserId((int) $query['user_id'])
             : $repo->all();
 
-        return [
-            'list' => $list,
-            'total' => count($list),
-            'page' => $query['page'] ?? 1,
-            'page_size' => $query['page_size'] ?? 20,
-        ];
+        return AdminListBuilder::make($list, (int) $query['page'], (int) $query['page_size']);
     }
 
     public function detail(string $taskNo): array
@@ -47,7 +44,9 @@ class CollectAdminService
 
     public function retry(string $taskNo): array
     {
-        (new CollectTaskRepository())->updateStatus($taskNo, 1, '');
+        $repo = new CollectTaskRepository();
+        $repo->updateStatus($taskNo, 0, '');
+        $repo->clearRunnerScript($taskNo);
         return [
             'success' => true,
             'action' => 'retry',

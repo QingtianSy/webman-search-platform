@@ -2,6 +2,7 @@
 
 namespace app\service\search;
 
+use app\exception\BusinessException;
 use app\repository\es\QuestionIndexRepository;
 use app\repository\mongo\SearchLogDetailRepository;
 use app\repository\mysql\SearchLogRepository;
@@ -16,6 +17,13 @@ class SearchService
         $logService = new LogService();
         $startMs = (int) (microtime(true) * 1000);
         $logNo = 'SL' . date('YmdHis') . mt_rand(1000, 9999);
+
+        if ($userId > 0) {
+            $quotaService = new QuotaService();
+            if (!$quotaService->consume($userId, 1)) {
+                throw new BusinessException('额度不足', 40006);
+            }
+        }
 
         $logService->info('search.query', [
             'keyword' => $keyword,
@@ -38,15 +46,7 @@ class SearchService
         unset($item);
         $hitCount = count($list);
         $costMs = (int) (microtime(true) * 1000) - $startMs;
-        $consumeQuota = $hitCount > 0 ? 1 : 0;
-
-        if ($consumeQuota > 0 && $userId > 0) {
-            $ok = (new QuotaService())->consume($userId, $consumeQuota);
-            if (!$ok) {
-                $consumeQuota = 0;
-                error_log("[SearchService] consume failed for user={$userId}, quota may have been exhausted");
-            }
-        }
+        $consumeQuota = ($hitCount > 0 && $userId > 0) ? 1 : 0;
 
         (new SearchLogRepository())->create([
             'log_no' => $logNo,
