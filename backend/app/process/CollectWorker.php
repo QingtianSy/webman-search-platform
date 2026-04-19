@@ -43,16 +43,6 @@ class CollectWorker
         return $this->collectConfig[$key] ?? $default;
     }
 
-    public function onWorkerStart(): void
-    {
-        $this->taskRepo = new CollectTaskRepository();
-        $this->questionRepo = new QuestionRepository();
-        $this->esRepo = new QuestionIndexRepository();
-
-        $this->recoverRunningTasks();
-        Timer::add(5, [$this, 'poll']);
-    }
-
     protected function recoverRunningTasks(): void
     {
         $tasks = $this->taskRepo->findByStatus(1);

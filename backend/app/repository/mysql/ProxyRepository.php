@@ -45,7 +45,7 @@ class ProxyRepository
         try {
             $sets = [];
             $bind = ['id' => $id];
-            foreach (['name', 'protocol', 'host', 'port', 'username', 'password'] as $field) {
+            foreach (['name', 'protocol', 'host', 'port', 'username', 'password', 'country', 'country_code', 'province', 'city'] as $field) {
                 if (array_key_exists($field, $data)) {
                     $sets[] = "$field = :$field";
                     $bind[$field] = $data[$field];

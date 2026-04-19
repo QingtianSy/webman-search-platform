@@ -48,6 +48,7 @@ class CollectValidate
             'collect_type' => $collectType,
             'course_ids' => $courseIds,
             'course_count' => $data['course_count'] ?? 0,
+            'school_name' => trim((string) ($data['school_name'] ?? '')),
         ];
     }
 }
