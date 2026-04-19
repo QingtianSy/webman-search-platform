@@ -2,7 +2,6 @@
 
 namespace app\controller\user;
 
-use app\common\CurrentUser;
 use app\common\user\UserListBuilder;
 use app\common\user\UserQuery;
 use app\service\user\CollectService;
@@ -14,7 +13,7 @@ class CollectController
 {
     public function accounts(Request $request)
     {
-        $userId = CurrentUser::id($request);
+        $userId = (int) ($request->userId ?? 0);
         $query = UserQuery::parse($request->get());
         $list = (new CollectService())->accounts($userId);
         return ApiResponse::success(UserListBuilder::make($list, $query['page'], $query['page_size']));
@@ -22,7 +21,7 @@ class CollectController
 
     public function tasks(Request $request)
     {
-        $userId = CurrentUser::id($request);
+        $userId = (int) ($request->userId ?? 0);
         $query = UserQuery::parse($request->get());
         $list = (new CollectService())->tasks($userId);
         return ApiResponse::success(UserListBuilder::make($list, $query['page'], $query['page_size']));
@@ -45,7 +44,7 @@ class CollectController
 
     public function submitCollect(Request $request)
     {
-        $userId = CurrentUser::id($request);
+        $userId = (int) ($request->userId ?? 0);
         $data = (new CollectValidate())->submitCollect($request->post());
         return ApiResponse::success(
             (new CollectService())->submitCollect($userId, $data),

@@ -2,7 +2,6 @@
 
 namespace app\controller\user;
 
-use app\common\CurrentUser;
 use app\common\user\UserListBuilder;
 use app\common\user\UserQuery;
 use app\service\user\ApiKeyService;
@@ -14,7 +13,7 @@ class ApiKeyController
 {
     public function index(Request $request)
     {
-        $userId = CurrentUser::id($request);
+        $userId = (int) ($request->userId ?? 0);
         $query = UserQuery::parse($request->get());
         $list = (new ApiKeyService())->listByUserId($userId);
         return ApiResponse::success(UserListBuilder::make($list, $query['page'], $query['page_size']));
@@ -22,14 +21,14 @@ class ApiKeyController
 
     public function detail(Request $request)
     {
-        $userId = CurrentUser::id($request);
+        $userId = (int) ($request->userId ?? 0);
         $id = (new ApiKeyValidate())->id($request->get());
         return ApiResponse::success((new ApiKeyService())->detailById($userId, $id));
     }
 
     public function create(Request $request)
     {
-        $userId = CurrentUser::id($request);
+        $userId = (int) ($request->userId ?? 0);
         $data = (new ApiKeyValidate())->create($request->post());
         return ApiResponse::success((new ApiKeyService())->create($userId, $data['app_name']), '创建成功');
     }

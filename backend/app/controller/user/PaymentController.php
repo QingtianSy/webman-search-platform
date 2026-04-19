@@ -2,7 +2,6 @@
 
 namespace app\controller\user;
 
-use app\common\CurrentUser;
 use app\service\payment\OrderService;
 use app\service\payment\PaymentService;
 use support\ApiResponse;
@@ -14,7 +13,7 @@ class PaymentController
 {
     public function create(Request $request)
     {
-        $userId = CurrentUser::id($request);
+        $userId = (int) ($request->userId ?? 0);
         $type = (int) $request->input('type', 1);
         $payType = $request->input('pay_type', 'alipay');
         $planId = null;
@@ -62,7 +61,7 @@ class PaymentController
 
     public function list(Request $request)
     {
-        $userId = CurrentUser::id($request);
+        $userId = (int) ($request->userId ?? 0);
         $query = $request->all();
         $result = (new OrderService())->listByUserId($userId, $query);
         return ApiResponse::success($result);

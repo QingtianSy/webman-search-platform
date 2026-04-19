@@ -2,7 +2,6 @@
 
 namespace app\controller\user;
 
-use app\common\CurrentUser;
 use app\common\user\UserQuery;
 use app\service\quota\QuotaService;
 use app\service\search\SearchService;
@@ -15,7 +14,7 @@ class SearchController
 {
     public function query(Request $request)
     {
-        $userId = CurrentUser::id($request);
+        $userId = (int) ($request->userId ?? 0);
         $payload = (new SearchValidate())->query($request->post());
 
         $remainQuota = (new QuotaService())->getUserQuota($userId);
@@ -30,7 +29,7 @@ class SearchController
 
     public function logs(Request $request)
     {
-        $userId = CurrentUser::id($request);
+        $userId = (int) ($request->userId ?? 0);
         $query = UserQuery::parse($request->get());
         return ApiResponse::success((new SearchHistoryService())->getList($userId, $query));
     }

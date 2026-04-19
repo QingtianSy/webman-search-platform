@@ -22,11 +22,13 @@ class SearchController
         $userId = (int) ($request->apiKeyUserId ?? 0);
         $apiKeyId = (int) ($request->apiKeyId ?? 0);
 
-        if ($userId > 0) {
-            $remainQuota = (new QuotaService())->getUserQuota($userId);
-            if ($remainQuota <= 0) {
-                return ApiResponse::error(40006, '额度不足');
-            }
+        if ($userId <= 0) {
+            return ApiResponse::error(40008, 'API Key 未关联用户');
+        }
+
+        $remainQuota = (new QuotaService())->getUserQuota($userId);
+        if ($remainQuota <= 0) {
+            return ApiResponse::error(40006, '额度不足');
         }
 
         $result = (new SearchService())->query($userId, $keyword, $info, $split, $apiKeyId);

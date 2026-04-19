@@ -32,7 +32,11 @@ class SearchService
         $consumeQuota = $hitCount > 0 ? 1 : 0;
 
         if ($consumeQuota > 0 && $userId > 0) {
-            (new QuotaService())->consume($userId, $consumeQuota);
+            $ok = (new QuotaService())->consume($userId, $consumeQuota);
+            if (!$ok) {
+                $consumeQuota = 0;
+                error_log("[SearchService] consume failed for user={$userId}, quota may have been exhausted");
+            }
         }
 
         (new SearchLogRepository())->create([
