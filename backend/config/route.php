@@ -32,6 +32,7 @@ use app\controller\user\SearchController as UserSearchController;
 use app\controller\admin\AnnouncementController;
 use app\controller\admin\ApiSourceManageController;
 use app\controller\admin\CollectManageController;
+use app\controller\admin\MonitorController;
 use app\controller\admin\DashboardController as AdminDashboardController;
 use app\controller\admin\DocManageController;
 use app\controller\admin\MenuController;
@@ -111,6 +112,7 @@ Route::group('/api/v1/admin', function () {
     Route::post('/question/create', [QuestionController::class, 'create']);
     Route::put('/question/update', [QuestionController::class, 'update']);
     Route::delete('/question/delete', [QuestionController::class, 'delete']);
+    Route::get('/question/export', [QuestionController::class, 'export']);
     Route::get('/question-category/list', [QuestionCategoryController::class, 'index']);
     Route::post('/question-category/create', [QuestionCategoryController::class, 'create']);
     Route::put('/question-category/update', [QuestionCategoryController::class, 'update']);
@@ -155,6 +157,7 @@ Route::group('/api/v1/admin', function () {
     Route::put('/announcement/update', [AnnouncementController::class, 'update']);
     Route::delete('/announcement/delete', [AnnouncementController::class, 'delete']);
     Route::get('/log/search/list', [SearchLogController::class, 'index']);
+    Route::get('/log/search/export', [SearchLogController::class, 'export']);
     Route::get('/doc/article/list', [DocManageController::class, 'articles']);
     Route::post('/doc/article/create', [DocManageController::class, 'create']);
     Route::put('/doc/article/update', [DocManageController::class, 'update']);
@@ -188,6 +191,9 @@ Route::group('/api/v1/admin', function () {
     // 支付配置（系统管理）
     Route::get('/payment-config/list', [PaymentConfigController::class, 'list']);
     Route::post('/payment-config/update', [PaymentConfigController::class, 'update']);
+
+    // 系统监控
+    Route::get('/monitor/overview', [MonitorController::class, 'overview']);
 })->middleware([AdminAuthMiddleware::class]);
 
 // 开放 API 路由（API Key 认证）

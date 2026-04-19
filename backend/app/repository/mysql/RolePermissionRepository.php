@@ -25,6 +25,23 @@ class RolePermissionRepository
         }
     }
 
+    public function roleCodesByIds(array $roleIds): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo || empty($roleIds)) {
+            return [];
+        }
+        try {
+            $placeholders = implode(',', array_fill(0, count($roleIds), '?'));
+            $stmt = $pdo->prepare("SELECT code FROM roles WHERE id IN ({$placeholders}) AND status = 1");
+            $stmt->execute(array_values($roleIds));
+            return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        } catch (\PDOException $e) {
+            error_log("[RolePermissionRepository] roleCodesByIds failed: " . $e->getMessage());
+            return [];
+        }
+    }
+
     public function permissionCodesByRoleCodes(array $roleCodes): array
     {
         $pdo = MySqlClient::pdo();

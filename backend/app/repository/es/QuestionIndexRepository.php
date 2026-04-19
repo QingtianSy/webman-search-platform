@@ -169,6 +169,9 @@ class QuestionIndexRepository
         if (!empty($q['options']) && is_array($q['options'])) {
             $optionsText = implode(' ', array_map(fn ($o) => (string) ($o['content'] ?? ''), $q['options']));
         }
+        if ($optionsText === '' && !empty($q['options_text']) && is_string($q['options_text'])) {
+            $optionsText = $q['options_text'];
+        }
         return [
             'question_id' => $q['question_id'] ?? '',
             'stem' => $q['stem'] ?? '',

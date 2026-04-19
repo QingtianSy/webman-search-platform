@@ -163,7 +163,7 @@ class UserApiSourceRepository
             return ['id' => $id, 'status' => 'error', 'message' => 'URL为空', 'tested_at' => date('Y-m-d H:i:s')];
         }
         try {
-            $client = new \GuzzleHttp\Client(['timeout' => (int) ($row['timeout'] ?? 10), 'verify' => false]);
+            $client = new \GuzzleHttp\Client(['timeout' => (int) ($row['timeout'] ?? 10), 'verify' => true]);
             $method = strtoupper($row['method'] ?? 'GET');
             $response = $client->request($method, $url);
             $code = $response->getStatusCode();

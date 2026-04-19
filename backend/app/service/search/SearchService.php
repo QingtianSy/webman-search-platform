@@ -58,13 +58,14 @@ class SearchService
             }
         }
 
-        $hasApiHits = false;
+        $apiHitCount = 0;
         foreach ($apiResults as $ar) {
             if (($ar['status'] ?? '') === 'success' && !empty($ar['data'])) {
-                $hasApiHits = true;
-                break;
+                $apiHitCount += is_array($ar['data']) ? count($ar['data']) : 1;
             }
         }
+        $hasApiHits = $apiHitCount > 0;
+        $totalHitCount = $hitCount + $apiHitCount;
 
         if ($hitCount === 0 && $userId > 0 && isset($quotaService)) {
             if ($hasApiHits) {
@@ -75,15 +76,17 @@ class SearchService
             }
         }
 
+        $sourceType = $hitCount > 0 && $hasApiHits ? 'es+api' : ($hasApiHits ? 'api' : 'es');
+
         (new SearchLogRepository())->create([
             'log_no' => $logNo,
             'user_id' => $userId ?: null,
             'api_key_id' => $apiKeyId,
             'keyword' => $keyword,
             'question_type' => null,
-            'status' => 1,
-            'hit_count' => $hitCount,
-            'source_type' => 'es',
+            'status' => $totalHitCount > 0 ? 1 : 0,
+            'hit_count' => $totalHitCount,
+            'source_type' => $sourceType,
             'consume_quota' => $consumeQuota,
             'cost_ms' => $costMs,
         ]);
@@ -91,14 +94,15 @@ class SearchService
         (new SearchLogDetailRepository())->create([
             'log_no' => $logNo,
             'keyword' => $keyword,
-            'hit_count' => $hitCount,
+            'hit_count' => $totalHitCount,
             'question_ids' => $questionIds,
+            'api_hit_count' => $apiHitCount,
             'cost_ms' => $costMs,
         ]);
 
         return [
             'log_no' => $logNo,
-            'hit_count' => $hitCount,
+            'hit_count' => $totalHitCount,
             'consume_quota' => $consumeQuota,
             'list' => $list,
             'api_results' => $apiResults,

@@ -2,9 +2,9 @@
 
 namespace app\service\admin;
 
-use app\common\admin\AdminListBuilder;
 use app\exception\BusinessException;
 use app\model\admin\QuestionCategory;
+use support\Pagination;
 use support\ResponseCode;
 
 class QuestionCategoryAdminService
@@ -21,7 +21,7 @@ class QuestionCategoryAdminService
         }
         $total = $builder->count();
         $list = $builder->orderBy('id', 'desc')->forPage($page, $pageSize)->get()->toArray();
-        return AdminListBuilder::make($list, $page, $pageSize) + ['total' => $total];
+        return Pagination::format($list, $total, $page, $pageSize);
     }
 
     public function create(array $data): array

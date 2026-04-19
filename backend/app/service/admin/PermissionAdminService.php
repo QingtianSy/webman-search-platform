@@ -2,9 +2,9 @@
 
 namespace app\service\admin;
 
-use app\common\admin\AdminListBuilder;
 use app\model\admin\Permission;
 use support\Db;
+use support\Pagination;
 
 class PermissionAdminService
 {
@@ -33,7 +33,7 @@ class PermissionAdminService
         }
         $total = $builder->count();
         $list = $builder->orderBy($sort, $order)->forPage($page, $pageSize)->get()->toArray();
-        return AdminListBuilder::make($list, $page, $pageSize) + ['total' => $total];
+        return Pagination::format($list, $total, $page, $pageSize);
     }
 
     public function create(array $data): array

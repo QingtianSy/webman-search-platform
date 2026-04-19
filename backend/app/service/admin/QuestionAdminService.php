@@ -30,10 +30,12 @@ class QuestionAdminService
 
     public function create(array $data): array
     {
-        $data['question_id'] = $data['question_id'] ?? 'Q' . date('YmdHis') . bin2hex(random_bytes(4));
+        $data['question_id'] = 'Q' . date('YmdHis') . bin2hex(random_bytes(4));
         $data['created_at'] = date('Y-m-d H:i:s');
         $data['updated_at'] = date('Y-m-d H:i:s');
         $data['status'] = $data['status'] ?? 1;
+        $data['stem_plain'] = $data['stem'] ?? '';
+        $data['md5'] = md5(($data['stem'] ?? '') . ($data['options_text'] ?? '') . ($data['answer_text'] ?? ''));
 
         $db = \support\adapter\MongoClient::connection();
         if ($db) {
@@ -61,5 +63,29 @@ class QuestionAdminService
         $deleted = (new QuestionRepository())->delete($id);
         (new QuestionIndexService())->delete($id);
         return ['deleted' => $deleted];
+    }
+
+    public function export(array $query = []): array
+    {
+        $filters = [
+            'stem' => trim((string) ($query['keyword'] ?? '')),
+        ];
+        $list = (new QuestionService())->getList($filters)['list'] ?? [];
+
+        $headers = ['题目ID', 'MD5', '题型', '来源', '课程', '题干', '选项', '答案', '状态', '创建时间'];
+        $rows = array_map(fn($r) => [
+            $r['question_id'] ?? '',
+            $r['md5'] ?? '',
+            $r['type_name'] ?? '',
+            $r['source_name'] ?? '',
+            $r['course_name'] ?? '',
+            $r['stem_plain'] ?? ($r['stem'] ?? ''),
+            $r['options_text'] ?? '',
+            $r['answer_text'] ?? '',
+            ((int) ($r['status'] ?? 1)) === 1 ? '正常' : '停用',
+            $r['created_at'] ?? '',
+        ], $list);
+
+        return [$headers, $rows];
     }
 }

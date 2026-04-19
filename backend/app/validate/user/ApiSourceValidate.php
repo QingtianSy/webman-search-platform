@@ -17,6 +17,7 @@ class ApiSourceValidate
         if ($url === '') {
             throw new BusinessException('接口地址不能为空', ResponseCode::PARAM_ERROR);
         }
+        self::validateUrlSafe($url);
         $method = strtoupper(trim((string) ($data['method'] ?? 'GET')));
         if (!in_array($method, ['GET', 'POST'], true)) {
             throw new BusinessException('请求方式仅支持 GET/POST', ResponseCode::PARAM_ERROR);
@@ -99,6 +100,7 @@ class ApiSourceValidate
             if ($url === '') {
                 throw new BusinessException('接口地址不能为空', ResponseCode::PARAM_ERROR);
             }
+            self::validateUrlSafe($url);
             $result['url'] = $url;
         }
         if (isset($data['method'])) {
@@ -192,5 +194,51 @@ class ApiSourceValidate
             throw new BusinessException('接口源ID不能为空', ResponseCode::PARAM_ERROR);
         }
         return $id;
+    }
+
+    public static function validateUrlSafe(string $url): void
+    {
+        $parsed = parse_url($url);
+        if (!$parsed || !in_array(strtolower($parsed['scheme'] ?? ''), ['http', 'https'], true)) {
+            throw new BusinessException('接口地址仅支持 http/https 协议', ResponseCode::PARAM_ERROR);
+        }
+        $host = strtolower($parsed['host'] ?? '');
+        if ($host === '') {
+            throw new BusinessException('接口地址缺少域名', ResponseCode::PARAM_ERROR);
+        }
+
+        $bareHost = $host;
+        if (str_starts_with($bareHost, '[') && str_ends_with($bareHost, ']')) {
+            $bareHost = substr($bareHost, 1, -1);
+        }
+
+        if (filter_var($bareHost, FILTER_VALIDATE_IP) !== false) {
+            self::assertPublicIp($bareHost);
+            return;
+        }
+
+        if (preg_match('/^[\d.]+$/', $bareHost) || preg_match('/^0x[0-9a-f]+$/i', $bareHost)) {
+            throw new BusinessException('接口地址格式不合法', ResponseCode::PARAM_ERROR);
+        }
+
+        $ip = gethostbyname($bareHost);
+        if ($ip === $bareHost) {
+            throw new BusinessException('接口地址域名无法解析', ResponseCode::PARAM_ERROR);
+        }
+        self::assertPublicIp($ip);
+    }
+
+    private static function assertPublicIp(string $ip): void
+    {
+        $flags = FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE;
+        if (filter_var($ip, FILTER_VALIDATE_IP, $flags) === false) {
+            throw new BusinessException('接口地址不允许指向内网/保留 IP 地址', ResponseCode::PARAM_ERROR);
+        }
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false && str_contains($ip, '.')) {
+            $v4 = substr($ip, (int) strrpos($ip, ':') + 1);
+            if (filter_var($v4, FILTER_VALIDATE_IP) !== false && filter_var($v4, FILTER_VALIDATE_IP, $flags) === false) {
+                throw new BusinessException('接口地址不允许指向内网/保留 IP 地址', ResponseCode::PARAM_ERROR);
+            }
+        }
     }
 }

@@ -2,7 +2,9 @@
 
 namespace app\middleware;
 
+use app\repository\mysql\RolePermissionRepository;
 use app\repository\mysql\UserRepository;
+use app\repository\mysql\UserRoleRepository;
 use app\repository\redis\TokenCacheRepository;
 use app\service\auth\JwtService;
 use support\ApiResponse;
@@ -29,15 +31,20 @@ class UserAuthMiddleware implements MiddlewareInterface
             return ApiResponse::error(40002, 'Token 已失效，请重新登录');
         }
 
+        $rolesFromDb = null;
         if ($storedToken === null) {
             $user = (new UserRepository())->findById($userId);
             if (!$user || (int) ($user['status'] ?? 0) !== 1) {
                 return ApiResponse::error(40002, '用户不存在或已被禁用');
             }
+            $roleIds = (new UserRoleRepository())->roleIdsByUserId($userId);
+            $rolesFromDb = !empty($roleIds)
+                ? (new RolePermissionRepository())->roleCodesByIds($roleIds)
+                : [];
         }
 
         $request->userId = $userId;
-        $request->userRoles = $decoded['payload']['roles'] ?? [];
+        $request->userRoles = $rolesFromDb ?? ($decoded['payload']['roles'] ?? []);
         return $handler($request);
     }
 }

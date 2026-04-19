@@ -2,8 +2,8 @@
 
 namespace app\service\admin;
 
-use app\common\admin\AdminListBuilder;
 use app\model\admin\QuestionType;
+use support\Pagination;
 
 class QuestionTypeAdminService
 {
@@ -19,7 +19,7 @@ class QuestionTypeAdminService
         }
         $total = $builder->count();
         $list = $builder->orderBy('id', 'desc')->forPage($page, $pageSize)->get()->toArray();
-        return AdminListBuilder::make($list, $page, $pageSize) + ['total' => $total];
+        return Pagination::format($list, $total, $page, $pageSize);
     }
 
     public function create(array $data): array

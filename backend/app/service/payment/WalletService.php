@@ -14,8 +14,11 @@ class WalletService
         if (!$pdo) {
             return false;
         }
+        $ownTransaction = !$pdo->inTransaction();
         try {
-            $pdo->beginTransaction();
+            if ($ownTransaction) {
+                $pdo->beginTransaction();
+            }
 
             $stmt = $pdo->prepare('SELECT id, balance FROM wallets WHERE user_id = :user_id FOR UPDATE');
             $stmt->execute(['user_id' => $userId]);
@@ -31,8 +34,6 @@ class WalletService
                 $stmt->execute(['user_id' => $userId, 'balance' => $amount, 'total_recharge' => $amount]);
             }
 
-            $pdo->commit();
-
             (new BalanceLogRepository())->create([
                 'user_id' => $userId,
                 'type' => 'recharge',
@@ -41,9 +42,14 @@ class WalletService
                 'remark' => '在线充值 ' . $orderNo,
             ]);
 
+            if ($ownTransaction) {
+                $pdo->commit();
+            }
             return true;
         } catch (\PDOException $e) {
-            $pdo->rollBack();
+            if ($ownTransaction && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             error_log("[WalletService] recharge failed: " . $e->getMessage());
             return false;
         }

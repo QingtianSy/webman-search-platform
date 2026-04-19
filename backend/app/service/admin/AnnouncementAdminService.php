@@ -2,11 +2,11 @@
 
 namespace app\service\admin;
 
-use app\common\admin\AdminListBuilder;
 use app\common\admin\AdminSort;
 use app\common\admin\AdminTimeRange;
 use app\model\admin\Announcement;
 use app\repository\mysql\AnnouncementRepository;
+use support\Pagination;
 
 class AnnouncementAdminService
 {
@@ -43,7 +43,7 @@ class AnnouncementAdminService
         }
         $total = $builder->count();
         $list = $builder->orderBy($sort, $order)->forPage($page, $pageSize)->get()->toArray();
-        return AdminListBuilder::make($list, $page, $pageSize) + ['total' => $total];
+        return Pagination::format($list, $total, $page, $pageSize);
     }
 
     public function create(array $data): array

@@ -34,6 +34,7 @@ class AdminAuthMiddleware implements MiddlewareInterface
         '/proxy'             => 'system.config',
         '/payment-config'    => 'system.config',
         '/log'               => 'log.view',
+        '/monitor'           => 'system.config',
     ];
 
     public function process(Request $request, callable $handler): Response
@@ -53,14 +54,21 @@ class AdminAuthMiddleware implements MiddlewareInterface
             return ApiResponse::error(40002, 'Token 已失效，请重新登录');
         }
 
+        $rolesFromDb = null;
         if ($storedToken === null) {
             $user = (new UserRepository())->findById($userId);
             if (!$user || (int) ($user['status'] ?? 0) !== 1) {
                 return ApiResponse::error(40002, '用户不存在或已被禁用');
             }
+            $roleIds = (new \app\repository\mysql\UserRoleRepository())->roleIdsByUserId($userId);
+            if (!empty($roleIds)) {
+                $rolesFromDb = (new RolePermissionRepository())->roleCodesByIds($roleIds);
+            } else {
+                $rolesFromDb = [];
+            }
         }
 
-        $roles = $decoded['payload']['roles'] ?? [];
+        $roles = $rolesFromDb ?? ($decoded['payload']['roles'] ?? []);
         $adminRoles = ['admin', 'super_admin', 'operator'];
         if (empty(array_intersect($roles, $adminRoles)) && ($decoded['payload']['default_portal'] ?? '') !== 'admin') {
             return ApiResponse::error(40003, '无权限');

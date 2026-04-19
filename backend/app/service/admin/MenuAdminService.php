@@ -2,9 +2,9 @@
 
 namespace app\service\admin;
 
-use app\common\admin\AdminListBuilder;
 use app\exception\BusinessException;
 use app\model\admin\Menu;
+use support\Pagination;
 use support\ResponseCode;
 
 class MenuAdminService
@@ -35,7 +35,7 @@ class MenuAdminService
         }
         $total = $builder->count();
         $list = $builder->orderBy($sort, $order)->orderBy('id', 'asc')->forPage($page, $pageSize)->get()->toArray();
-        return AdminListBuilder::make($list, $page, $pageSize) + ['total' => $total];
+        return Pagination::format($list, $total, $page, $pageSize);
     }
 
     public function create(array $data): array

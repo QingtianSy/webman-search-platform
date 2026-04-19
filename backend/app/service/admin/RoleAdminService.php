@@ -2,9 +2,9 @@
 
 namespace app\service\admin;
 
-use app\common\admin\AdminListBuilder;
 use app\model\admin\Role;
 use support\Db;
+use support\Pagination;
 
 class RoleAdminService
 {
@@ -39,7 +39,7 @@ class RoleAdminService
         foreach ($list as &$row) {
             $row['permissions'] = $permMap[(int) $row['id']] ?? [];
         }
-        return AdminListBuilder::make($list, $page, $pageSize) + ['total' => $total];
+        return Pagination::format($list, $total, $page, $pageSize);
     }
 
     public function create(array $data): array

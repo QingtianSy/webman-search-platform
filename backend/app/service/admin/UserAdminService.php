@@ -2,10 +2,10 @@
 
 namespace app\service\admin;
 
-use app\common\admin\AdminListBuilder;
 use app\model\admin\User;
 use app\repository\redis\TokenCacheRepository;
 use support\Db;
+use support\Pagination;
 
 class UserAdminService
 {
@@ -48,7 +48,7 @@ class UserAdminService
             unset($row['type']);
             $row['roles'] = $roleMap[(int) $row['id']] ?? [];
         }
-        return AdminListBuilder::make($list, $page, $pageSize) + ['total' => $total];
+        return Pagination::format($list, $total, $page, $pageSize);
     }
 
     public function create(array $data): array

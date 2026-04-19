@@ -2,8 +2,8 @@
 
 namespace app\service\admin;
 
-use app\common\admin\AdminListBuilder;
 use app\model\admin\QuestionTag;
+use support\Pagination;
 
 class QuestionTagAdminService
 {
@@ -19,7 +19,7 @@ class QuestionTagAdminService
         }
         $total = $builder->count();
         $list = $builder->orderBy('id', 'desc')->forPage($page, $pageSize)->get()->toArray();
-        return AdminListBuilder::make($list, $page, $pageSize) + ['total' => $total];
+        return Pagination::format($list, $total, $page, $pageSize);
     }
 
     public function create(array $data): array

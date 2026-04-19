@@ -21,7 +21,7 @@ class QuestionIndexService
         $repo = new QuestionRepository();
         $esRepo = new QuestionIndexRepository();
 
-        $all = $repo->findList();
+        $all = $repo->findList([], 0);
         $total = count($all);
         $indexed = 0;
 

@@ -78,7 +78,7 @@ class QuestionRepository
         }
     }
 
-    public function findList(array $filters = []): array
+    public function findList(array $filters = [], int $limit = 1000): array
     {
         $db = MongoClient::connection();
         if (!$db) {
@@ -90,10 +90,11 @@ class QuestionRepository
             if ($stem !== '') {
                 $query['stem'] = ['$regex' => preg_quote($stem, '/'), '$options' => 'i'];
             }
-            $cursor = $db->selectCollection('questions')->find($query, [
-                'sort' => ['created_at' => -1],
-                'limit' => 1000,
-            ]);
+            $options = ['sort' => ['created_at' => -1]];
+            if ($limit > 0) {
+                $options['limit'] = $limit;
+            }
+            $cursor = $db->selectCollection('questions')->find($query, $options);
             $rows = [];
             foreach ($cursor as $doc) {
                 $rows[] = $this->docToArray($doc);

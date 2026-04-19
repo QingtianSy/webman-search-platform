@@ -19,7 +19,7 @@ class ThirdPartySearchService
             return [];
         }
 
-        $client = new Client(['verify' => false]);
+        $client = new Client(['verify' => true]);
         $promises = [];
 
         foreach ($sources as $source) {
