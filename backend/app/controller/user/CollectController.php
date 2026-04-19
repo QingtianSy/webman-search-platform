@@ -4,6 +4,7 @@ namespace app\controller\user;
 
 use app\common\user\UserListBuilder;
 use app\common\user\UserQuery;
+use app\repository\mysql\OperateLogRepository;
 use app\service\user\CollectService;
 use app\validate\user\CollectValidate;
 use support\ApiResponse;
@@ -47,9 +48,8 @@ class CollectController
     {
         $userId = (int) ($request->userId ?? 0);
         $data = (new CollectValidate())->submitCollect($request->post());
-        return ApiResponse::success(
-            (new CollectService())->submitCollect($userId, $data),
-            '采集任务已提交'
-        );
+        $result = (new CollectService())->submitCollect($userId, $data);
+        (new OperateLogRepository())->create(['user_id' => $userId, 'module' => 'collect', 'action' => 'submit', 'content' => "提交采集任务: {$data['route']}", 'ip' => $request->getRealIp()]);
+        return ApiResponse::success($result, '采集任务已提交');
     }
 }

@@ -53,4 +53,34 @@ class UserRepository
             return null;
         }
     }
+
+    public function updateProfile(int $id, array $data): bool
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return false;
+        }
+        $allowed = ['nickname', 'email', 'phone', 'avatar'];
+        $sets = [];
+        $bind = ['id' => $id];
+        foreach ($allowed as $field) {
+            if (array_key_exists($field, $data)) {
+                $sets[] = "{$field} = :{$field}";
+                $bind[$field] = $data[$field];
+            }
+        }
+        if (empty($sets)) {
+            return false;
+        }
+        $sets[] = 'updated_at = NOW()';
+        $sql = 'UPDATE users SET ' . implode(', ', $sets) . ' WHERE id = :id';
+        try {
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($bind);
+            return $stmt->rowCount() > 0;
+        } catch (\PDOException $e) {
+            error_log("[UserRepository] updateProfile failed: " . $e->getMessage());
+            return false;
+        }
+    }
 }

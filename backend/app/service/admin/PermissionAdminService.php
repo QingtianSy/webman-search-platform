@@ -4,6 +4,7 @@ namespace app\service\admin;
 
 use app\common\admin\AdminListBuilder;
 use app\model\admin\Permission;
+use support\Db;
 
 class PermissionAdminService
 {
@@ -33,5 +34,34 @@ class PermissionAdminService
         $total = $builder->count();
         $list = $builder->orderBy($sort, $order)->forPage($page, $pageSize)->get()->toArray();
         return AdminListBuilder::make($list, $page, $pageSize) + ['total' => $total];
+    }
+
+    public function create(array $data): array
+    {
+        $row = new Permission();
+        $row->fill($data);
+        $row->save();
+        return ['success' => true, 'action' => 'create', 'id' => $row->id, 'data' => $row->toArray()];
+    }
+
+    public function update(int $id, array $data): array
+    {
+        $row = Permission::query()->find($id);
+        if (!$row) {
+            return [];
+        }
+        $row->fill($data);
+        $row->save();
+        return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];
+    }
+
+    public function delete(int $id): array
+    {
+        $row = Permission::query()->find($id);
+        if ($row) {
+            $row->delete();
+            Db::table('role_permission')->where('permission_id', $id)->delete();
+        }
+        return ['success' => true, 'action' => 'delete', 'id' => $id];
     }
 }

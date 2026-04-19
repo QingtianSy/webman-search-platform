@@ -48,6 +48,10 @@ class SearchService
         $costMs = (int) (microtime(true) * 1000) - $startMs;
         $consumeQuota = ($hitCount > 0 && $userId > 0) ? 1 : 0;
 
+        if ($hitCount === 0 && $userId > 0 && isset($quotaService)) {
+            $quotaService->refund($userId, 1);
+        }
+
         (new SearchLogRepository())->create([
             'log_no' => $logNo,
             'user_id' => $userId ?: null,

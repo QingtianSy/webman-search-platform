@@ -79,6 +79,20 @@ class AuthService
         return $payload;
     }
 
+    public function updateProfile(int $userId, array $data): array
+    {
+        $updated = (new UserRepository())->updateProfile($userId, $data);
+        if (!$updated) {
+            return [];
+        }
+        $user = (new UserRepository())->findById($userId);
+        if (!$user) {
+            return [];
+        }
+        unset($user['password'], $user['password_hash'], $user['type']);
+        return $user;
+    }
+
     public function register(array $data): array
     {
         $username = $data['username'];

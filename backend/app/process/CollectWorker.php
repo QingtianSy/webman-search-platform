@@ -194,7 +194,11 @@ class CollectWorker
             }
             $esFailed = $imported - $esIndexed;
             $this->taskRepo->updateProgress($taskNo, $imported, $esIndexed, $esFailed);
-            $this->taskRepo->updateStatus($taskNo, 2);
+            if ($esFailed > 0) {
+                $this->taskRepo->updateStatus($taskNo, 4, "ES索引部分失败: {$esFailed}/{$imported}条未索引");
+            } else {
+                $this->taskRepo->updateStatus($taskNo, 2);
+            }
             error_log("[CollectWorker] imported task={$taskNo} mongo={$imported} es_ok={$esIndexed} es_fail={$esFailed}");
         } catch (\Throwable $e) {
             $this->taskRepo->updateStatus($taskNo, 3, '导入失败: ' . $e->getMessage());

@@ -40,6 +40,34 @@ class QuotaService
         }
     }
 
+    public function refund(int $userId, int $amount = 1): bool
+    {
+        if ($amount <= 0) {
+            return false;
+        }
+
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return false;
+        }
+
+        $cache = new QuotaCacheRepository();
+        try {
+            $stmt = $pdo->prepare('UPDATE user_subscriptions SET remain_quota = remain_quota + :amount, used_quota = GREATEST(used_quota - :amount2, 0), updated_at = NOW() WHERE user_id = :user_id AND (expire_at IS NULL OR expire_at > NOW()) ORDER BY id DESC LIMIT 1');
+            $ok = $stmt->execute([
+                'amount' => $amount,
+                'amount2' => $amount,
+                'user_id' => $userId,
+            ]);
+            $cache->deleteUserQuota($userId);
+            return $ok && $stmt->rowCount() > 0;
+        } catch (\PDOException $e) {
+            error_log("[QuotaService] refund failed: " . $e->getMessage());
+            $cache->deleteUserQuota($userId);
+            return false;
+        }
+    }
+
     public function consume(int $userId, int $amount = 1): bool
     {
         if ($amount <= 0) {

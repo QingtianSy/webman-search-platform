@@ -76,8 +76,8 @@ class ApiKeyService
         }
     }
 
-    public function delete(int $id): bool
+    public function delete(int $userId, int $id): bool
     {
-        return (new ApiKeyRepository())->delete($id);
+        return (new ApiKeyRepository())->delete($userId, $id);
     }
 }

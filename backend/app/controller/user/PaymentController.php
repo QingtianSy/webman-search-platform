@@ -2,6 +2,7 @@
 
 namespace app\controller\user;
 
+use app\repository\mysql\OperateLogRepository;
 use app\service\payment\OrderService;
 use app\service\payment\PaymentService;
 use support\ApiResponse;
@@ -53,6 +54,7 @@ class PaymentController
         }
 
         $payUrl = (new PaymentService())->createPayUrl($order);
+        (new OperateLogRepository())->create(['user_id' => $userId, 'module' => 'payment', 'action' => 'create', 'content' => "创建订单: {$order['order_no']}, 金额: {$amount}", 'ip' => $request->getRealIp()]);
         return ApiResponse::success([
             'order_no' => $order['order_no'],
             'pay_url' => $payUrl,

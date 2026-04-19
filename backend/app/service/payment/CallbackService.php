@@ -56,7 +56,10 @@ class CallbackService
 
         if (!$fulfilled) {
             error_log("[CallbackService] fulfillment failed for order={$orderNo}, reverting paid status");
-            $repo->revertPaid($orderNo);
+            $reverted = $repo->revertPaid($orderNo);
+            if (!$reverted) {
+                error_log("[CallbackService] CRITICAL: revertPaid also failed for order={$orderNo}, manual intervention required");
+            }
             return false;
         }
 

@@ -16,6 +16,7 @@ use Webman\Route;
 use app\middleware\UserAuthMiddleware;
 use app\middleware\AdminAuthMiddleware;
 use app\middleware\OpenApiAuthMiddleware;
+use app\middleware\RateLimitMiddleware;
 use app\controller\HealthController;
 use app\controller\IndexController;
 use app\controller\auth\AuthController as UnifiedAuthController;
@@ -29,6 +30,7 @@ use app\controller\user\SearchController as UserSearchController;
 use app\controller\admin\AnnouncementController;
 use app\controller\admin\ApiSourceManageController;
 use app\controller\admin\CollectManageController;
+use app\controller\admin\DashboardController as AdminDashboardController;
 use app\controller\admin\DocManageController;
 use app\controller\admin\MenuController;
 use app\controller\admin\PermissionController;
@@ -56,12 +58,13 @@ Route::get('/health', [HealthController::class, 'health']);
 Route::get('/ready', [HealthController::class, 'ready']);
 
 // 认证路由
-Route::post('/api/v1/auth/login', [UnifiedAuthController::class, 'login']);
-Route::post('/api/v1/auth/register', [UnifiedAuthController::class, 'register']);
+Route::post('/api/v1/auth/login', [UnifiedAuthController::class, 'login'])->middleware([new RateLimitMiddleware(10, 60, 'ip')]);
+Route::post('/api/v1/auth/register', [UnifiedAuthController::class, 'register'])->middleware([new RateLimitMiddleware(5, 60, 'ip')]);
 // profile/menus/permissions 需要登录后才能访问
 Route::get('/api/v1/auth/profile', [UnifiedAuthController::class, 'profile'])->middleware([UserAuthMiddleware::class]);
 Route::get('/api/v1/auth/menus', [UnifiedAuthController::class, 'menus'])->middleware([UserAuthMiddleware::class]);
 Route::get('/api/v1/auth/permissions', [UnifiedAuthController::class, 'permissions'])->middleware([UserAuthMiddleware::class]);
+Route::put('/api/v1/auth/update-profile', [UnifiedAuthController::class, 'updateProfile'])->middleware([UserAuthMiddleware::class]);
 
 // 用户端路由（需要用户认证）
 Route::group('/api/v1/user', function () {
@@ -78,20 +81,21 @@ Route::group('/api/v1/user', function () {
     Route::get('/doc/config', [DocController::class, 'config']);
     Route::get('/collect/task/list', [CollectController::class, 'tasks']);
     Route::get('/collect/task/detail', [CollectController::class, 'detail']);
-    Route::post('/collect/query-courses', [CollectController::class, 'queryCourses']);
-    Route::post('/collect/submit-collect', [CollectController::class, 'submitCollect']);
+    Route::post('/collect/query-courses', [CollectController::class, 'queryCourses'])->middleware([new RateLimitMiddleware(10, 60, 'user')]);
+    Route::post('/collect/submit-collect', [CollectController::class, 'submitCollect'])->middleware([new RateLimitMiddleware(10, 60, 'user')]);
     Route::get('/log/balance', [LogController::class, 'balance']);
     Route::get('/log/payment', [LogController::class, 'payment']);
     Route::get('/log/login', [LogController::class, 'login']);
     Route::get('/log/operate', [LogController::class, 'operate']);
     Route::post('/search/query', [UserSearchController::class, 'query']);
     Route::get('/search/logs', [UserSearchController::class, 'logs']);
-    Route::post('/order/create', [PaymentController::class, 'create']);
+    Route::post('/order/create', [PaymentController::class, 'create'])->middleware([new RateLimitMiddleware(5, 60, 'user')]);
     Route::get('/order/list', [PaymentController::class, 'list']);
 })->middleware([UserAuthMiddleware::class]);
 
 // 管理端路由（需要管理员认证）
 Route::group('/api/v1/admin', function () {
+    Route::get('/dashboard/overview', [AdminDashboardController::class, 'overview']);
     Route::get('/question/list', [QuestionController::class, 'index']);
     Route::get('/question/detail', [QuestionController::class, 'detail']);
     Route::post('/question/create', [QuestionController::class, 'create']);
@@ -125,6 +129,9 @@ Route::group('/api/v1/admin', function () {
     Route::delete('/role/delete', [RoleController::class, 'delete']);
     Route::put('/role/assign-permissions', [RoleController::class, 'assignPermissions']);
     Route::get('/permission/list', [PermissionController::class, 'index']);
+    Route::post('/permission/create', [PermissionController::class, 'create']);
+    Route::put('/permission/update', [PermissionController::class, 'update']);
+    Route::delete('/permission/delete', [PermissionController::class, 'delete']);
     Route::get('/menu/list', [MenuController::class, 'index']);
     Route::post('/menu/create', [MenuController::class, 'create']);
     Route::put('/menu/update', [MenuController::class, 'update']);
