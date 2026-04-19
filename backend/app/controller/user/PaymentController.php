@@ -56,6 +56,11 @@ class PaymentController
             }
         }
 
+        $appUrl = rtrim(getenv('APP_URL') ?: '', '/');
+        if ($appUrl === '') {
+            return ApiResponse::error(500, '支付服务未配置，请联系管理员');
+        }
+
         $orderService = new OrderService();
         $order = $orderService->create($userId, $type, $amount, $payType, $planId);
         if (empty($order)) {

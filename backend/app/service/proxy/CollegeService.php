@@ -13,7 +13,7 @@ class CollegeService
         }
 
         try {
-            $client = new Client(['timeout' => 5, 'verify' => false]);
+            $client = new Client(['timeout' => 5, 'verify' => true]);
             $resp = $client->get('https://api.pearktrue.cn/api/college/', [
                 'query' => ['keyword' => $schoolName],
             ]);
