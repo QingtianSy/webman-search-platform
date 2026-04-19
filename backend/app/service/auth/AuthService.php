@@ -2,11 +2,15 @@
 
 namespace app\service\auth;
 
+use app\exception\BusinessException;
+use app\model\admin\User;
 use app\repository\mysql\MenuRepository;
 use app\repository\mysql\RolePermissionRepository;
 use app\repository\mysql\RoleRepository;
 use app\repository\mysql\UserRepository;
 use app\repository\mysql\UserRoleRepository;
+use support\Db;
+use support\ResponseCode;
 
 class AuthService
 {
@@ -73,5 +77,41 @@ class AuthService
             return [];
         }
         return $payload;
+    }
+
+    public function register(array $data): array
+    {
+        $username = $data['username'];
+        $existing = (new UserRepository())->findByUsername($username);
+        if ($existing) {
+            throw new BusinessException('用户名已存在', ResponseCode::PARAM_ERROR);
+        }
+
+        $user = new User();
+        $user->username = $username;
+        $user->password_hash = password_hash($data['password'], PASSWORD_DEFAULT);
+        $user->nickname = $data['nickname'] ?? '';
+        $user->status = 1;
+        $user->save();
+
+        Db::table('wallets')->insert([
+            'user_id' => $user->id,
+            'balance' => 0,
+            'frozen_balance' => 0,
+            'total_recharge' => 0,
+            'total_consume' => 0,
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $userRole = Db::table('roles')->where('code', 'user')->first();
+        if ($userRole) {
+            Db::table('user_role')->insert([
+                'user_id' => $user->id,
+                'role_id' => $userRole->id,
+            ]);
+        }
+
+        return $this->buildAuthPayload($user->toArray());
     }
 }

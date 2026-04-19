@@ -21,4 +21,38 @@ class PlanAdminService
         $list = $builder->orderBy('id', 'desc')->forPage($page, $pageSize)->get()->toArray();
         return AdminListBuilder::make($list, $page, $pageSize) + ['total' => $total];
     }
+
+    public function create(array $data): array
+    {
+        if (isset($data['features']) && is_array($data['features'])) {
+            $data['features'] = json_encode($data['features'], JSON_UNESCAPED_UNICODE);
+        }
+        $row = new Plan();
+        $row->fill($data);
+        $row->save();
+        return ['success' => true, 'action' => 'create', 'id' => $row->id, 'data' => $row->toArray()];
+    }
+
+    public function update(int $id, array $data): array
+    {
+        $row = Plan::query()->find($id);
+        if (!$row) {
+            return [];
+        }
+        if (isset($data['features']) && is_array($data['features'])) {
+            $data['features'] = json_encode($data['features'], JSON_UNESCAPED_UNICODE);
+        }
+        $row->fill($data);
+        $row->save();
+        return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];
+    }
+
+    public function delete(int $id): array
+    {
+        $row = Plan::query()->find($id);
+        if ($row) {
+            $row->delete();
+        }
+        return ['success' => true, 'action' => 'delete', 'id' => $id];
+    }
 }

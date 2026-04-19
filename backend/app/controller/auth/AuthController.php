@@ -4,6 +4,7 @@ namespace app\controller\auth;
 
 use app\service\auth\AuthService;
 use app\service\auth\JwtService;
+use app\validate\auth\RegisterValidate;
 use support\ApiResponse;
 use support\Request;
 
@@ -71,5 +72,30 @@ class AuthController
         $userId = (int) (($decoded['payload']['uid'] ?? 0));
         $payload = (new AuthService())->profile($userId);
         return ApiResponse::success($payload['permissions'] ?? []);
+    }
+
+    public function register(Request $request)
+    {
+        $data = (new RegisterValidate())->register($request->post());
+        $authService = new AuthService();
+        $payload = $authService->register($data);
+
+        $user = $payload['user'];
+        $token = (new JwtService())->encode([
+            'uid' => $user['id'],
+            'username' => $user['username'],
+            'roles' => $payload['roles'],
+            'default_portal' => $payload['default_portal'] ?? 'user',
+        ]);
+
+        return ApiResponse::success([
+            'token' => $token,
+            'expire_at' => time() + (int) config('jwt.expire', 604800),
+            'user' => $user,
+            'roles' => $payload['roles'],
+            'permissions' => $payload['permissions'],
+            'menus' => $payload['menus'],
+            'default_portal' => $payload['default_portal'],
+        ], '注册成功');
     }
 }

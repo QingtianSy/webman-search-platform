@@ -1,0 +1,42 @@
+<?php
+
+namespace app\validate\admin;
+
+use app\exception\BusinessException;
+use support\ResponseCode;
+
+class QuestionSourceValidate
+{
+    public function create(array $data): array
+    {
+        $name = trim((string) ($data['name'] ?? ''));
+        if ($name === '') {
+            throw new BusinessException('来源名称不能为空', ResponseCode::PARAM_ERROR);
+        }
+        $code = trim((string) ($data['code'] ?? ''));
+        if ($code === '') {
+            throw new BusinessException('来源编码不能为空', ResponseCode::PARAM_ERROR);
+        }
+        return [
+            'name' => $name,
+            'code' => $code,
+            'url' => trim((string) ($data['url'] ?? '')),
+            'status' => (int) ($data['status'] ?? 1),
+        ];
+    }
+
+    public function update(array $data): array
+    {
+        $id = (int) ($data['id'] ?? 0);
+        if ($id <= 0) {
+            throw new BusinessException('来源ID不能为空', ResponseCode::PARAM_ERROR);
+        }
+        return [
+            'id' => $id,
+            'name' => trim((string) ($data['name'] ?? '')),
+            'code' => trim((string) ($data['code'] ?? '')),
+            'url' => trim((string) ($data['url'] ?? '')),
+            'status' => (int) ($data['status'] ?? 1),
+        ];
+    }
+}

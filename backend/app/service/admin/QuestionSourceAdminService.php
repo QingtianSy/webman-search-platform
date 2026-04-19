@@ -21,4 +21,32 @@ class QuestionSourceAdminService
         $list = $builder->orderBy('id', 'desc')->forPage($page, $pageSize)->get()->toArray();
         return AdminListBuilder::make($list, $page, $pageSize) + ['total' => $total];
     }
+
+    public function create(array $data): array
+    {
+        $row = new QuestionSource();
+        $row->fill($data);
+        $row->save();
+        return ['success' => true, 'action' => 'create', 'id' => $row->id, 'data' => $row->toArray()];
+    }
+
+    public function update(int $id, array $data): array
+    {
+        $row = QuestionSource::query()->find($id);
+        if (!$row) {
+            return [];
+        }
+        $row->fill($data);
+        $row->save();
+        return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];
+    }
+
+    public function delete(int $id): array
+    {
+        $row = QuestionSource::query()->find($id);
+        if ($row) {
+            $row->delete();
+        }
+        return ['success' => true, 'action' => 'delete', 'id' => $id];
+    }
 }
