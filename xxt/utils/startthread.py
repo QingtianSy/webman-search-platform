@@ -249,6 +249,13 @@ class StartThread:
             session.headers.update(base_session.headers)
             session.cookies.update(base_session.cookies)
 
+        proxy_url = getattr(self.gui, "proxy", "")
+        if proxy_url:
+            session.proxies = {
+                "http": proxy_url,
+                "https": proxy_url,
+            }
+
         original_request = session.request
 
         def throttled_request(method, url, **kwargs):

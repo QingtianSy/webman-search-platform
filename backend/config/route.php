@@ -42,6 +42,9 @@ use app\controller\admin\RoleController;
 use app\controller\admin\SearchLogController;
 use app\controller\admin\SystemConfigController;
 use app\controller\admin\UserController;
+use app\controller\admin\ProxyController;
+use app\controller\admin\CollectConfigController;
+use app\controller\admin\PaymentConfigController;
 use app\controller\user\PaymentController;
 use app\controller\PaymentCallbackController;
 use app\controller\open\HealthController as OpenHealthController;
@@ -120,6 +123,26 @@ Route::group('/api/v1/admin', function () {
     Route::post('/api-source/test', [ApiSourceManageController::class, 'test']);
     Route::get('/system-config/list', [SystemConfigController::class, 'index']);
     Route::post('/system-config/update', [SystemConfigController::class, 'update']);
+
+    // IP管理（系统工具）
+    Route::get('/proxy/list', [ProxyController::class, 'list']);
+    Route::get('/proxy/detail', [ProxyController::class, 'detail']);
+    Route::post('/proxy/create', [ProxyController::class, 'create']);
+    Route::put('/proxy/update', [ProxyController::class, 'update']);
+    Route::delete('/proxy/delete', [ProxyController::class, 'delete']);
+    Route::post('/proxy/probe', [ProxyController::class, 'probe']);
+    Route::post('/proxy/quick-add', [ProxyController::class, 'quickAdd']);
+    Route::post('/proxy/batch-import', [ProxyController::class, 'batchImport']);
+    Route::get('/proxy/batch-export', [ProxyController::class, 'batchExport']);
+    Route::post('/proxy/probe-all', [ProxyController::class, 'probeAll']);
+
+    // 采集管理（系统工具）
+    Route::get('/collect-config/list', [CollectConfigController::class, 'list']);
+    Route::post('/collect-config/update', [CollectConfigController::class, 'update']);
+
+    // 支付配置（系统管理）
+    Route::get('/payment-config/list', [PaymentConfigController::class, 'list']);
+    Route::post('/payment-config/update', [PaymentConfigController::class, 'update']);
 })->middleware([AdminAuthMiddleware::class]);
 
 // 开放 API 路由（API Key 认证）

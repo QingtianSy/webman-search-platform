@@ -5,6 +5,7 @@ namespace app\process;
 use app\repository\es\QuestionIndexRepository;
 use app\repository\mongo\QuestionRepository;
 use app\repository\mysql\CollectTaskRepository;
+use app\repository\mysql\SystemConfigRepository;
 use Workerman\Timer;
 
 class CollectWorker
@@ -13,6 +14,34 @@ class CollectWorker
     protected QuestionRepository $questionRepo;
     protected QuestionIndexRepository $esRepo;
     protected array $runningTasks = [];
+    protected array $collectConfig = [];
+
+    public function onWorkerStart(): void
+    {
+        $this->taskRepo = new CollectTaskRepository();
+        $this->questionRepo = new QuestionRepository();
+        $this->esRepo = new QuestionIndexRepository();
+        $this->loadCollectConfig();
+
+        $this->recoverRunningTasks();
+        Timer::add(5, [$this, 'poll']);
+        Timer::add(300, [$this, 'loadCollectConfig']);
+    }
+
+    public function loadCollectConfig(): void
+    {
+        $rows = (new SystemConfigRepository())->getByGroup('collect');
+        $map = [];
+        foreach ($rows as $row) {
+            $map[$row['config_key']] = $row['config_value'];
+        }
+        $this->collectConfig = $map;
+    }
+
+    protected function getConfig(string $key, string $default = ''): string
+    {
+        return $this->collectConfig[$key] ?? $default;
+    }
 
     public function onWorkerStart(): void
     {
@@ -76,6 +105,14 @@ class CollectWorker
         $password = $task['account_password'] ?? '';
         $courseIds = $task['course_ids'] ?? '';
         $mode = $task['collect_type'] ?? 'courses';
+        $proxyUrl = $task['proxy_url'] ?? '';
+
+        $concurrency = $this->getConfig('collect_concurrency', '1');
+        $courseConcurrency = $this->getConfig('collect_course_concurrency', '1');
+        $requestIntervalMs = $this->getConfig('collect_request_interval_ms', '120');
+        $separator = $this->getConfig('collect_separator', '###');
+        $outputMode = $this->getConfig('collect_output_mode', 'json');
+        $progressInterval = $this->getConfig('collect_progress_interval', '10');
 
         $projectRoot = dirname(__DIR__, 3);
         $pythonDir = $projectRoot . '/xxt';
@@ -88,15 +125,24 @@ class CollectWorker
         $logFile = $resultsDir . '/' . $taskNo . '.log';
 
         $cmd = sprintf(
-            'cd %s && nohup python3 run.py --account %s --mode %s --output json --task-no %s --concurrency 1',
+            'cd %s && nohup python3 run.py --account %s --mode %s --output %s --task-no %s --concurrency %s --course-concurrency %s --request-interval-ms %s --separator %s',
             escapeshellarg($pythonDir),
             escapeshellarg($phone . '----' . $password),
             escapeshellarg($mode),
-            escapeshellarg($taskNo)
+            escapeshellarg($outputMode),
+            escapeshellarg($taskNo),
+            escapeshellarg($concurrency),
+            escapeshellarg($courseConcurrency),
+            escapeshellarg($requestIntervalMs),
+            escapeshellarg($separator)
         );
 
         if ($courseIds !== '') {
             $cmd .= ' --course-ids ' . escapeshellarg($courseIds);
+        }
+
+        if ($proxyUrl !== '') {
+            $cmd .= ' --proxy ' . escapeshellarg($proxyUrl);
         }
 
         $cmd .= sprintf(' > %s 2>&1 & echo $! > %s',
@@ -123,9 +169,10 @@ class CollectWorker
             $isRunning = $this->isProcessRunning($pid);
 
             if ($isRunning) {
-                if (time() - $info['started_at'] > 7200) {
+                $timeoutSeconds = (int) $this->getConfig('collect_timeout_seconds', '7200');
+                if (time() - $info['started_at'] > $timeoutSeconds) {
                     $this->killProcess($pid);
-                    $this->taskRepo->updateStatus($taskNo, 3, '采集超时(2h)');
+                    $this->taskRepo->updateStatus($taskNo, 3, "采集超时({$timeoutSeconds}s)");
                     unset($this->runningTasks[$taskNo]);
                     error_log("[CollectWorker] timeout task={$taskNo} pid={$pid}");
                 }

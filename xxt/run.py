@@ -50,9 +50,11 @@ class SharedState:
         debug_cpi_ids,
         debug_chapter_ids,
         task_no="",
+        proxy="",
     ):
         self.db_config = db_config
         self.task_no = task_no
+        self.proxy = proxy
         self.course_concurrency = course_concurrency
         self.request_interval_ms = request_interval_ms
         self.error_log_file = Path(error_log_file).expanduser() if error_log_file else None
@@ -181,6 +183,7 @@ class WorkerContext:
         self.dbs = db_connection
         self.db_config = shared_state.db_config
         self.task_no = shared_state.task_no
+        self.proxy = shared_state.proxy
         self.course_concurrency = shared_state.course_concurrency
         self.request_interval_ms = shared_state.request_interval_ms
         self.debug_knowledge_ids = set(shared_state.debug_knowledge_ids)
@@ -426,6 +429,11 @@ def build_parser():
         default=Path("config.ini"),
         help="MySQL 配置文件路径，仅 output=sql 时使用",
     )
+    parser.add_argument(
+        "--proxy",
+        default="",
+        help="代理地址，格式: protocol://[user:pass@]host:port",
+    )
     return parser
 
 
@@ -472,6 +480,7 @@ def run_collection(args):
         debug_cpi_ids=debug_scope["cpi_ids"],
         debug_chapter_ids=debug_scope["chapter_ids"],
         task_no=args.task_no,
+        proxy=args.proxy,
     )
     shared_state.ensure_paths()
     shared_state.start_error_log_session()
@@ -490,6 +499,8 @@ def run_collection(args):
         debug_suffix += f" chapter_filter={','.join(sorted(debug_scope['chapter_ids']))}"
     if shared_state.error_log_file is not None:
         debug_suffix += f" error_log={shared_state.error_log_file}"
+    if args.proxy:
+        debug_suffix += f" proxy={args.proxy}"
 
     print(
         f"开始采集: 账号数={len(accounts)} 模式={args.mode} 导出={args.output} "

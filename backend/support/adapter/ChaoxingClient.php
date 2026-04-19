@@ -58,6 +58,7 @@ class ChaoxingClient
         }
 
         $userName = $account;
+        $schoolName = '';
         try {
             $info = json_decode(
                 (string) $this->http->get('https://sso.chaoxing.com/apis/login/userLogin4Uname.do')->getBody(),
@@ -67,11 +68,12 @@ class ChaoxingClient
             if ($name !== '') {
                 $userName = $name;
             }
+            $schoolName = $info['msg']['schoolname'] ?? '';
         } catch (\Throwable $e) {
             error_log("[ChaoxingClient] getlogin_info failed: " . $e->getMessage());
         }
 
-        return ['success' => true, 'userName' => $userName, 'msg' => ''];
+        return ['success' => true, 'userName' => $userName, 'schoolName' => $schoolName, 'msg' => ''];
     }
 
     public function queryCourses(): array
