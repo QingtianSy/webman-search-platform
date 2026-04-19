@@ -27,7 +27,11 @@ class ApiKeyController
     {
         $userId = (int) ($request->userId ?? 0);
         $id = (new ApiKeyValidate())->id($request->get());
-        return ApiResponse::success((new ApiKeyService())->detailById($userId, $id));
+        $result = (new ApiKeyService())->detailById($userId, $id);
+        if (empty($result)) {
+            return ApiResponse::error(40004, 'API Key 不存在');
+        }
+        return ApiResponse::success($result);
     }
 
     public function create(Request $request)

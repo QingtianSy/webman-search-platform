@@ -101,7 +101,10 @@ class QuestionAdminService
         $filters = [
             'stem' => trim((string) ($query['keyword'] ?? '')),
         ];
-        $list = (new QuestionRepository())->findList($filters, 50000);
+        $exportLimit = 50000;
+        $repo = new QuestionRepository();
+        $total = $repo->countByFilters($filters);
+        $list = $repo->findList($filters, $exportLimit);
 
         $headers = ['题目ID', 'MD5', '题型', '来源', '课程', '题干', '选项', '答案', '状态', '创建时间'];
         $rows = array_map(fn($r) => [
@@ -117,6 +120,6 @@ class QuestionAdminService
             $r['created_at'] ?? '',
         ], $list);
 
-        return [$headers, $rows];
+        return [$headers, $rows, $total, $exportLimit];
     }
 }

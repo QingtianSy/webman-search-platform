@@ -19,7 +19,11 @@ class ApiSourceManageController
     public function detail(Request $request)
     {
         $id = (new ApiSourceValidate())->id($request->get());
-        return ApiResponse::success((new ApiSourceAdminService())->detail($id));
+        $result = (new ApiSourceAdminService())->detail($id);
+        if (empty($result)) {
+            return ApiResponse::error(40004, '接口源不存在');
+        }
+        return ApiResponse::success($result);
     }
 
     public function test(Request $request)

@@ -20,7 +20,14 @@ class DocController
     public function detail(Request $request)
     {
         $slug = (string) $request->get('slug', '');
-        return ApiResponse::success((new DocService())->detail($slug));
+        if ($slug === '') {
+            return ApiResponse::error(40001, '参数错误');
+        }
+        $result = (new DocService())->detail($slug);
+        if (empty($result)) {
+            return ApiResponse::error(40004, '文档不存在');
+        }
+        return ApiResponse::success($result);
     }
 
     public function config(Request $request)

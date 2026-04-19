@@ -19,7 +19,8 @@ class SearchLogController
     public function export(Request $request)
     {
         $query = AdminQuery::parse($request->get());
-        [$headers, $rows] = (new SearchLogAdminService())->export($query);
-        return CsvExporter::export('search_logs_' . date('Ymd_His') . '.csv', $headers, $rows);
+        [$headers, $rows, $total, $limit] = (new SearchLogAdminService())->export($query);
+        $suffix = $total > $limit ? "_partial_{$limit}_of_{$total}" : '';
+        return CsvExporter::export('search_logs_' . date('Ymd_His') . $suffix . '.csv', $headers, $rows);
     }
 }

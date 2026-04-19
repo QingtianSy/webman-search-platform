@@ -38,7 +38,11 @@ class CollectController
     {
         $userId = (int) ($request->userId ?? 0);
         $taskNo = (new CollectValidate())->taskNo($request->get());
-        return ApiResponse::success((new CollectService())->detail($userId, $taskNo));
+        $result = (new CollectService())->detail($userId, $taskNo);
+        if (empty($result)) {
+            return ApiResponse::error(40004, '采集任务不存在');
+        }
+        return ApiResponse::success($result);
     }
 
     public function queryCourses(Request $request)

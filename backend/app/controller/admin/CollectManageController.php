@@ -18,7 +18,11 @@ class CollectManageController
     public function detail(Request $request)
     {
         $taskNo = (new CollectTaskValidate())->taskNo($request->get());
-        return ApiResponse::success((new CollectAdminService())->detail($taskNo));
+        $result = (new CollectAdminService())->detail($taskNo);
+        if (empty($result)) {
+            return ApiResponse::error(40004, '采集任务不存在');
+        }
+        return ApiResponse::success($result);
     }
 
     public function stop(Request $request)

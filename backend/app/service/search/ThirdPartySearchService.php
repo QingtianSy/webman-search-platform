@@ -111,6 +111,12 @@ class ThirdPartySearchService
             $dataPath = $source['data_path'] ?? '';
             $data = $dataPath !== '' ? $this->extractPath($body, $dataPath) : $body;
 
+            if (empty($data)) {
+                $entry['error'] = '接口返回数据为空';
+                $apiResults[] = $entry;
+                continue;
+            }
+
             $entry['status'] = 'success';
             $entry['data'] = $data;
             $apiResults[] = $entry;

@@ -21,7 +21,11 @@ class QuestionController
     public function detail(Request $request)
     {
         $id = (new QuestionValidate())->id($request->get());
-        return ApiResponse::success((new QuestionAdminService())->detail($id));
+        $result = (new QuestionAdminService())->detail($id);
+        if (empty($result)) {
+            return ApiResponse::error(40004, '题目不存在');
+        }
+        return ApiResponse::success($result);
     }
 
     public function create(Request $request)
@@ -47,8 +51,9 @@ class QuestionController
     public function export(Request $request)
     {
         $query = AdminQuery::parse($request->get());
-        [$headers, $rows] = (new QuestionAdminService())->export($query);
-        return CsvExporter::export('questions_' . date('Ymd_His') . '.csv', $headers, $rows);
+        [$headers, $rows, $total, $limit] = (new QuestionAdminService())->export($query);
+        $suffix = $total > $limit ? "_partial_{$limit}_of_{$total}" : '';
+        return CsvExporter::export('questions_' . date('Ymd_His') . $suffix . '.csv', $headers, $rows);
     }
 
     public function reindex(Request $request)
