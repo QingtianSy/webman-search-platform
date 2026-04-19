@@ -53,7 +53,7 @@ class AuthController
     public function profile(Request $request)
     {
                 $authorization = (string) $request->header('Authorization', '');
-        $token = trim(str_replace('Bearer', '', $authorization));
+        $token = preg_match('/^Bearer\s+(.+)$/i', $authorization, $m) ? $m[1] : '';
         $decoded = (new JwtService())->decode($token);
         $userId = (int) (($decoded['payload']['uid'] ?? 0));
         $payload = (new AuthService())->profile($userId);
@@ -66,7 +66,7 @@ class AuthController
     public function menus(Request $request)
     {
                 $authorization = (string) $request->header('Authorization', '');
-        $token = trim(str_replace('Bearer', '', $authorization));
+        $token = preg_match('/^Bearer\s+(.+)$/i', $authorization, $m) ? $m[1] : '';
         $decoded = (new JwtService())->decode($token);
         $userId = (int) (($decoded['payload']['uid'] ?? 0));
         $payload = (new AuthService())->profile($userId);
@@ -76,7 +76,7 @@ class AuthController
     public function permissions(Request $request)
     {
                 $authorization = (string) $request->header('Authorization', '');
-        $token = trim(str_replace('Bearer', '', $authorization));
+        $token = preg_match('/^Bearer\s+(.+)$/i', $authorization, $m) ? $m[1] : '';
         $decoded = (new JwtService())->decode($token);
         $userId = (int) (($decoded['payload']['uid'] ?? 0));
         $payload = (new AuthService())->profile($userId);

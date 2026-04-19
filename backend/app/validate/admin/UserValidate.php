@@ -33,14 +33,22 @@ class UserValidate
         if ($id <= 0) {
             throw new BusinessException('用户ID不能为空', ResponseCode::PARAM_ERROR);
         }
-        $result = [
-            'id' => $id,
-            'username' => trim((string) ($data['username'] ?? '')),
-            'nickname' => trim((string) ($data['nickname'] ?? '')),
-            'mobile' => trim((string) ($data['mobile'] ?? '')),
-            'email' => trim((string) ($data['email'] ?? '')),
-            'status' => (int) ($data['status'] ?? 1),
-        ];
+        $result = ['id' => $id];
+        if (array_key_exists('username', $data)) {
+            $result['username'] = trim((string) $data['username']);
+        }
+        if (array_key_exists('nickname', $data)) {
+            $result['nickname'] = trim((string) $data['nickname']);
+        }
+        if (array_key_exists('mobile', $data)) {
+            $result['mobile'] = trim((string) $data['mobile']);
+        }
+        if (array_key_exists('email', $data)) {
+            $result['email'] = trim((string) $data['email']);
+        }
+        if (array_key_exists('status', $data)) {
+            $result['status'] = (int) $data['status'];
+        }
         $password = (string) ($data['password'] ?? '');
         if ($password !== '') {
             if (mb_strlen($password) < 6) {

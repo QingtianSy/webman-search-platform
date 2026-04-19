@@ -25,10 +25,16 @@ class QuestionTagValidate
         if ($id <= 0) {
             throw new BusinessException('标签ID不能为空', ResponseCode::PARAM_ERROR);
         }
-        return [
-            'id' => $id,
-            'name' => trim((string) ($data['name'] ?? '')),
-            'sort' => (int) ($data['sort'] ?? 0),
-        ];
+        $result = ['id' => $id];
+        if (array_key_exists('name', $data)) {
+            $result['name'] = trim((string) $data['name']);
+        }
+        if (array_key_exists('sort', $data)) {
+            $result['sort'] = (int) $data['sort'];
+        }
+        if (count($result) <= 1) {
+            throw new BusinessException('没有需要更新的字段', ResponseCode::PARAM_ERROR);
+        }
+        return $result;
     }
 }

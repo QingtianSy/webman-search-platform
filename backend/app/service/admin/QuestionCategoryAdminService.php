@@ -38,6 +38,7 @@ class QuestionCategoryAdminService
         if (!$row) {
             throw new BusinessException('分类不存在', 40001);
         }
+        unset($data['id']);
         $row->fill($data);
         $row->save();
         return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];

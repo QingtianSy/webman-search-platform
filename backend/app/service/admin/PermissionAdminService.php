@@ -52,6 +52,7 @@ class PermissionAdminService
         if (!$row) {
             throw new BusinessException('权限不存在', 40001);
         }
+        unset($data['id']);
         $row->fill($data);
         $row->save();
         (new PermissionCacheRepository())->clearAll();

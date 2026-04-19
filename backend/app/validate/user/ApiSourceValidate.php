@@ -198,14 +198,32 @@ class ApiSourceValidate
 
     public static function validateUrlSafe(string $url): void
     {
+        self::resolveToSafeIp($url);
+    }
+
+    /**
+     * @return array{host: string, port: int, ip: string}
+     */
+    public static function resolveToSafeIp(string $url): array
+    {
+        return self::resolveHost($url, true);
+    }
+
+    /**
+     * @return array{host: string, port: int, ip: string}
+     */
+    public static function resolveHost(string $url, bool $requirePublicIp = true): array
+    {
         $parsed = parse_url($url);
         if (!$parsed || !in_array(strtolower($parsed['scheme'] ?? ''), ['http', 'https'], true)) {
             throw new BusinessException('接口地址仅支持 http/https 协议', ResponseCode::PARAM_ERROR);
         }
+        $scheme = strtolower($parsed['scheme']);
         $host = strtolower($parsed['host'] ?? '');
         if ($host === '') {
             throw new BusinessException('接口地址缺少域名', ResponseCode::PARAM_ERROR);
         }
+        $port = (int) ($parsed['port'] ?? ($scheme === 'https' ? 443 : 80));
 
         $bareHost = $host;
         if (str_starts_with($bareHost, '[') && str_ends_with($bareHost, ']')) {
@@ -213,8 +231,10 @@ class ApiSourceValidate
         }
 
         if (filter_var($bareHost, FILTER_VALIDATE_IP) !== false) {
-            self::assertPublicIp($bareHost);
-            return;
+            if ($requirePublicIp) {
+                self::assertPublicIp($bareHost);
+            }
+            return ['host' => $host, 'port' => $port, 'ip' => $bareHost];
         }
 
         if (preg_match('/^[\d.]+$/', $bareHost) || preg_match('/^0x[0-9a-f]+$/i', $bareHost)) {
@@ -225,7 +245,10 @@ class ApiSourceValidate
         if ($ip === $bareHost) {
             throw new BusinessException('接口地址域名无法解析', ResponseCode::PARAM_ERROR);
         }
-        self::assertPublicIp($ip);
+        if ($requirePublicIp) {
+            self::assertPublicIp($ip);
+        }
+        return ['host' => $host, 'port' => $port, 'ip' => $ip];
     }
 
     private static function assertPublicIp(string $ip): void

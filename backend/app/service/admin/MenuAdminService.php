@@ -52,6 +52,7 @@ class MenuAdminService
         if (!$row) {
             throw new BusinessException('菜单不存在', 40001);
         }
+        unset($data['id']);
         $row->fill($data);
         $row->save();
         return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];

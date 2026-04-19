@@ -3,6 +3,7 @@
 namespace app\service\open;
 
 use app\repository\mysql\ApiKeyRepository;
+use app\repository\mysql\UserRepository;
 use PDO;
 use support\adapter\MySqlClient;
 
@@ -23,6 +24,14 @@ class ApiKeyService
         if (!empty($record['expire_at']) && strtotime($record['expire_at']) < time()) {
             return null;
         }
+        $userId = (int) ($record['user_id'] ?? 0);
+        if ($userId > 0) {
+            $user = (new UserRepository())->findById($userId);
+            if (!$user || (int) ($user['status'] ?? 0) !== 1) {
+                return null;
+            }
+        }
+
         if (!empty($record['api_secret_hash'])) {
             return password_verify($apiSecret, $record['api_secret_hash']) ? $record : null;
         }

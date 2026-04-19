@@ -156,6 +156,24 @@ class QuestionIndexRepository
         }
     }
 
+    public function deleteIndex(): bool
+    {
+        if (!ElasticsearchClient::isConfigured()) {
+            return false;
+        }
+        try {
+            $client = $this->client();
+            $client->delete('/' . ElasticsearchClient::questionIndex());
+            return true;
+        } catch (Throwable $e) {
+            if (str_contains($e->getMessage(), '404')) {
+                return true;
+            }
+            error_log("[QuestionIndexRepository] deleteIndex failed: " . $e->getMessage());
+            return false;
+        }
+    }
+
     public function deleteQuestion(string $questionId): bool
     {
         if (!ElasticsearchClient::isConfigured()) {
@@ -202,7 +220,7 @@ class QuestionIndexRepository
         }
         self::$client = new Client([
             'base_uri' => ElasticsearchClient::host(),
-            'verify' => false,
+            'verify' => true,
             'auth' => [
                 ElasticsearchClient::username(),
                 ElasticsearchClient::password(),

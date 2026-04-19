@@ -44,7 +44,7 @@ class AdminAuthMiddleware implements MiddlewareInterface
         if ($authorization === '') {
             return ApiResponse::error(40002, '未登录');
         }
-        $token = trim(str_replace('Bearer', '', $authorization));
+        $token = preg_match('/^Bearer\s+(.+)$/i', $authorization, $m) ? $m[1] : '';
         $decoded = (new JwtService())->decode($token);
         if (empty($decoded)) {
             return ApiResponse::error(40002, 'Token 无效');

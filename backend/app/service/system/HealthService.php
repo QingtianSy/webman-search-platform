@@ -80,7 +80,7 @@ class HealthService
         try {
             $client = new Client([
                 'base_uri' => ElasticsearchClient::host(),
-                'verify' => false,
+                'verify' => true,
                 'auth' => [ElasticsearchClient::username(), ElasticsearchClient::password()],
                 'timeout' => 5,
             ]);

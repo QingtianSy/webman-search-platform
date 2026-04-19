@@ -61,7 +61,7 @@ class RoleAdminService
             throw new BusinessException('角色不存在', 40001);
         }
         $permissionIds = $data['permission_ids'] ?? null;
-        unset($data['permission_ids']);
+        unset($data['permission_ids'], $data['id']);
         return Db::transaction(function () use ($row, $id, $data, $permissionIds) {
             $affectedUserIds = (new UserRoleRepository())->userIdsByRoleId($id);
             $row->fill($data);

@@ -98,9 +98,14 @@ class ApiKeyRepository
             return false;
         }
         try {
+            $check = $pdo->prepare('SELECT id FROM user_api_keys WHERE id = :id AND user_id = :user_id');
+            $check->execute(['id' => $id, 'user_id' => $userId]);
+            if (!$check->fetch()) {
+                return false;
+            }
             $stmt = $pdo->prepare('UPDATE user_api_keys SET status = :status, updated_at = NOW() WHERE id = :id AND user_id = :user_id');
             $stmt->execute(['status' => $status, 'id' => $id, 'user_id' => $userId]);
-            return $stmt->rowCount() > 0;
+            return true;
         } catch (\PDOException $e) {
             error_log("[ApiKeyRepository] toggle failed: " . $e->getMessage());
             return false;

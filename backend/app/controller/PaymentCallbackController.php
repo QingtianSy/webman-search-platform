@@ -2,6 +2,7 @@
 
 namespace app\controller;
 
+use app\repository\mysql\OrderRepository;
 use app\service\payment\CallbackService;
 use support\Request;
 use support\Response;
@@ -18,10 +19,14 @@ class PaymentCallbackController
 
     public function returnUrl(Request $request)
     {
-        $tradeStatus = $request->get('trade_status', '');
-        if ($tradeStatus === 'TRADE_SUCCESS') {
-            return new Response(200, ['Content-Type' => 'text/html'], '<script>alert("支付成功");window.close();</script>');
+        $orderNo = $request->get('out_trade_no', '');
+        $message = '支付未完成';
+        if ($orderNo !== '') {
+            $order = (new OrderRepository())->findByOrderNo($orderNo);
+            if (!empty($order) && (int) $order['status'] === 1) {
+                $message = '支付成功';
+            }
         }
-        return new Response(200, ['Content-Type' => 'text/html'], '<script>alert("支付未完成");window.close();</script>');
+        return new Response(200, ['Content-Type' => 'text/html'], '<script>alert("' . $message . '");window.close();</script>');
     }
 }

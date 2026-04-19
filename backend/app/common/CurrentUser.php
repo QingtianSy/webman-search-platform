@@ -10,7 +10,7 @@ class CurrentUser
     public static function id(Request $request): int
     {
         $authorization = (string) $request->header('Authorization', '');
-        $token = trim(str_replace('Bearer', '', $authorization));
+        $token = preg_match('/^Bearer\s+(.+)$/i', $authorization, $m) ? $m[1] : '';
         $decoded = (new JwtService())->decode($token);
         return (int) (($decoded['payload']['uid'] ?? 0));
     }

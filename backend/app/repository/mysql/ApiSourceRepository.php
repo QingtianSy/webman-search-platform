@@ -2,6 +2,7 @@
 
 namespace app\repository\mysql;
 
+use app\validate\user\ApiSourceValidate;
 use PDO;
 use support\adapter\MySqlClient;
 
@@ -82,7 +83,19 @@ class ApiSourceRepository
             return ['id' => $id, 'status' => 'error', 'message' => 'URL为空', 'tested_at' => date('Y-m-d H:i:s')];
         }
         try {
-            $client = new \GuzzleHttp\Client(['timeout' => (int) ($row['timeout'] ?? 10), 'verify' => false]);
+            $resolved = ApiSourceValidate::resolveHost($url, false);
+        } catch (\Throwable $e) {
+            return ['id' => $id, 'status' => 'error', 'message' => 'URL解析失败: ' . $e->getMessage(), 'tested_at' => date('Y-m-d H:i:s')];
+        }
+        try {
+            $client = new \GuzzleHttp\Client([
+                'timeout' => (int) ($row['timeout'] ?? 10),
+                'verify' => true,
+                'allow_redirects' => false,
+                'curl' => [
+                    CURLOPT_RESOLVE => ["{$resolved['host']}:{$resolved['port']}:{$resolved['ip']}"],
+                ],
+            ]);
             $method = strtoupper($row['method'] ?? 'GET');
             $response = $client->request($method, $url);
             $code = $response->getStatusCode();

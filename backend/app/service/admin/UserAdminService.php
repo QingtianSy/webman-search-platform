@@ -114,6 +114,7 @@ class UserAdminService
         (new TokenCacheRepository())->setUserToken($id, 'REVOKED');
         $row->delete();
         Db::table('user_role')->where('user_id', $id)->delete();
+        Db::table('user_api_keys')->where('user_id', $id)->delete();
         return ['success' => true, 'action' => 'delete', 'id' => $id];
     }
 
@@ -128,6 +129,7 @@ class UserAdminService
 
         if ((int) $row->status === 0) {
             (new TokenCacheRepository())->setUserToken($id, 'REVOKED');
+            Db::table('user_api_keys')->where('user_id', $id)->update(['status' => 0]);
         }
 
         return ['success' => true, 'action' => 'toggle_status', 'id' => $id, 'status' => $row->status];
@@ -147,9 +149,9 @@ class UserAdminService
     {
         $validIds = array_filter(array_map('intval', $roleIds), fn($id) => $id > 0);
         if (!empty($validIds)) {
-            $existCount = Db::table('roles')->whereIn('id', $validIds)->count();
+            $existCount = Db::table('roles')->whereIn('id', $validIds)->where('status', 1)->count();
             if ($existCount !== count($validIds)) {
-                throw new BusinessException('部分角色不存在', 40001);
+                throw new BusinessException('部分角色不存在或已禁用', 40001);
             }
         }
         Db::table('user_role')->where('user_id', $userId)->delete();

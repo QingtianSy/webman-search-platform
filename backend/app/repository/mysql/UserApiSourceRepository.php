@@ -2,6 +2,7 @@
 
 namespace app\repository\mysql;
 
+use app\validate\user\ApiSourceValidate;
 use PDO;
 use support\adapter\MySqlClient;
 
@@ -111,9 +112,14 @@ class UserApiSourceRepository
         $sets[] = 'updated_at = NOW()';
         $sql = 'UPDATE user_api_sources SET ' . implode(', ', $sets) . ' WHERE id = :id AND user_id = :user_id';
         try {
+            $check = $pdo->prepare('SELECT id FROM user_api_sources WHERE id = :id AND user_id = :user_id');
+            $check->execute(['id' => $id, 'user_id' => $userId]);
+            if (!$check->fetch()) {
+                return false;
+            }
             $stmt = $pdo->prepare($sql);
             $stmt->execute($bind);
-            return $stmt->rowCount() > 0;
+            return true;
         } catch (\PDOException $e) {
             error_log("[UserApiSourceRepository] update failed: " . $e->getMessage());
             return false;
@@ -163,7 +169,19 @@ class UserApiSourceRepository
             return ['id' => $id, 'status' => 'error', 'message' => 'URL为空', 'tested_at' => date('Y-m-d H:i:s')];
         }
         try {
-            $client = new \GuzzleHttp\Client(['timeout' => (int) ($row['timeout'] ?? 10), 'verify' => true]);
+            $resolved = ApiSourceValidate::resolveToSafeIp($url);
+        } catch (\Throwable $e) {
+            return ['id' => $id, 'status' => 'error', 'message' => 'URL安全检查失败: ' . $e->getMessage(), 'tested_at' => date('Y-m-d H:i:s')];
+        }
+        try {
+            $client = new \GuzzleHttp\Client([
+                'timeout' => (int) ($row['timeout'] ?? 10),
+                'verify' => true,
+                'allow_redirects' => false,
+                'curl' => [
+                    CURLOPT_RESOLVE => ["{$resolved['host']}:{$resolved['port']}:{$resolved['ip']}"],
+                ],
+            ]);
             $method = strtoupper($row['method'] ?? 'GET');
             $response = $client->request($method, $url);
             $code = $response->getStatusCode();

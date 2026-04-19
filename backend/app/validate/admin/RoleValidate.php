@@ -31,15 +31,24 @@ class RoleValidate
         if ($id <= 0) {
             throw new BusinessException('角色ID不能为空', ResponseCode::PARAM_ERROR);
         }
-        $result = [
-            'id' => $id,
-            'name' => trim((string) ($data['name'] ?? '')),
-            'code' => trim((string) ($data['code'] ?? '')),
-            'sort' => (int) ($data['sort'] ?? 0),
-            'status' => (int) ($data['status'] ?? 1),
-        ];
+        $result = ['id' => $id];
+        if (array_key_exists('name', $data)) {
+            $result['name'] = trim((string) $data['name']);
+        }
+        if (array_key_exists('code', $data)) {
+            $result['code'] = trim((string) $data['code']);
+        }
+        if (array_key_exists('sort', $data)) {
+            $result['sort'] = (int) $data['sort'];
+        }
+        if (array_key_exists('status', $data)) {
+            $result['status'] = (int) $data['status'];
+        }
         if (isset($data['permission_ids']) && is_array($data['permission_ids'])) {
             $result['permission_ids'] = array_map('intval', $data['permission_ids']);
+        }
+        if (count($result) <= 1) {
+            throw new BusinessException('没有需要更新的字段', ResponseCode::PARAM_ERROR);
         }
         return $result;
     }

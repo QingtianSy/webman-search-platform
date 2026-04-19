@@ -75,9 +75,14 @@ class UserRepository
         $sets[] = 'updated_at = NOW()';
         $sql = 'UPDATE users SET ' . implode(', ', $sets) . ' WHERE id = :id';
         try {
+            $check = $pdo->prepare('SELECT id FROM users WHERE id = :id');
+            $check->execute(['id' => $id]);
+            if (!$check->fetch()) {
+                return false;
+            }
             $stmt = $pdo->prepare($sql);
             $stmt->execute($bind);
-            return $stmt->rowCount() > 0;
+            return true;
         } catch (\PDOException $e) {
             error_log("[UserRepository] updateProfile failed: " . $e->getMessage());
             return false;

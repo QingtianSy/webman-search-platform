@@ -23,13 +23,19 @@ class PaymentService
 
     private function getNotifyUrl(): string
     {
-        $host = rtrim(getenv('APP_URL') ?: 'http://127.0.0.1:8787', '/');
+        $host = rtrim(getenv('APP_URL') ?: '', '/');
+        if ($host === '') {
+            throw new \RuntimeException('APP_URL 环境变量未配置，无法生成支付回调地址');
+        }
         return $host . '/callback/epay/notify';
     }
 
     private function getReturnUrl(): string
     {
-        $host = rtrim(getenv('APP_URL') ?: 'http://127.0.0.1:8787', '/');
+        $host = rtrim(getenv('APP_URL') ?: '', '/');
+        if ($host === '') {
+            throw new \RuntimeException('APP_URL 环境变量未配置，无法生成支付回跳地址');
+        }
         return $host . '/callback/epay/return';
     }
 }

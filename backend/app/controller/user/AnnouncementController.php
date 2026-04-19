@@ -14,7 +14,10 @@ class AnnouncementController
         $page = max(1, (int) $request->get('page', 1));
         $pageSize = max(1, min(50, (int) $request->get('page_size', 10)));
 
-        $builder = Announcement::query()->where('status', 1);
+        $builder = Announcement::query()->where('status', 1)
+            ->where(function ($q) {
+                $q->whereNull('publish_at')->orWhere('publish_at', '<=', now());
+            });
         if (in_array($type, ['notice', 'announcement'], true)) {
             $builder->where('type', $type);
         }
@@ -43,6 +46,9 @@ class AnnouncementController
         $row = Announcement::query()
             ->where('id', $id)
             ->where('status', 1)
+            ->where(function ($q) {
+                $q->whereNull('publish_at')->orWhere('publish_at', '<=', now());
+            })
             ->first(['id', 'title', 'content', 'type', 'publish_at', 'created_at']);
 
         if (!$row) {

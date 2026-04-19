@@ -3,6 +3,7 @@
 namespace app\service\search;
 
 use app\repository\mysql\UserApiSourceRepository;
+use app\validate\user\ApiSourceValidate;
 use GuzzleHttp\Client;
 use GuzzleHttp\Promise;
 
@@ -83,7 +84,7 @@ class ThirdPartySearchService
 
             $response = $result['value'];
             $httpCode = $response->getStatusCode();
-            if ($httpCode < 200 || $httpCode >= 400) {
+            if ($httpCode < 200 || $httpCode >= 300) {
                 $entry['error'] = "HTTP {$httpCode}";
                 $apiResults[] = $entry;
                 continue;
@@ -172,6 +173,7 @@ class ThirdPartySearchService
         $options = [
             'timeout' => $timeout,
             'headers' => $headers,
+            'allow_redirects' => false,
         ];
 
         if (!empty($queryParams)) {
@@ -186,6 +188,16 @@ class ThirdPartySearchService
                 $options['form_params'] = $bodyParams;
             }
         }
+
+        try {
+            $resolved = ApiSourceValidate::resolveToSafeIp($url);
+        } catch (\Throwable $e) {
+            return Promise\Create::rejectionFor($e);
+        }
+
+        $options['curl'] = [
+            CURLOPT_RESOLVE => ["{$resolved['host']}:{$resolved['port']}:{$resolved['ip']}"],
+        ];
 
         return $client->requestAsync($method, $url, $options);
     }
@@ -204,7 +216,7 @@ class ThirdPartySearchService
         $options = array_slice($parts, 1);
         $optionsStr = implode($delimiter ?: $split, $options);
 
-        $result = str_replace('type', $type, $format);
+        $result = str_replace('[type]', $type, $format);
         $result = str_replace('[options]', $optionsStr, $result);
 
         return $result;

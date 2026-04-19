@@ -31,12 +31,22 @@ class PermissionValidate
         if ($id <= 0) {
             throw new BusinessException('权限ID不能为空', ResponseCode::PARAM_ERROR);
         }
-        return [
-            'id' => $id,
-            'name' => trim((string) ($data['name'] ?? '')),
-            'code' => trim((string) ($data['code'] ?? '')),
-            'type' => trim((string) ($data['type'] ?? '')),
-            'status' => (int) ($data['status'] ?? 1),
-        ];
+        $result = ['id' => $id];
+        if (array_key_exists('name', $data)) {
+            $result['name'] = trim((string) $data['name']);
+        }
+        if (array_key_exists('code', $data)) {
+            $result['code'] = trim((string) $data['code']);
+        }
+        if (array_key_exists('type', $data)) {
+            $result['type'] = trim((string) $data['type']);
+        }
+        if (array_key_exists('status', $data)) {
+            $result['status'] = (int) $data['status'];
+        }
+        if (count($result) <= 1) {
+            throw new BusinessException('没有需要更新的字段', ResponseCode::PARAM_ERROR);
+        }
+        return $result;
     }
 }

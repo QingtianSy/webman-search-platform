@@ -43,6 +43,7 @@ class PlanAdminService
         if (isset($data['features']) && is_array($data['features'])) {
             $data['features'] = json_encode($data['features'], JSON_UNESCAPED_UNICODE);
         }
+        unset($data['id']);
         $row->fill($data);
         $row->save();
         return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];

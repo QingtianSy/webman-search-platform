@@ -14,7 +14,7 @@ class AnnouncementRepository
             return [];
         }
         try {
-            $stmt = $pdo->query('SELECT id, title, content, type, status, publish_at, created_at, updated_at FROM announcements ORDER BY id DESC LIMIT 10000');
+            $stmt = $pdo->query('SELECT id, title, type, status, publish_at, created_at, updated_at FROM announcements WHERE status = 1 AND (publish_at IS NULL OR publish_at <= NOW()) ORDER BY id DESC LIMIT 10000');
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {
             error_log("[AnnouncementRepository] latest failed: " . $e->getMessage());
@@ -51,12 +51,18 @@ class AnnouncementRepository
             return [];
         }
         try {
-            $stmt = $pdo->prepare('UPDATE announcements SET title = :title, content = :content, updated_at = NOW() WHERE id = :id');
-            $stmt->execute([
-                'id' => $id,
-                'title' => $data['title'] ?? '',
-                'content' => $data['content'] ?? '',
-            ]);
+            $sets = ['updated_at = NOW()'];
+            $bind = ['id' => $id];
+            $allowed = ['title', 'content', 'status', 'type', 'publish_at'];
+            foreach ($allowed as $field) {
+                if (array_key_exists($field, $data)) {
+                    $sets[] = "{$field} = :{$field}";
+                    $bind[$field] = $data[$field];
+                }
+            }
+            $sql = 'UPDATE announcements SET ' . implode(', ', $sets) . ' WHERE id = :id';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($bind);
             return ['id' => $id] + $data;
         } catch (\PDOException $e) {
             error_log("[AnnouncementRepository] update failed: " . $e->getMessage());

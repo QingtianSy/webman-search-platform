@@ -37,14 +37,28 @@ class MenuValidate
         if ($id <= 0) {
             throw new BusinessException('菜单ID不能为空', ResponseCode::PARAM_ERROR);
         }
-        return [
-            'id' => $id,
-            'name' => trim((string) ($data['name'] ?? '')),
-            'path' => trim((string) ($data['path'] ?? '')),
-            'permission_code' => trim((string) ($data['permission_code'] ?? '')),
-            'parent_id' => (int) ($data['parent_id'] ?? 0),
-            'sort' => (int) ($data['sort'] ?? 0),
-            'status' => (int) ($data['status'] ?? 1),
-        ];
+        $result = ['id' => $id];
+        if (array_key_exists('name', $data)) {
+            $result['name'] = trim((string) $data['name']);
+        }
+        if (array_key_exists('path', $data)) {
+            $result['path'] = trim((string) $data['path']);
+        }
+        if (array_key_exists('permission_code', $data)) {
+            $result['permission_code'] = trim((string) $data['permission_code']);
+        }
+        if (array_key_exists('parent_id', $data)) {
+            $result['parent_id'] = (int) $data['parent_id'];
+        }
+        if (array_key_exists('sort', $data)) {
+            $result['sort'] = (int) $data['sort'];
+        }
+        if (array_key_exists('status', $data)) {
+            $result['status'] = (int) $data['status'];
+        }
+        if (count($result) <= 1) {
+            throw new BusinessException('没有需要更新的字段', ResponseCode::PARAM_ERROR);
+        }
+        return $result;
     }
 }

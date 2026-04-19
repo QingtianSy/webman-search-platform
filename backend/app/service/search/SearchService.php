@@ -4,6 +4,7 @@ namespace app\service\search;
 
 use app\exception\BusinessException;
 use app\repository\es\QuestionIndexRepository;
+use app\repository\mongo\QuestionRepository;
 use app\repository\mongo\SearchLogDetailRepository;
 use app\repository\mysql\SearchLogRepository;
 use app\service\log\LogService;
@@ -39,6 +40,17 @@ class SearchService
         }
 
         $esHits = (new QuestionIndexRepository())->search($keyword);
+        $searchSource = 'es';
+        if (empty($esHits) && trim($keyword) !== '') {
+            $mongoResults = (new QuestionRepository())->search($keyword);
+            $esHits = array_map(fn($r) => [
+                'question_id' => $r['question_id'] ?? '',
+                'score' => $r['score'] ?? 100,
+            ], array_slice($mongoResults, 0, 20));
+            if (!empty($esHits)) {
+                $searchSource = 'mongo';
+            }
+        }
         $questionIds = array_map(fn ($row) => (string) ($row['question_id'] ?? ''), $esHits);
         $questionIds = array_values(array_filter($questionIds));
         $scoreMap = [];
@@ -82,7 +94,7 @@ class SearchService
             }
         }
 
-        $sourceType = $hitCount > 0 && $hasApiHits ? 'es+api' : ($hasApiHits ? 'api' : 'es');
+        $sourceType = $hitCount > 0 && $hasApiHits ? $searchSource . '+api' : ($hasApiHits ? 'api' : $searchSource);
 
         $logData = [
             'log_no' => $logNo,

@@ -14,7 +14,7 @@ class DocCategoryRepository
             return [];
         }
         try {
-            $stmt = $pdo->query('SELECT id, name, slug, sort, status, created_at, updated_at FROM docs_categories ORDER BY sort ASC, id ASC');
+            $stmt = $pdo->query('SELECT id, name, slug, sort, status, created_at, updated_at FROM docs_categories WHERE status = 1 ORDER BY sort ASC, id ASC');
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {
             error_log("[DocCategoryRepository] all failed: " . $e->getMessage());

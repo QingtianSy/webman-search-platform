@@ -42,7 +42,7 @@ class AuthController
     public function profile(Request $request)
     {
         $jwtService = new JwtService();
-        $token = str_replace('Bearer ', '', (string) $request->header('authorization', ''));
+        $token = preg_match('/^Bearer\s+(.+)$/i', (string) $request->header('authorization', ''), $m) ? $m[1] : '';
         $decoded = $jwtService->decode($token);
         if (empty($decoded['payload']['uid'])) {
             return ApiResponse::error(40001, '未登录');

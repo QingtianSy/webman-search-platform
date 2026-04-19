@@ -19,7 +19,7 @@ class DocValidate
             'title' => $title,
             'summary' => (string) ($data['summary'] ?? ''),
             'content_md' => (string) ($data['content_md'] ?? ''),
-            'status' => 1,
+            'status' => (int) ($data['status'] ?? 1),
         ];
     }
 
@@ -29,11 +29,28 @@ class DocValidate
         if ($id <= 0) {
             throw new BusinessException('文档ID不能为空', ResponseCode::PARAM_ERROR);
         }
-        return [
-            'id' => $id,
-            'title' => (string) ($data['title'] ?? ''),
-            'summary' => (string) ($data['summary'] ?? ''),
-            'content_md' => (string) ($data['content_md'] ?? ''),
-        ];
+        $result = ['id' => $id];
+        if (array_key_exists('title', $data)) {
+            $result['title'] = (string) $data['title'];
+        }
+        if (array_key_exists('summary', $data)) {
+            $result['summary'] = (string) $data['summary'];
+        }
+        if (array_key_exists('content_md', $data)) {
+            $result['content_md'] = (string) $data['content_md'];
+        }
+        if (isset($data['status'])) {
+            $result['status'] = (int) $data['status'];
+        }
+        if (isset($data['category_id'])) {
+            $result['category_id'] = (int) $data['category_id'];
+        }
+        if (isset($data['slug'])) {
+            $result['slug'] = (string) $data['slug'];
+        }
+        if (count($result) <= 1) {
+            throw new BusinessException('没有需要更新的字段', ResponseCode::PARAM_ERROR);
+        }
+        return $result;
     }
 }

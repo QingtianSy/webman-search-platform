@@ -24,7 +24,7 @@ class ChaoxingClient
         $this->cookies = new CookieJar();
         $this->http = new Client([
             'cookies' => $this->cookies,
-            'verify' => false,
+            'verify' => true,
             'timeout' => 10,
             'headers' => ['User-Agent' => self::UA],
         ]);

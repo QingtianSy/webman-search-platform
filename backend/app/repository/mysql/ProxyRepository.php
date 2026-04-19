@@ -56,9 +56,14 @@ class ProxyRepository
             }
             $sets[] = 'updated_at = NOW()';
             $sql = 'UPDATE proxies SET ' . implode(', ', $sets) . ' WHERE id = :id';
+            $check = $pdo->prepare('SELECT id FROM proxies WHERE id = :id');
+            $check->execute(['id' => $id]);
+            if (!$check->fetch()) {
+                return false;
+            }
             $stmt = $pdo->prepare($sql);
             $stmt->execute($bind);
-            return $stmt->rowCount() > 0;
+            return true;
         } catch (\PDOException $e) {
             error_log("[ProxyRepository] update failed: " . $e->getMessage());
             return false;

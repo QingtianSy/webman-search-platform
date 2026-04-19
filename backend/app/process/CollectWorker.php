@@ -50,6 +50,18 @@ class CollectWorker
             $taskNo = $task['task_no'] ?? '';
             $pid = (int) ($task['runner_script'] ?? 0);
             if ($taskNo === '' || $pid <= 0) {
+                if ($taskNo !== '') {
+                    $recoveredPid = $this->tryRecoverPid($taskNo);
+                    if ($recoveredPid > 0) {
+                        $this->taskRepo->updateRunnerPid($taskNo, $recoveredPid);
+                        $this->runningTasks[$taskNo] = ['pid' => $recoveredPid, 'started_at' => time()];
+                        error_log("[CollectWorker] adopted orphan task={$taskNo} pid={$recoveredPid}");
+                    } else {
+                        $this->taskRepo->updateStatus($taskNo, 0, '进程丢失，重新排队');
+                        $this->cleanupPidFile($taskNo);
+                        error_log("[CollectWorker] reset orphaned task={$taskNo} to pending");
+                    }
+                }
                 continue;
             }
             $this->runningTasks[$taskNo] = [
@@ -148,7 +160,6 @@ class CollectWorker
             return 0;
         }
         $pid = (int) trim((string) file_get_contents($pidFile));
-        @unlink($pidFile);
         return $pid;
     }
 
@@ -164,12 +175,14 @@ class CollectWorker
                     $this->killProcess($pid);
                     $this->taskRepo->updateStatus($taskNo, 3, "采集超时({$timeoutSeconds}s)");
                     unset($this->runningTasks[$taskNo]);
+                    $this->cleanupPidFile($taskNo);
                     error_log("[CollectWorker] timeout task={$taskNo} pid={$pid}");
                 }
                 continue;
             }
 
             unset($this->runningTasks[$taskNo]);
+            $this->cleanupPidFile($taskNo);
             error_log("[CollectWorker] python finished task={$taskNo} pid={$pid}");
             $this->importResults($taskNo);
         }
@@ -221,6 +234,34 @@ class CollectWorker
         if ($pid > 0) {
             $output = [];
             @exec("kill {$pid} 2>/dev/null", $output);
+        }
+    }
+
+    protected function tryRecoverPid(string $taskNo): int
+    {
+        $pidFile = '/tmp/collect_' . $taskNo . '.pid';
+        if (is_file($pidFile)) {
+            $pid = (int) trim((string) file_get_contents($pidFile));
+            if ($pid > 0 && $this->isProcessRunning($pid)) {
+                return $pid;
+            }
+        }
+        $output = [];
+        @exec("pgrep -f " . escapeshellarg("task-no {$taskNo}") . " 2>/dev/null", $output);
+        foreach ($output as $line) {
+            $pid = (int) trim($line);
+            if ($pid > 0) {
+                return $pid;
+            }
+        }
+        return 0;
+    }
+
+    protected function cleanupPidFile(string $taskNo): void
+    {
+        $pidFile = '/tmp/collect_' . $taskNo . '.pid';
+        if (is_file($pidFile)) {
+            @unlink($pidFile);
         }
     }
 }

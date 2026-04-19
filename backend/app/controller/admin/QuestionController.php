@@ -53,7 +53,11 @@ class QuestionController
 
     public function reindex(Request $request)
     {
-        $result = (new QuestionIndexService())->syncAll();
-        return ApiResponse::success($result, 'ES索引重建完成');
+        $result = (new QuestionIndexService())->rebuild();
+        if (empty($result['rebuilt'])) {
+            return ApiResponse::error(50001, $result['error'] ?? 'ES索引重建失败');
+        }
+        $msg = isset($result['es_warning']) ? ('ES索引重建完成（部分失败）：' . $result['es_warning']) : 'ES索引重建完成';
+        return ApiResponse::success($result, $msg);
     }
 }

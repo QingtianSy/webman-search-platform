@@ -37,6 +37,7 @@ class QuestionTypeAdminService
         if (!$row) {
             throw new BusinessException('题型不存在', 40001);
         }
+        unset($data['id']);
         $row->fill($data);
         $row->save();
         return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];

@@ -55,7 +55,7 @@ class CollectController
         $userId = (int) ($request->userId ?? 0);
         $data = (new CollectValidate())->submitCollect($request->post());
         $result = (new CollectService())->submitCollect($userId, $data);
-        (new OperateLogRepository())->create(['user_id' => $userId, 'module' => 'collect', 'action' => 'submit', 'content' => "提交采集任务: {$data['route']}", 'ip' => $request->getRealIp()]);
+        (new OperateLogRepository())->create(['user_id' => $userId, 'module' => 'collect', 'action' => 'submit', 'content' => "提交采集任务: {$data['collect_type']}", 'ip' => $request->getRealIp()]);
         return ApiResponse::success($result, '采集任务已提交');
     }
 }

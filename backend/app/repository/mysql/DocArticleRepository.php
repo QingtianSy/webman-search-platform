@@ -62,7 +62,7 @@ class DocArticleRepository
             return [];
         }
         try {
-            $stmt = $pdo->prepare('SELECT id, category_id, slug, title, summary, content_md, status, created_at, updated_at FROM docs_articles WHERE slug = :slug LIMIT 1');
+            $stmt = $pdo->prepare('SELECT id, category_id, slug, title, summary, content_md, status, created_at, updated_at FROM docs_articles WHERE slug = :slug AND status = 1 LIMIT 1');
             $stmt->execute(['slug' => $slug]);
             return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {
@@ -101,16 +101,24 @@ class DocArticleRepository
             return [];
         }
         try {
-            $stmt = $pdo->prepare('UPDATE docs_articles SET title = :title, summary = :summary, content_md = :content_md, updated_at = NOW() WHERE id = :id');
-            $stmt->execute([
-                'id' => $id,
-                'title' => $data['title'] ?? '',
-                'summary' => $data['summary'] ?? '',
-                'content_md' => $data['content_md'] ?? '',
-            ]);
-            if ($stmt->rowCount() === 0) {
+            $check = $pdo->prepare('SELECT id FROM docs_articles WHERE id = :id');
+            $check->execute(['id' => $id]);
+            if (!$check->fetch()) {
                 return [];
             }
+
+            $sets = ['updated_at = NOW()'];
+            $bind = ['id' => $id];
+            $allowed = ['title', 'summary', 'content_md', 'status', 'category_id', 'slug'];
+            foreach ($allowed as $field) {
+                if (array_key_exists($field, $data)) {
+                    $sets[] = "{$field} = :{$field}";
+                    $bind[$field] = $data[$field];
+                }
+            }
+            $sql = 'UPDATE docs_articles SET ' . implode(', ', $sets) . ' WHERE id = :id';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($bind);
             return ['id' => $id] + $data;
         } catch (\PDOException $e) {
             error_log("[DocArticleRepository] update failed: " . $e->getMessage());

@@ -42,8 +42,8 @@ class OrderService
 
     public function listByUserId(int $userId, array $query = []): array
     {
-        $page = (int) ($query['page'] ?? 1);
-        $pageSize = (int) ($query['page_size'] ?? 20);
+        $page = max(1, (int) ($query['page'] ?? 1));
+        $pageSize = min(100, max(1, (int) ($query['page_size'] ?? 20)));
         $filters = [
             'order_no' => $query['order_no'] ?? '',
             'trade_no' => $query['trade_no'] ?? '',
