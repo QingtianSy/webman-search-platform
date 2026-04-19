@@ -15,8 +15,6 @@ class HealthService
         return [
             'app' => [
                 'name' => config('app.app_name', 'webman-search-platform'),
-                'env' => config('app.env', 'prod'),
-                'debug' => (bool) config('app.debug', false),
             ],
             'services' => [
                 'mysql' => $this->checkMysql(),
@@ -37,7 +35,8 @@ class HealthService
             $pdo->query('SELECT 1');
             return 'ok';
         } catch (\Throwable $e) {
-            return 'error: ' . $e->getMessage();
+            error_log("[HealthService] checkMysql failed: " . $e->getMessage());
+            return 'error';
         }
     }
 
@@ -51,7 +50,8 @@ class HealthService
             $pong = $redis->ping();
             return $pong ? 'ok' : 'disconnected';
         } catch (\Throwable $e) {
-            return 'error: ' . $e->getMessage();
+            error_log("[HealthService] checkRedis failed: " . $e->getMessage());
+            return 'error';
         }
     }
 
@@ -68,7 +68,8 @@ class HealthService
             $db->command(['ping' => 1]);
             return 'ok';
         } catch (\Throwable $e) {
-            return 'error: ' . $e->getMessage();
+            error_log("[HealthService] checkMongo failed: " . $e->getMessage());
+            return 'error';
         }
     }
 
@@ -88,7 +89,8 @@ class HealthService
             $data = json_decode((string) $response->getBody(), true);
             return !empty($data['cluster_name']) ? 'ok' : 'unknown';
         } catch (\Throwable $e) {
-            return 'error: ' . $e->getMessage();
+            error_log("[HealthService] checkEs failed: " . $e->getMessage());
+            return 'error';
         }
     }
 }

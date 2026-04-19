@@ -30,7 +30,7 @@ class ApiKeyRepository
             return [];
         }
         try {
-            $stmt = $pdo->prepare('SELECT id, user_id, app_name, api_key, api_secret_hash, status, expire_at, created_at, updated_at FROM user_api_keys WHERE user_id = :user_id ORDER BY id DESC LIMIT 10000');
+            $stmt = $pdo->prepare('SELECT id, user_id, app_name, api_key, status, expire_at, created_at, updated_at FROM user_api_keys WHERE user_id = :user_id ORDER BY id DESC LIMIT 10000');
             $stmt->execute(['user_id' => $userId]);
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {
@@ -63,7 +63,7 @@ class ApiKeyRepository
         }
         try {
             $offset = ($page - 1) * $pageSize;
-            $stmt = $pdo->prepare('SELECT id, user_id, app_name, api_key, api_secret_hash, status, expire_at, created_at, updated_at FROM user_api_keys WHERE user_id = :user_id ORDER BY id DESC LIMIT :limit OFFSET :offset');
+            $stmt = $pdo->prepare('SELECT id, user_id, app_name, api_key, status, expire_at, created_at, updated_at FROM user_api_keys WHERE user_id = :user_id ORDER BY id DESC LIMIT :limit OFFSET :offset');
             $stmt->bindValue('user_id', $userId, PDO::PARAM_INT);
             $stmt->bindValue('limit', $pageSize, PDO::PARAM_INT);
             $stmt->bindValue('offset', $offset, PDO::PARAM_INT);
@@ -71,6 +71,22 @@ class ApiKeyRepository
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {
             error_log("[ApiKeyRepository] findPageByUserId failed: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function findByIdAndUserId(int $id, int $userId): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return [];
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT id, user_id, app_name, api_key, status, expire_at, created_at, updated_at FROM user_api_keys WHERE id = :id AND user_id = :user_id LIMIT 1');
+            $stmt->execute(['id' => $id, 'user_id' => $userId]);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            error_log("[ApiKeyRepository] findByIdAndUserId failed: " . $e->getMessage());
             return [];
         }
     }

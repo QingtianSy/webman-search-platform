@@ -45,12 +45,7 @@ class ApiKeyService
 
     public function detailById(int $userId, int $id): array
     {
-        foreach ($this->listByUserId($userId) as $row) {
-            if ((int) ($row['id'] ?? 0) === $id) {
-                return $row;
-            }
-        }
-        return [];
+        return (new ApiKeyRepository())->findByIdAndUserId($id, $userId);
     }
 
     public function create(int $userId, string $appName): array

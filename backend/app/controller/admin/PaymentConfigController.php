@@ -51,6 +51,12 @@ class PaymentConfigController
             return ApiResponse::error(40001, '配置项不存在');
         }
         EpayClient::clearConfigCache();
+        if (in_array($key, ['epay_key', 'epay_merchant_private_key', 'epay_platform_public_key'], true)) {
+            $val = $row['config_value'] ?? '';
+            $row['config_value'] = strlen($val) > 8
+                ? substr($val, 0, 4) . '****' . substr($val, -4)
+                : '****';
+        }
         return ApiResponse::success($row);
     }
 }
