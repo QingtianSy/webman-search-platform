@@ -52,10 +52,10 @@ class SearchController
     public function quotaDetail(Request $request)
     {
         $userId = (int) ($request->apiKeyUserId ?? 0);
-        $quota = (new QuotaService())->getUserQuota($userId);
+        $detail = (new QuotaService())->getUserQuotaDetail($userId);
         return ApiResponse::success([
-            'remain_quota' => $quota,
-            'is_unlimited' => $quota >= 999999 ? 1 : 0,
+            'remain_quota' => $detail['is_unlimited'] ? 999999 : $detail['remain_quota'],
+            'is_unlimited' => $detail['is_unlimited'] ? 1 : 0,
         ]);
     }
 }

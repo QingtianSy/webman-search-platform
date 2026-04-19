@@ -107,18 +107,22 @@ class QuestionAdminService
         $list = $repo->findList($filters, $exportLimit);
 
         $headers = ['题目ID', 'MD5', '题型', '来源', '课程', '题干', '选项', '答案', '状态', '创建时间'];
-        $rows = array_map(fn($r) => [
-            $r['question_id'] ?? '',
-            $r['md5'] ?? '',
-            $r['type_name'] ?? '',
-            $r['source_name'] ?? '',
-            $r['course_name'] ?? '',
-            $r['stem_plain'] ?? ($r['stem'] ?? ''),
-            $r['options_text'] ?? '',
-            $r['answer_text'] ?? '',
-            ((int) ($r['status'] ?? 1)) === 1 ? '正常' : '停用',
-            $r['created_at'] ?? '',
-        ], $list);
+        $rows = (function () use ($list) {
+            foreach ($list as $r) {
+                yield [
+                    $r['question_id'] ?? '',
+                    $r['md5'] ?? '',
+                    $r['type_name'] ?? '',
+                    $r['source_name'] ?? '',
+                    $r['course_name'] ?? '',
+                    $r['stem_plain'] ?? ($r['stem'] ?? ''),
+                    $r['options_text'] ?? '',
+                    $r['answer_text'] ?? '',
+                    ((int) ($r['status'] ?? 1)) === 1 ? '正常' : '停用',
+                    $r['created_at'] ?? '',
+                ];
+            }
+        })();
 
         return [$headers, $rows, $total, $exportLimit];
     }

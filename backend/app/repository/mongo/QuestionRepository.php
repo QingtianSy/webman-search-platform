@@ -322,16 +322,20 @@ class QuestionRepository
         return 'Q' . date('YmdHis') . bin2hex(random_bytes(4));
     }
 
-    public function findByTaskNo(string $taskNo): array
+    public function findByTaskNo(string $taskNo, int $limit = 0): array
     {
         $db = MongoClient::connection();
         if (!$db) {
             return [];
         }
         try {
+            $options = ['sort' => ['created_at' => -1]];
+            if ($limit > 0) {
+                $options['limit'] = $limit;
+            }
             $cursor = $db->selectCollection('questions')->find(
                 ['task_no' => $taskNo],
-                ['sort' => ['created_at' => -1], 'limit' => 10000]
+                $options
             );
             $rows = [];
             foreach ($cursor as $doc) {

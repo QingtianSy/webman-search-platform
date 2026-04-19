@@ -8,8 +8,11 @@ class TokenCacheRepository
 {
     protected const PREFIX = 'token:user';
 
-    public function setUserToken(int $userId, string $token, int $ttl = 604800): bool
+    public function setUserToken(int $userId, string $token, ?int $ttl = null): bool
     {
+        if ($ttl === null) {
+            $ttl = (int) (config('jwt.expire', 604800));
+        }
         $redis = RedisClient::connection();
         if (!$redis) {
             return true;

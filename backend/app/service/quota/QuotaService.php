@@ -40,6 +40,29 @@ class QuotaService
         }
     }
 
+    public function getUserQuotaDetail(int $userId): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return ['remain_quota' => 0, 'is_unlimited' => false];
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT is_unlimited, remain_quota FROM user_subscriptions WHERE user_id = :user_id AND (expire_at IS NULL OR expire_at > NOW()) ORDER BY id DESC LIMIT 1');
+            $stmt->execute(['user_id' => $userId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row) {
+                return ['remain_quota' => 0, 'is_unlimited' => false];
+            }
+            return [
+                'remain_quota' => (int) $row['remain_quota'],
+                'is_unlimited' => (int) $row['is_unlimited'] === 1,
+            ];
+        } catch (\PDOException $e) {
+            error_log("[QuotaService] getUserQuotaDetail failed: " . $e->getMessage());
+            return ['remain_quota' => 0, 'is_unlimited' => false];
+        }
+    }
+
     public function refund(int $userId, int $amount = 1): bool
     {
         if ($amount <= 0) {

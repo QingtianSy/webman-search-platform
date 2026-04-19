@@ -70,18 +70,22 @@ class SearchLogAdminService
         $list = $builder->orderBy($sort, $order)->limit($exportLimit)->get()->toArray();
 
         $headers = ['日志编号', '用户ID', '关键词', '题型', '状态', '命中数', '来源', '消耗额度', '耗时(ms)', '创建时间'];
-        $rows = array_map(fn($r) => [
-            $r['log_no'] ?? '',
-            $r['user_id'] ?? '',
-            $r['keyword'] ?? '',
-            $r['question_type'] ?? '',
-            ((int) ($r['status'] ?? 0)) === 1 ? '成功' : '失败',
-            $r['hit_count'] ?? 0,
-            $r['source_type'] ?? '',
-            $r['consume_quota'] ?? 0,
-            $r['cost_ms'] ?? 0,
-            $r['created_at'] ?? '',
-        ], $list);
+        $rows = (function () use ($list) {
+            foreach ($list as $r) {
+                yield [
+                    $r['log_no'] ?? '',
+                    $r['user_id'] ?? '',
+                    $r['keyword'] ?? '',
+                    $r['question_type'] ?? '',
+                    ((int) ($r['status'] ?? 0)) === 1 ? '成功' : '失败',
+                    $r['hit_count'] ?? 0,
+                    $r['source_type'] ?? '',
+                    $r['consume_quota'] ?? 0,
+                    $r['cost_ms'] ?? 0,
+                    $r['created_at'] ?? '',
+                ];
+            }
+        })();
 
         return [$headers, $rows, $total, $exportLimit];
     }

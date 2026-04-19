@@ -203,7 +203,9 @@ class CollectWorker
             $esIndexed = 0;
             if ($imported > 0) {
                 $questions = $this->questionRepo->findByTaskNo($taskNo);
-                $esIndexed = $this->esRepo->bulkIndex($questions);
+                foreach (array_chunk($questions, 2000) as $batch) {
+                    $esIndexed += $this->esRepo->bulkIndex($batch);
+                }
             }
             $esFailed = $imported - $esIndexed;
             $this->taskRepo->updateProgress($taskNo, $imported, $esIndexed, $esFailed);
