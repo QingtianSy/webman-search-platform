@@ -4,9 +4,16 @@ namespace app\service\auth;
 
 class JwtService
 {
+    protected static bool $secretWarned = false;
+
     protected function getSecret(): string
     {
-        return config('jwt.secret', 'please_change_me');
+        $secret = config('jwt.secret', 'please_change_me');
+        if ($secret === 'please_change_me' && !self::$secretWarned) {
+            self::$secretWarned = true;
+            error_log('[SECURITY] JWT secret is using default value "please_change_me". Set JWT_SECRET in .env for production.');
+        }
+        return $secret;
     }
 
     protected function sign(string $data): string

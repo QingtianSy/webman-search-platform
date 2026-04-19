@@ -118,7 +118,7 @@ class QuestionIndexRepository
                     ],
                     'mappings' => [
                         'properties' => [
-                            'question_id' => ['type' => 'integer'],
+                            'question_id' => ['type' => 'keyword'],
                             'stem' => ['type' => 'text', 'analyzer' => 'ik_smart'],
                             'options_text' => ['type' => 'text', 'analyzer' => 'ik_smart'],
                             'answer_text' => ['type' => 'text', 'analyzer' => 'ik_smart'],
@@ -159,10 +159,10 @@ class QuestionIndexRepository
     {
         $optionsText = '';
         if (!empty($q['options']) && is_array($q['options'])) {
-            $optionsText = implode(' ', array_map(fn ($o) => (string) ($o['text'] ?? ''), $q['options']));
+            $optionsText = implode(' ', array_map(fn ($o) => (string) ($o['content'] ?? ''), $q['options']));
         }
         return [
-            'question_id' => $q['question_id'] ?? 0,
+            'question_id' => $q['question_id'] ?? '',
             'stem' => $q['stem'] ?? '',
             'options_text' => $optionsText,
             'answer_text' => $q['answer_text'] ?? '',

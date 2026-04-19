@@ -23,14 +23,14 @@ class QuestionAdminService
         return AdminListBuilder::make($list, $page, $pageSize);
     }
 
-    public function detail(int $id): array
+    public function detail(string $id): array
     {
         return (new QuestionService())->detail($id);
     }
 
     public function create(array $data): array
     {
-        $data['question_id'] = $data['question_id'] ?? (int) (microtime(true) * 1000);
+        $data['question_id'] = $data['question_id'] ?? 'Q' . date('YmdHis') . bin2hex(random_bytes(4));
         $data['created_at'] = date('Y-m-d H:i:s');
         $data['updated_at'] = date('Y-m-d H:i:s');
         $data['status'] = $data['status'] ?? 1;
@@ -47,7 +47,7 @@ class QuestionAdminService
         ];
     }
 
-    public function update(int $id, array $data): array
+    public function update(string $id, array $data): array
     {
         $result = (new QuestionRepository())->update($id, $data);
         if (!empty($result)) {
@@ -56,7 +56,7 @@ class QuestionAdminService
         return $result;
     }
 
-    public function delete(int $id): array
+    public function delete(string $id): array
     {
         $deleted = (new QuestionRepository())->delete($id);
         (new QuestionIndexService())->delete($id);

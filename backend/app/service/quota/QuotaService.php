@@ -46,13 +46,12 @@ class QuotaService
             return false;
         }
 
-        $cache = new QuotaCacheRepository();
-        $remaining = $cache->decrementQuota($userId);
-
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
-            return $remaining >= 0;
+            return false;
         }
+
+        $cache = new QuotaCacheRepository();
         try {
             $stmt = $pdo->prepare('UPDATE user_subscriptions SET remain_quota = remain_quota - :amount, used_quota = used_quota + :amount2, updated_at = NOW() WHERE user_id = :user_id AND remain_quota >= :check AND (expire_at IS NULL OR expire_at > NOW()) ORDER BY id DESC LIMIT 1');
             $ok = $stmt->execute([
@@ -61,11 +60,12 @@ class QuotaService
                 'user_id' => $userId,
                 'check' => $amount,
             ]);
-            if ($ok && $stmt->rowCount() === 0) {
+            if (!$ok || $stmt->rowCount() === 0) {
                 $cache->deleteUserQuota($userId);
                 return false;
             }
-            return $ok;
+            $cache->deleteUserQuota($userId);
+            return true;
         } catch (\PDOException $e) {
             error_log("[QuotaService] consume failed: " . $e->getMessage());
             $cache->deleteUserQuota($userId);

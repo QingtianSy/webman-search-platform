@@ -7,7 +7,7 @@ use app\repository\mongo\QuestionRepository;
 
 class QuestionIndexService
 {
-    public function sync(int $questionId): bool
+    public function sync(string $questionId): bool
     {
         $question = (new QuestionRepository())->findByQuestionId($questionId);
         if (empty($question)) {
@@ -40,7 +40,7 @@ class QuestionIndexService
         return (new QuestionIndexRepository())->createIndex();
     }
 
-    public function delete(int $questionId): bool
+    public function delete(string $questionId): bool
     {
         return (new QuestionIndexRepository())->deleteQuestion($questionId);
     }

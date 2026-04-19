@@ -24,9 +24,18 @@ class SearchService
         ]);
 
         $esHits = (new QuestionIndexRepository())->search($keyword);
-        $questionIds = array_map(fn ($row) => (int) ($row['question_id'] ?? 0), $esHits);
+        $questionIds = array_map(fn ($row) => (string) ($row['question_id'] ?? ''), $esHits);
         $questionIds = array_values(array_filter($questionIds));
+        $scoreMap = [];
+        foreach ($esHits as $hit) {
+            $scoreMap[(string) ($hit['question_id'] ?? '')] = $hit['score'] ?? null;
+        }
         $list = (new QuestionService())->findManyByIds($questionIds);
+        foreach ($list as &$item) {
+            $qid = (string) ($item['question_id'] ?? '');
+            $item['score'] = $scoreMap[$qid] ?? null;
+        }
+        unset($item);
         $hitCount = count($list);
         $costMs = (int) (microtime(true) * 1000) - $startMs;
         $consumeQuota = $hitCount > 0 ? 1 : 0;

@@ -35,7 +35,7 @@ class QuestionRepository
         }
     }
 
-    public function findByQuestionId(int $questionId): array
+    public function findByQuestionId(string $questionId): array
     {
         $db = MongoClient::connection();
         if (!$db) {
@@ -58,13 +58,20 @@ class QuestionRepository
         }
         try {
             $cursor = $db->selectCollection('questions')->find([
-                'question_id' => ['$in' => array_values(array_map('intval', $questionIds))],
+                'question_id' => ['$in' => array_values($questionIds)],
             ]);
-            $rows = [];
+            $map = [];
             foreach ($cursor as $doc) {
-                $rows[] = $this->docToArray($doc);
+                $row = $this->docToArray($doc);
+                $map[$row['question_id'] ?? ''] = $row;
             }
-            return $rows;
+            $ordered = [];
+            foreach ($questionIds as $id) {
+                if (isset($map[$id])) {
+                    $ordered[] = $map[$id];
+                }
+            }
+            return $ordered;
         } catch (\Throwable $e) {
             error_log("[QuestionRepository] findByQuestionIds failed: " . $e->getMessage());
             return [];
@@ -128,7 +135,7 @@ class QuestionRepository
         }
     }
 
-    public function update(int $questionId, array $data): array
+    public function update(string $questionId, array $data): array
     {
         $db = MongoClient::connection();
         if (!$db) {
@@ -147,7 +154,7 @@ class QuestionRepository
         }
     }
 
-    public function delete(int $questionId): bool
+    public function delete(string $questionId): bool
     {
         $db = MongoClient::connection();
         if (!$db) {

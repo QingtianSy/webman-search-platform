@@ -8,6 +8,9 @@ class UserListBuilder
 {
     public static function make(array $list, int $page = 1, int $pageSize = 20): array
     {
-        return Pagination::format($list, count($list), $page, $pageSize);
+        $total = count($list);
+        $offset = ($page - 1) * $pageSize;
+        $sliced = array_slice($list, $offset, $pageSize);
+        return Pagination::format($sliced, $total, $page, $pageSize);
     }
 }

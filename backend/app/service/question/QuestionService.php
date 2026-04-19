@@ -14,7 +14,7 @@ class QuestionService
         return Pagination::format($list, count($list), 1, 20);
     }
 
-    public function detail(int $questionId): array
+    public function detail(string $questionId): array
     {
         return (new QuestionRepository())->findByQuestionId($questionId);
     }
