@@ -4,7 +4,9 @@ namespace app\service\admin;
 
 use app\exception\BusinessException;
 use app\model\admin\Role;
+use app\repository\mysql\UserRoleRepository;
 use app\repository\redis\PermissionCacheRepository;
+use app\repository\redis\TokenCacheRepository;
 use support\Db;
 use support\Pagination;
 
@@ -61,12 +63,14 @@ class RoleAdminService
         $permissionIds = $data['permission_ids'] ?? null;
         unset($data['permission_ids']);
         return Db::transaction(function () use ($row, $id, $data, $permissionIds) {
+            $affectedUserIds = (new UserRoleRepository())->userIdsByRoleId($id);
             $row->fill($data);
             $row->save();
             if (is_array($permissionIds)) {
                 $this->syncPermissions($id, $permissionIds);
             }
             (new PermissionCacheRepository())->clearAll();
+            $this->revokeUserTokens($affectedUserIds);
             return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];
         });
     }
@@ -77,10 +81,12 @@ class RoleAdminService
         if (!$row) {
             throw new BusinessException('角色不存在', 40001);
         }
+        $affectedUserIds = (new UserRoleRepository())->userIdsByRoleId($id);
         $row->delete();
         Db::table('role_permission')->where('role_id', $id)->delete();
         Db::table('user_role')->where('role_id', $id)->delete();
         (new PermissionCacheRepository())->clearAll();
+        $this->revokeUserTokens($affectedUserIds);
         return ['success' => true, 'action' => 'delete', 'id' => $id];
     }
 
@@ -89,8 +95,10 @@ class RoleAdminService
         if (!Role::query()->where('id', $roleId)->exists()) {
             throw new BusinessException('角色不存在', 40001);
         }
+        $affectedUserIds = (new UserRoleRepository())->userIdsByRoleId($roleId);
         $this->syncPermissions($roleId, $permissionIds);
         (new PermissionCacheRepository())->clearAll();
+        $this->revokeUserTokens($affectedUserIds);
         return ['success' => true, 'action' => 'assign_permissions', 'role_id' => $roleId, 'permission_ids' => $permissionIds];
     }
 
@@ -134,5 +142,16 @@ class RoleAdminService
             ];
         }
         return $map;
+    }
+
+    protected function revokeUserTokens(array $userIds): void
+    {
+        if (empty($userIds)) {
+            return;
+        }
+        $tokenRepo = new TokenCacheRepository();
+        foreach ($userIds as $uid) {
+            $tokenRepo->setUserToken($uid, 'REVOKED');
+        }
     }
 }

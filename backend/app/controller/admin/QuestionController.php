@@ -5,6 +5,7 @@ namespace app\controller\admin;
 use app\common\admin\AdminQuery;
 use app\common\CsvExporter;
 use app\service\admin\QuestionAdminService;
+use app\service\question\QuestionIndexService;
 use app\validate\admin\QuestionValidate;
 use support\ApiResponse;
 use support\Request;
@@ -48,5 +49,11 @@ class QuestionController
         $query = AdminQuery::parse($request->get());
         [$headers, $rows] = (new QuestionAdminService())->export($query);
         return CsvExporter::export('questions_' . date('Ymd_His') . '.csv', $headers, $rows);
+    }
+
+    public function reindex(Request $request)
+    {
+        $result = (new QuestionIndexService())->syncAll();
+        return ApiResponse::success($result, 'ES索引重建完成');
     }
 }

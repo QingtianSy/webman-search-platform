@@ -15,6 +15,7 @@ use Webman\Http\Request;
 class AdminAuthMiddleware implements MiddlewareInterface
 {
     protected const ROUTE_PERMISSION_MAP = [
+        '/dashboard'         => 'admin.access',
         '/question'          => 'question.manage',
         '/question-category' => 'question.manage',
         '/question-type'     => 'question.manage',

@@ -22,4 +22,20 @@ class UserRoleRepository
             return [];
         }
     }
+
+    public function userIdsByRoleId(int $roleId): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return [];
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT user_id FROM user_role WHERE role_id = :role_id');
+            $stmt->execute(['role_id' => $roleId]);
+            return array_map('intval', array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'user_id'));
+        } catch (\PDOException $e) {
+            error_log("[UserRoleRepository] userIdsByRoleId failed: " . $e->getMessage());
+            return [];
+        }
+    }
 }

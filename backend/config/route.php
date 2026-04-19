@@ -113,6 +113,7 @@ Route::group('/api/v1/admin', function () {
     Route::put('/question/update', [QuestionController::class, 'update']);
     Route::delete('/question/delete', [QuestionController::class, 'delete']);
     Route::get('/question/export', [QuestionController::class, 'export']);
+    Route::post('/question/reindex', [QuestionController::class, 'reindex']);
     Route::get('/question-category/list', [QuestionCategoryController::class, 'index']);
     Route::post('/question-category/create', [QuestionCategoryController::class, 'create']);
     Route::put('/question-category/update', [QuestionCategoryController::class, 'update']);

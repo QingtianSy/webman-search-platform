@@ -46,14 +46,20 @@ class QuestionAdminService
         }
         $db->selectCollection('questions')->insertOne($data);
 
-        if (!(new QuestionIndexService())->sync($data['question_id'])) {
+        $esSynced = (new QuestionIndexService())->sync($data['question_id']);
+        if (!$esSynced) {
             error_log("[QuestionAdminService] ES sync failed after create: {$data['question_id']}");
         }
 
-        return [
+        $result = [
             'created' => true,
             'data' => $data,
+            'es_synced' => $esSynced,
         ];
+        if (!$esSynced) {
+            $result['es_warning'] = 'ES索引同步失败，搜索结果可能暂时不包含此题目';
+        }
+        return $result;
     }
 
     public function update(string $id, array $data): array
@@ -62,8 +68,13 @@ class QuestionAdminService
         if (empty($result)) {
             throw new BusinessException('题目不存在', 40001);
         }
-        if (!(new QuestionIndexService())->sync($id)) {
+        $esSynced = (new QuestionIndexService())->sync($id);
+        if (!$esSynced) {
             error_log("[QuestionAdminService] ES sync failed after update: {$id}");
+        }
+        $result['es_synced'] = $esSynced;
+        if (!$esSynced) {
+            $result['es_warning'] = 'ES索引同步失败，搜索结果可能暂时不���含���题目';
         }
         return $result;
     }
@@ -74,10 +85,15 @@ class QuestionAdminService
         if (!$deleted) {
             throw new BusinessException('题目不存在', 40001);
         }
-        if (!(new QuestionIndexService())->delete($id)) {
+        $esSynced = (new QuestionIndexService())->delete($id);
+        if (!$esSynced) {
             error_log("[QuestionAdminService] ES delete failed after delete: {$id}");
         }
-        return ['deleted' => true];
+        $result = ['deleted' => true, 'es_synced' => $esSynced];
+        if (!$esSynced) {
+            $result['es_warning'] = 'ES索引删除失败，搜索结果可能仍显示已删除题目';
+        }
+        return $result;
     }
 
     public function export(array $query = []): array
