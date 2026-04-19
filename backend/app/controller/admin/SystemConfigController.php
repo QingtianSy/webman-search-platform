@@ -21,7 +21,7 @@ class SystemConfigController
         $data = (new SystemConfigValidate())->update($request->post());
         return ApiResponse::success(
             (new SystemConfigAdminService())->update($data['config_key'], $data['config_value']),
-            '系统配置更新骨架已创建'
+            '系统配置更新成功'
         );
     }
 }

@@ -20,6 +20,7 @@ use app\middleware\RateLimitMiddleware;
 use app\controller\HealthController;
 use app\controller\IndexController;
 use app\controller\auth\AuthController as UnifiedAuthController;
+use app\controller\user\AnnouncementController as UserAnnouncementController;
 use app\controller\user\ApiKeyController;
 use app\controller\user\ApiSourceController as UserApiSourceController;
 use app\controller\user\BillingController;
@@ -70,6 +71,8 @@ Route::put('/api/v1/auth/update-profile', [UnifiedAuthController::class, 'update
 // 用户端路由（需要用户认证）
 Route::group('/api/v1/user', function () {
     Route::get('/dashboard/overview', [DashboardController::class, 'overview']);
+    Route::get('/announcement/list', [UserAnnouncementController::class, 'index']);
+    Route::get('/announcement/detail', [UserAnnouncementController::class, 'detail']);
     Route::get('/api-key/list', [ApiKeyController::class, 'index']);
     Route::get('/api-key/detail', [ApiKeyController::class, 'detail']);
     Route::post('/api-key/create', [ApiKeyController::class, 'create']);

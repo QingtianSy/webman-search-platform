@@ -2,6 +2,7 @@
 
 namespace app\middleware;
 
+use app\repository\mysql\UserRepository;
 use app\repository\redis\TokenCacheRepository;
 use app\service\auth\JwtService;
 use support\ApiResponse;
@@ -26,6 +27,13 @@ class UserAuthMiddleware implements MiddlewareInterface
         $storedToken = (new TokenCacheRepository())->getUserToken($userId);
         if ($storedToken !== null && $storedToken !== $token) {
             return ApiResponse::error(40002, 'Token 已失效，请重新登录');
+        }
+
+        if ($storedToken === null) {
+            $user = (new UserRepository())->findById($userId);
+            if (!$user || (int) ($user['status'] ?? 0) !== 1) {
+                return ApiResponse::error(40002, '用户不存在或已被禁用');
+            }
         }
 
         $request->userId = $userId;

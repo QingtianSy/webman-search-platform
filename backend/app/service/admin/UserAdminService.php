@@ -95,7 +95,7 @@ class UserAdminService
         }
 
         if (!empty($data['password']) || (isset($data['status']) && (int) $data['status'] === 0) || isset($data['role_ids'])) {
-            (new TokenCacheRepository())->deleteToken($id);
+            (new TokenCacheRepository())->setUserToken($id, 'REVOKED');
         }
 
         return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];
@@ -105,6 +105,7 @@ class UserAdminService
     {
         $row = User::query()->find($id);
         if ($row) {
+            (new TokenCacheRepository())->setUserToken($id, 'REVOKED');
             $row->delete();
             Db::table('user_role')->where('user_id', $id)->delete();
         }
@@ -121,7 +122,7 @@ class UserAdminService
         $row->save();
 
         if ((int) $row->status === 0) {
-            (new TokenCacheRepository())->deleteToken($id);
+            (new TokenCacheRepository())->setUserToken($id, 'REVOKED');
         }
 
         return ['success' => true, 'action' => 'toggle_status', 'id' => $id, 'status' => $row->status];
@@ -130,7 +131,7 @@ class UserAdminService
     public function assignRoles(int $userId, array $roleIds): array
     {
         $this->syncRoles($userId, $roleIds);
-        (new TokenCacheRepository())->deleteToken($userId);
+        (new TokenCacheRepository())->setUserToken($userId, 'REVOKED');
         return ['success' => true, 'action' => 'assign_roles', 'user_id' => $userId, 'role_ids' => $roleIds];
     }
 

@@ -31,12 +31,17 @@ class SubscriptionService
             $quota = (int) $plan['quota'];
             $isUnlimited = (int) $plan['is_unlimited'];
 
-            $stmt = $pdo->prepare('SELECT id, remain_quota, expire_at FROM user_subscriptions WHERE user_id = :user_id AND (expire_at IS NULL OR expire_at > NOW()) ORDER BY id DESC LIMIT 1');
+            $stmt = $pdo->prepare('SELECT id, is_unlimited, remain_quota, expire_at FROM user_subscriptions WHERE user_id = :user_id AND (expire_at IS NULL OR expire_at > NOW()) ORDER BY id DESC LIMIT 1');
             $stmt->execute(['user_id' => $userId]);
             $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($existing) {
-                $remainQuota = $isUnlimited ? 999999 : ((int) $existing['remain_quota'] + $quota);
+                if ($isUnlimited) {
+                    $remainQuota = 0;
+                } else {
+                    $existingRemain = ((int) ($existing['is_unlimited'] ?? 0) === 1) ? 0 : (int) $existing['remain_quota'];
+                    $remainQuota = $existingRemain + $quota;
+                }
                 $stmt = $pdo->prepare('UPDATE user_subscriptions SET name = :name, is_unlimited = :is_unlimited, remain_quota = :remain_quota, expire_at = :expire_at, updated_at = NOW() WHERE id = :id');
                 $stmt->execute([
                     'name' => $plan['name'],
@@ -46,7 +51,7 @@ class SubscriptionService
                     'id' => $existing['id'],
                 ]);
             } else {
-                $remainQuota = $isUnlimited ? 999999 : $quota;
+                $remainQuota = $isUnlimited ? 0 : $quota;
                 $stmt = $pdo->prepare('INSERT INTO user_subscriptions (user_id, name, is_unlimited, remain_quota, used_quota, expire_at, created_at, updated_at) VALUES (:user_id, :name, :is_unlimited, :remain_quota, 0, :expire_at, NOW(), NOW())');
                 $stmt->execute([
                     'user_id' => $userId,

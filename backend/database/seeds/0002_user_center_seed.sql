@@ -10,4 +10,4 @@ INSERT INTO user_api_keys (user_id, app_name, api_key, api_secret_hash, status, 
 VALUES (1, '默认测试应用', 'ak_demo_001', 'sk_demo_001', 1, NULL, NOW(), NOW());
 
 INSERT INTO announcements (title, content, type, status, publish_at, created_at, updated_at)
-VALUES ('欢迎使用平台', '当前为项目骨架阶段，后续将逐步接入真实业务能力。', 'notice', 1, NOW(), NOW(), NOW());
+VALUES ('欢迎使用平台', '欢迎使用搜题平台，如有问题请联系管理员。', 'notice', 1, NOW(), NOW(), NOW());
