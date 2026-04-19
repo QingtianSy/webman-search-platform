@@ -5,6 +5,7 @@ namespace app\service\payment;
 use app\repository\mysql\OrderRepository;
 use app\repository\mysql\PaymentLogRepository;
 use support\adapter\EpayClient;
+use support\adapter\MySqlClient;
 
 class CallbackService
 {
@@ -41,37 +42,52 @@ class CallbackService
             return false;
         }
 
-        if (!$repo->markPaid($orderNo, $tradeNo)) {
-            error_log("[CallbackService] markPaid failed: $orderNo");
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            error_log("[CallbackService] PDO unavailable for order={$orderNo}");
             return false;
         }
 
-        $type = (int) $order['type'];
-        $fulfilled = false;
-        if ($type === 1) {
-            $fulfilled = (new WalletService())->recharge((int) $order['user_id'], $order['amount'], $orderNo);
-        } elseif ($type === 2) {
-            $fulfilled = (new SubscriptionService())->activate((int) $order['user_id'], (int) $order['plan_id'], $orderNo);
-        }
+        try {
+            $pdo->beginTransaction();
 
-        if (!$fulfilled) {
-            error_log("[CallbackService] fulfillment failed for order={$orderNo}, reverting paid status");
-            $reverted = $repo->revertPaid($orderNo);
-            if (!$reverted) {
-                error_log("[CallbackService] CRITICAL: revertPaid also failed for order={$orderNo}, manual intervention required");
+            if (!$repo->markPaid($orderNo, $tradeNo)) {
+                $pdo->rollBack();
+                error_log("[CallbackService] markPaid failed: $orderNo");
+                return false;
             }
+
+            $type = (int) $order['type'];
+            $fulfilled = false;
+            if ($type === 1) {
+                $fulfilled = (new WalletService())->recharge((int) $order['user_id'], $order['amount'], $orderNo);
+            } elseif ($type === 2) {
+                $fulfilled = (new SubscriptionService())->activate((int) $order['user_id'], (int) $order['plan_id'], $orderNo);
+            }
+
+            if (!$fulfilled) {
+                $pdo->rollBack();
+                error_log("[CallbackService] fulfillment failed for order={$orderNo}, transaction rolled back");
+                return false;
+            }
+
+            (new PaymentLogRepository())->create([
+                'user_id' => $order['user_id'],
+                'order_no' => $orderNo,
+                'amount' => $order['amount'],
+                'pay_method' => $order['pay_type'],
+                'status' => 1,
+                'remark' => $type === 1 ? '余额充值' : '套餐购买',
+            ]);
+
+            $pdo->commit();
+            return true;
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log("[CallbackService] transaction failed for order={$orderNo}: " . $e->getMessage());
             return false;
         }
-
-        (new PaymentLogRepository())->create([
-            'user_id' => $order['user_id'],
-            'order_no' => $orderNo,
-            'amount' => $order['amount'],
-            'pay_method' => $order['pay_type'],
-            'status' => 1,
-            'remark' => $type === 1 ? '余额充值' : '套餐购买',
-        ]);
-
-        return true;
     }
 }

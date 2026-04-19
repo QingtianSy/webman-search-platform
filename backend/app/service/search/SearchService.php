@@ -49,7 +49,10 @@ class SearchService
         $consumeQuota = ($hitCount > 0 && $userId > 0) ? 1 : 0;
 
         if ($hitCount === 0 && $userId > 0 && isset($quotaService)) {
-            $quotaService->refund($userId, 1);
+            if (!$quotaService->refund($userId, 1)) {
+                error_log("[SearchService] WARN: refund failed for user={$userId} log_no={$logNo}, quota may be incorrectly deducted");
+                $consumeQuota = 1;
+            }
         }
 
         (new SearchLogRepository())->create([
