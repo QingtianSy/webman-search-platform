@@ -25,7 +25,7 @@ class ApiSourceAdminService
     {
         $row = (new ApiSourceRepository())->test($id);
         return [
-            'success' => true,
+            'success' => ($row['status'] ?? '') === 'success',
             'action' => 'test',
             'id' => $id,
             'data' => $row,

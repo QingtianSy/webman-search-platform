@@ -101,7 +101,7 @@ class QuestionAdminService
         $filters = [
             'stem' => trim((string) ($query['keyword'] ?? '')),
         ];
-        $list = (new QuestionRepository())->findList($filters, 0);
+        $list = (new QuestionRepository())->findList($filters, 50000);
 
         $headers = ['题目ID', 'MD5', '题型', '来源', '课程', '题干', '选项', '答案', '状态', '创建时间'];
         $rows = array_map(fn($r) => [

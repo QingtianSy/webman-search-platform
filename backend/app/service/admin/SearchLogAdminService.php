@@ -65,7 +65,7 @@ class SearchLogAdminService
             $builder->where('created_at', '<=', $range['end_time']);
         }
 
-        $list = $builder->orderBy($sort, $order)->limit(10000)->get()->toArray();
+        $list = $builder->orderBy($sort, $order)->limit(50000)->get()->toArray();
 
         $headers = ['日志编号', '用户ID', '关键词', '题型', '状态', '命中数', '来源', '消耗额度', '耗时(ms)', '创建时间'];
         $rows = array_map(fn($r) => [

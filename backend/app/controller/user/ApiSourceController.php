@@ -66,6 +66,10 @@ class ApiSourceController
     {
         $userId = (int) ($request->userId ?? 0);
         $id = (new ApiSourceValidate())->id($request->post());
-        return ApiResponse::success((new ApiSourceService())->test($userId, $id), '接口源测试完成');
+        $result = (new ApiSourceService())->test($userId, $id);
+        if (($result['status'] ?? '') !== 'success') {
+            return ApiResponse::error(50000, $result['message'] ?? '接口源测试失败', $result);
+        }
+        return ApiResponse::success($result, '接口源测试完成');
     }
 }

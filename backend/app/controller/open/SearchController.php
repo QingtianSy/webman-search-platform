@@ -28,7 +28,8 @@ class SearchController
 
         $result = (new SearchService())->query($userId, $keyword, $info, $split, $apiKeyId);
 
-        $hasAnyHit = !empty($result['list']) || !empty($result['api_results']);
+        $apiHasSuccess = !empty($result['api_results']) && count(array_filter($result['api_results'], fn($r) => ($r['status'] ?? '') === 'success')) > 0;
+        $hasAnyHit = !empty($result['list']) || $apiHasSuccess;
         if (!$hasAnyHit) {
             return ApiResponse::error(40004, '未找到匹配结果');
         }

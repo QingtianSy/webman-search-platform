@@ -32,7 +32,11 @@ class ProxyController
         if (empty($data['protocol']) || empty($data['host']) || empty($data['port'])) {
             return ApiResponse::error(40001, '协议、地址、端口不能为空');
         }
-        return ApiResponse::success((new ProxyService())->create($data));
+        $result = (new ProxyService())->create($data);
+        if (!($result['success'] ?? false)) {
+            return ApiResponse::error(50000, $result['msg'] ?? '创建失败');
+        }
+        return ApiResponse::success($result);
     }
 
     public function update(Request $request)
@@ -59,7 +63,11 @@ class ProxyController
         if ($id <= 0) {
             return ApiResponse::error(40001, '参数错误');
         }
-        return ApiResponse::success((new ProxyService())->probe($id));
+        $result = (new ProxyService())->probe($id);
+        if (!($result['success'] ?? false)) {
+            return ApiResponse::error(50000, $result['msg'] ?? '探测失败', $result);
+        }
+        return ApiResponse::success($result);
     }
 
     public function quickAdd(Request $request)
