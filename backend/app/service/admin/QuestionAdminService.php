@@ -104,11 +104,10 @@ class QuestionAdminService
         $exportLimit = 50000;
         $repo = new QuestionRepository();
         $total = $repo->countByFilters($filters);
-        $list = $repo->findList($filters, $exportLimit);
 
         $headers = ['题目ID', 'MD5', '题型', '来源', '课程', '题干', '选项', '答案', '状态', '创建时间'];
-        $rows = (function () use ($list) {
-            foreach ($list as $r) {
+        $rows = (function () use ($repo, $filters, $exportLimit) {
+            foreach ($repo->findListIterator($filters, $exportLimit) as $r) {
                 yield [
                     $r['question_id'] ?? '',
                     $r['md5'] ?? '',

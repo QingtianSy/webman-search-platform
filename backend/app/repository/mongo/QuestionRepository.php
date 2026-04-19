@@ -141,6 +141,27 @@ class QuestionRepository
         }
     }
 
+    public function findListIterator(array $filters = [], int $limit = 0): \Generator
+    {
+        $db = MongoClient::connection();
+        if (!$db) {
+            return;
+        }
+        try {
+            $query = self::buildQuery($filters);
+            $options = ['sort' => ['created_at' => -1]];
+            if ($limit > 0) {
+                $options['limit'] = $limit;
+            }
+            $cursor = $db->selectCollection('questions')->find($query, $options);
+            foreach ($cursor as $doc) {
+                yield $this->docToArray($doc);
+            }
+        } catch (\Throwable $e) {
+            error_log("[QuestionRepository] findListIterator failed: " . $e->getMessage());
+        }
+    }
+
     public function search(string $keyword): array
     {
         $db = MongoClient::connection();

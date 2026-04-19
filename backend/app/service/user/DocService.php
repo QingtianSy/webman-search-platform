@@ -25,6 +25,8 @@ class DocService
 
     public function config(): array
     {
-        return (new DocConfigRepository())->get();
+        $config = (new DocConfigRepository())->get();
+        unset($config['api_key']);
+        return $config;
     }
 }

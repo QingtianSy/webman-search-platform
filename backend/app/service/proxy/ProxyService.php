@@ -28,7 +28,9 @@ class ProxyService
         if (!empty($query['keyword'])) {
             $filters['keyword'] = $query['keyword'];
         }
-        return $this->repo->list($page, $pageSize, $filters);
+        $result = $this->repo->list($page, $pageSize, $filters);
+        $result['list'] = array_map([self::class, 'maskCredentials'], $result['list']);
+        return $result;
     }
 
     public function create(array $data): array
@@ -60,7 +62,7 @@ class ProxyService
 
     public function detail(int $id): array
     {
-        return $this->repo->findById($id);
+        return self::maskCredentials($this->repo->findById($id));
     }
 
     public function probe(int $id): array
@@ -194,7 +196,7 @@ class ProxyService
 
     public function batchExport(): array
     {
-        return $this->repo->all();
+        return array_map([self::class, 'maskCredentials'], $this->repo->all());
     }
 
     public function probeAll(): array
@@ -282,5 +284,13 @@ class ProxyService
             'username' => isset($parsed['user']) ? urldecode($parsed['user']) : null,
             'password' => isset($parsed['pass']) ? urldecode($parsed['pass']) : null,
         ];
+    }
+
+    private static function maskCredentials(array $row): array
+    {
+        if (isset($row['password']) && $row['password'] !== '' && $row['password'] !== null) {
+            $row['password'] = '****';
+        }
+        return $row;
     }
 }

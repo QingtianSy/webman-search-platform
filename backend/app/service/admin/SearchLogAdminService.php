@@ -67,11 +67,11 @@ class SearchLogAdminService
 
         $exportLimit = 50000;
         $total = $builder->count();
-        $list = $builder->orderBy($sort, $order)->limit($exportLimit)->get()->toArray();
 
         $headers = ['日志编号', '用户ID', '关键词', '题型', '状态', '命中数', '来源', '消耗额度', '耗时(ms)', '创建时间'];
-        $rows = (function () use ($list) {
-            foreach ($list as $r) {
+        $rows = (function () use ($builder, $sort, $order, $exportLimit) {
+            foreach ($builder->orderBy($sort, $order)->limit($exportLimit)->cursor() as $model) {
+                $r = $model->toArray();
                 yield [
                     $r['log_no'] ?? '',
                     $r['user_id'] ?? '',

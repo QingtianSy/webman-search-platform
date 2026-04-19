@@ -40,12 +40,31 @@ class SystemConfigAdminService
 
     private static function maskRow(array $row): array
     {
-        if (in_array($row['config_key'] ?? '', self::SENSITIVE_KEYS, true)) {
-            $val = $row['config_value'] ?? '';
-            $row['config_value'] = strlen($val) > 8
-                ? substr($val, 0, 4) . '****' . substr($val, -4)
-                : '****';
+        $key = $row['config_key'] ?? '';
+        if (in_array($key, self::SENSITIVE_KEYS, true)) {
+            $row['config_value'] = self::maskString($row['config_value'] ?? '');
+        } elseif ($key === 'doc_config') {
+            $row['config_value'] = self::maskDocConfig($row['config_value'] ?? '');
         }
         return $row;
+    }
+
+    private static function maskString(string $val): string
+    {
+        return strlen($val) > 8
+            ? substr($val, 0, 4) . '****' . substr($val, -4)
+            : '****';
+    }
+
+    private static function maskDocConfig(string $json): string
+    {
+        $data = json_decode($json, true);
+        if (!is_array($data)) {
+            return $json;
+        }
+        if (isset($data['api_key'])) {
+            $data['api_key'] = self::maskString($data['api_key']);
+        }
+        return json_encode($data, JSON_UNESCAPED_UNICODE);
     }
 }
