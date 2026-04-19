@@ -4,6 +4,7 @@ namespace app\middleware;
 
 use app\repository\mysql\RolePermissionRepository;
 use app\repository\redis\PermissionCacheRepository;
+use app\repository\redis\TokenCacheRepository;
 use app\service\auth\JwtService;
 use support\ApiResponse;
 use Webman\MiddlewareInterface;
@@ -45,13 +46,19 @@ class AdminAuthMiddleware implements MiddlewareInterface
         if (empty($decoded)) {
             return ApiResponse::error(40002, 'Token 无效');
         }
+        $userId = (int) ($decoded['payload']['uid'] ?? 0);
+        $storedToken = (new TokenCacheRepository())->getUserToken($userId);
+        if ($storedToken !== null && $storedToken !== $token) {
+            return ApiResponse::error(40002, 'Token 已失效，请重新登录');
+        }
+
         $roles = $decoded['payload']['roles'] ?? [];
         $adminRoles = ['admin', 'super_admin', 'operator'];
         if (empty(array_intersect($roles, $adminRoles)) && ($decoded['payload']['default_portal'] ?? '') !== 'admin') {
             return ApiResponse::error(40003, '无权限');
         }
 
-        $request->userId = (int) ($decoded['payload']['uid'] ?? 0);
+        $request->userId = $userId;
         $request->userRoles = $roles;
 
         if (in_array('super_admin', $roles, true)) {

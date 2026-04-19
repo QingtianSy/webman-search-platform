@@ -2,6 +2,7 @@
 
 namespace app\middleware;
 
+use app\repository\redis\TokenCacheRepository;
 use app\service\auth\JwtService;
 use support\ApiResponse;
 use Webman\MiddlewareInterface;
@@ -21,7 +22,13 @@ class UserAuthMiddleware implements MiddlewareInterface
         if (empty($decoded)) {
             return ApiResponse::error(40002, 'Token 无效');
         }
-        $request->userId = (int) ($decoded['payload']['uid'] ?? 0);
+        $userId = (int) ($decoded['payload']['uid'] ?? 0);
+        $storedToken = (new TokenCacheRepository())->getUserToken($userId);
+        if ($storedToken !== null && $storedToken !== $token) {
+            return ApiResponse::error(40002, 'Token 已失效，请重新登录');
+        }
+
+        $request->userId = $userId;
         $request->userRoles = $decoded['payload']['roles'] ?? [];
         return $handler($request);
     }

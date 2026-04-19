@@ -3,6 +3,7 @@
 namespace app\controller\auth;
 
 use app\repository\mysql\LoginLogRepository;
+use app\repository\redis\TokenCacheRepository;
 use app\service\auth\AuthService;
 use app\service\auth\JwtService;
 use app\validate\auth\RegisterValidate;
@@ -35,6 +36,8 @@ class AuthController
             'roles' => $payload['roles'],
             'default_portal' => $payload['default_portal'] ?? 'user',
         ]);
+
+        (new TokenCacheRepository())->setUserToken((int) $user['id'], $token);
 
         return ApiResponse::success([
             'token' => $token,
@@ -94,6 +97,8 @@ class AuthController
             'default_portal' => $payload['default_portal'] ?? 'user',
         ]);
 
+        (new TokenCacheRepository())->setUserToken((int) $user['id'], $token);
+
         return ApiResponse::success([
             'token' => $token,
             'expire_at' => time() + (int) config('jwt.expire', 604800),
@@ -111,7 +116,7 @@ class AuthController
         $data = array_filter([
             'nickname' => trim((string) $request->post('nickname', '')),
             'email' => trim((string) $request->post('email', '')),
-            'phone' => trim((string) $request->post('phone', '')),
+            'mobile' => trim((string) $request->post('phone', '')),
             'avatar' => trim((string) $request->post('avatar', '')),
         ], fn ($v) => $v !== '');
 

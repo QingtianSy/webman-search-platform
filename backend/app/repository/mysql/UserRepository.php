@@ -60,7 +60,7 @@ class UserRepository
         if (!$pdo) {
             return false;
         }
-        $allowed = ['nickname', 'email', 'phone', 'avatar'];
+        $allowed = ['nickname', 'email', 'mobile', 'avatar'];
         $sets = [];
         $bind = ['id' => $id];
         foreach ($allowed as $field) {

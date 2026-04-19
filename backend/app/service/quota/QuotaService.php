@@ -53,6 +53,13 @@ class QuotaService
 
         $cache = new QuotaCacheRepository();
         try {
+            $chk = $pdo->prepare('SELECT is_unlimited FROM user_subscriptions WHERE user_id = :user_id AND (expire_at IS NULL OR expire_at > NOW()) ORDER BY id DESC LIMIT 1');
+            $chk->execute(['user_id' => $userId]);
+            $row = $chk->fetch(PDO::FETCH_ASSOC);
+            if ($row && (int) $row['is_unlimited'] === 1) {
+                return true;
+            }
+
             $stmt = $pdo->prepare('UPDATE user_subscriptions SET remain_quota = remain_quota + :amount, used_quota = GREATEST(used_quota - :amount2, 0), updated_at = NOW() WHERE user_id = :user_id AND (expire_at IS NULL OR expire_at > NOW()) ORDER BY id DESC LIMIT 1');
             $ok = $stmt->execute([
                 'amount' => $amount,
@@ -81,6 +88,13 @@ class QuotaService
 
         $cache = new QuotaCacheRepository();
         try {
+            $chk = $pdo->prepare('SELECT is_unlimited FROM user_subscriptions WHERE user_id = :user_id AND (expire_at IS NULL OR expire_at > NOW()) ORDER BY id DESC LIMIT 1');
+            $chk->execute(['user_id' => $userId]);
+            $row = $chk->fetch(PDO::FETCH_ASSOC);
+            if ($row && (int) $row['is_unlimited'] === 1) {
+                return true;
+            }
+
             $stmt = $pdo->prepare('UPDATE user_subscriptions SET remain_quota = remain_quota - :amount, used_quota = used_quota + :amount2, updated_at = NOW() WHERE user_id = :user_id AND remain_quota >= :check AND (expire_at IS NULL OR expire_at > NOW()) ORDER BY id DESC LIMIT 1');
             $ok = $stmt->execute([
                 'amount' => $amount,

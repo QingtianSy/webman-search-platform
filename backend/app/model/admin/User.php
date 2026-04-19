@@ -9,4 +9,5 @@ namespace app\model\admin;
 class User extends Base
 {
     protected $table = 'users';
+    protected $hidden = ['password', 'password_hash'];
 }

@@ -4,6 +4,7 @@ namespace app\service\admin;
 
 use app\common\admin\AdminListBuilder;
 use app\model\admin\User;
+use app\repository\redis\TokenCacheRepository;
 use support\Db;
 
 class UserAdminService
@@ -92,6 +93,11 @@ class UserAdminService
         if (isset($data['role_ids'])) {
             $this->syncRoles($id, $data['role_ids']);
         }
+
+        if (!empty($data['password']) || (isset($data['status']) && (int) $data['status'] === 0) || isset($data['role_ids'])) {
+            (new TokenCacheRepository())->deleteToken($id);
+        }
+
         return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];
     }
 
@@ -113,12 +119,18 @@ class UserAdminService
         }
         $row->status = $row->status == 1 ? 0 : 1;
         $row->save();
+
+        if ((int) $row->status === 0) {
+            (new TokenCacheRepository())->deleteToken($id);
+        }
+
         return ['success' => true, 'action' => 'toggle_status', 'id' => $id, 'status' => $row->status];
     }
 
     public function assignRoles(int $userId, array $roleIds): array
     {
         $this->syncRoles($userId, $roleIds);
+        (new TokenCacheRepository())->deleteToken($userId);
         return ['success' => true, 'action' => 'assign_roles', 'user_id' => $userId, 'role_ids' => $roleIds];
     }
 
