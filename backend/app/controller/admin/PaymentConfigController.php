@@ -40,11 +40,16 @@ class PaymentConfigController
             'epay_key',
             'epay_platform_public_key',
             'epay_merchant_private_key',
+            'payment_min_amount',
+            'payment_max_amount',
         ];
         if (!in_array($key, $allowedKeys, true)) {
             return ApiResponse::error(40001, '不允许修改该配置');
         }
         $row = (new SystemConfigRepository())->updateByKey($key, $value);
+        if (empty($row)) {
+            return ApiResponse::error(40001, '配置项不存在');
+        }
         EpayClient::clearConfigCache();
         return ApiResponse::success($row);
     }

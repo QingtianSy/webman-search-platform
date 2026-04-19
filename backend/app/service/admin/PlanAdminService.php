@@ -2,6 +2,7 @@
 
 namespace app\service\admin;
 
+use app\exception\BusinessException;
 use app\model\admin\Plan;
 use support\Pagination;
 
@@ -37,7 +38,7 @@ class PlanAdminService
     {
         $row = Plan::query()->find($id);
         if (!$row) {
-            return [];
+            throw new BusinessException('套餐不存在', 40001);
         }
         if (isset($data['features']) && is_array($data['features'])) {
             $data['features'] = json_encode($data['features'], JSON_UNESCAPED_UNICODE);
@@ -50,9 +51,10 @@ class PlanAdminService
     public function delete(int $id): array
     {
         $row = Plan::query()->find($id);
-        if ($row) {
-            $row->delete();
+        if (!$row) {
+            throw new BusinessException('套餐不存在', 40001);
         }
+        $row->delete();
         return ['success' => true, 'action' => 'delete', 'id' => $id];
     }
 }

@@ -57,7 +57,8 @@ class ProxyRepository
             $sets[] = 'updated_at = NOW()';
             $sql = 'UPDATE proxies SET ' . implode(', ', $sets) . ' WHERE id = :id';
             $stmt = $pdo->prepare($sql);
-            return $stmt->execute($bind);
+            $stmt->execute($bind);
+            return $stmt->rowCount() > 0;
         } catch (\PDOException $e) {
             error_log("[ProxyRepository] update failed: " . $e->getMessage());
             return false;
@@ -95,7 +96,8 @@ class ProxyRepository
         }
         try {
             $stmt = $pdo->prepare('DELETE FROM proxies WHERE id = :id');
-            return $stmt->execute(['id' => $id]);
+            $stmt->execute(['id' => $id]);
+            return $stmt->rowCount() > 0;
         } catch (\PDOException $e) {
             error_log("[ProxyRepository] delete failed: " . $e->getMessage());
             return false;
@@ -155,6 +157,41 @@ class ProxyRepository
         } catch (\PDOException $e) {
             error_log("[ProxyRepository] list failed: " . $e->getMessage());
             return ['list' => [], 'total' => 0, 'page' => $page, 'page_size' => $pageSize];
+        }
+    }
+
+    public function batchCreate(array $items): int
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo || empty($items)) {
+            return 0;
+        }
+        try {
+            $placeholders = [];
+            $values = [];
+            foreach ($items as $i => $data) {
+                $p = "v{$i}";
+                $placeholders[] = "(:{$p}_name, :{$p}_protocol, :{$p}_host, :{$p}_port, :{$p}_username, :{$p}_password, :{$p}_country, :{$p}_country_code, :{$p}_province, :{$p}_city, :{$p}_latency_ms, :{$p}_status, NOW(), NOW())";
+                $values["{$p}_name"] = $data['name'] ?? 'default';
+                $values["{$p}_protocol"] = $data['protocol'];
+                $values["{$p}_host"] = $data['host'];
+                $values["{$p}_port"] = $data['port'];
+                $values["{$p}_username"] = $data['username'] ?? null;
+                $values["{$p}_password"] = $data['password'] ?? null;
+                $values["{$p}_country"] = $data['country'] ?? null;
+                $values["{$p}_country_code"] = $data['country_code'] ?? null;
+                $values["{$p}_province"] = $data['province'] ?? null;
+                $values["{$p}_city"] = $data['city'] ?? null;
+                $values["{$p}_latency_ms"] = $data['latency_ms'] ?? null;
+                $values["{$p}_status"] = $data['status'] ?? 0;
+            }
+            $sql = 'INSERT INTO proxies (name, protocol, host, port, username, password, country, country_code, province, city, latency_ms, status, created_at, updated_at) VALUES ' . implode(', ', $placeholders);
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($values);
+            return $stmt->rowCount();
+        } catch (\PDOException $e) {
+            error_log("[ProxyRepository] batchCreate failed: " . $e->getMessage());
+            return 0;
         }
     }
 

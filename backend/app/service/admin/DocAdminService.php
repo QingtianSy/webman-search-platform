@@ -2,20 +2,19 @@
 
 namespace app\service\admin;
 
+use app\exception\BusinessException;
 use app\repository\mysql\DocArticleRepository;
+use support\Pagination;
 
 class DocAdminService
 {
     public function getList(array $query = []): array
     {
-        $list = (new DocArticleRepository())->all();
-
-        return [
-            'list' => $list,
-            'total' => count($list),
-            'page' => 1,
-            'page_size' => 20,
-        ];
+        $query += ['page' => 1, 'page_size' => 20];
+        $repo = new DocArticleRepository();
+        $total = $repo->countAll();
+        $list = $repo->findPage((int) $query['page'], (int) $query['page_size']);
+        return Pagination::format($list, $total, (int) $query['page'], (int) $query['page_size']);
     }
 
     public function create(array $data): array
@@ -32,6 +31,9 @@ class DocAdminService
     public function update(int $id, array $data): array
     {
         $row = (new DocArticleRepository())->update($id, $data);
+        if (empty($row)) {
+            throw new BusinessException('文档不存在', 40001);
+        }
         return [
             'success' => true,
             'action' => 'update',
@@ -42,7 +44,10 @@ class DocAdminService
 
     public function delete(int $id): array
     {
-        (new DocArticleRepository())->delete($id);
+        $ok = (new DocArticleRepository())->delete($id);
+        if (!$ok) {
+            throw new BusinessException('文档不存在', 40001);
+        }
         return [
             'success' => true,
             'action' => 'delete',

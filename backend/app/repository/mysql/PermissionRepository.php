@@ -14,7 +14,7 @@ class PermissionRepository
             return [];
         }
         try {
-            $stmt = $pdo->query('SELECT id, name, code, type, created_at, updated_at FROM permissions');
+            $stmt = $pdo->query('SELECT id, name, code, type, created_at, updated_at FROM permissions LIMIT 10000');
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {
             error_log("[PermissionRepository] all failed: " . $e->getMessage());

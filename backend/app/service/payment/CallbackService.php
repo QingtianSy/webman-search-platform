@@ -71,7 +71,7 @@ class CallbackService
                 return false;
             }
 
-            (new PaymentLogRepository())->create([
+            $logOk = (new PaymentLogRepository())->create([
                 'user_id' => $order['user_id'],
                 'order_no' => $orderNo,
                 'amount' => $order['amount'],
@@ -79,6 +79,11 @@ class CallbackService
                 'status' => 1,
                 'remark' => $type === 1 ? '余额充值' : '套餐购买',
             ]);
+            if (!$logOk) {
+                $pdo->rollBack();
+                error_log("[CallbackService] payment log write failed for order={$orderNo}");
+                return false;
+            }
 
             $pdo->commit();
             return true;

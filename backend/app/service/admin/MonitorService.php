@@ -123,7 +123,7 @@ class MonitorService
         $activeTasks = 0;
         if ($pdo) {
             try {
-                $activeTasks = (int) $pdo->query("SELECT COUNT(*) FROM collect_tasks WHERE status = 2")->fetchColumn();
+                $activeTasks = (int) $pdo->query("SELECT COUNT(*) FROM collect_tasks WHERE status = 1")->fetchColumn();
             } catch (\Throwable) {
             }
         }

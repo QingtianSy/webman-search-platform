@@ -2,6 +2,7 @@
 
 namespace app\service\user;
 
+use app\exception\BusinessException;
 use app\repository\mysql\ApiKeyRepository;
 use PDO;
 use support\adapter\MySqlClient;
@@ -57,11 +58,19 @@ class ApiKeyService
 
     public function toggle(int $userId, int $id, int $status): bool
     {
-        return (new ApiKeyRepository())->toggle($userId, $id, $status);
+        $ok = (new ApiKeyRepository())->toggle($userId, $id, $status);
+        if (!$ok) {
+            throw new BusinessException('API Key 不存在', 40001);
+        }
+        return true;
     }
 
     public function delete(int $userId, int $id): bool
     {
-        return (new ApiKeyRepository())->delete($userId, $id);
+        $ok = (new ApiKeyRepository())->delete($userId, $id);
+        if (!$ok) {
+            throw new BusinessException('API Key 不存在', 40001);
+        }
+        return true;
     }
 }

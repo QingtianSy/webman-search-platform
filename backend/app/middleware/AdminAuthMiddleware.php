@@ -66,6 +66,7 @@ class AdminAuthMiddleware implements MiddlewareInterface
             } else {
                 $rolesFromDb = [];
             }
+            (new TokenCacheRepository())->setUserToken($userId, $token);
         }
 
         $roles = $rolesFromDb ?? ($decoded['payload']['roles'] ?? []);

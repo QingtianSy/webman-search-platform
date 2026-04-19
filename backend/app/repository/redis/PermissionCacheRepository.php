@@ -37,6 +37,22 @@ class PermissionCacheRepository
         }
     }
 
+    public function clearAll(): void
+    {
+        $redis = RedisClient::connection();
+        if (!$redis) {
+            return;
+        }
+        try {
+            $keys = $redis->keys(self::PREFIX . ':*');
+            if (!empty($keys)) {
+                $redis->del($keys);
+            }
+        } catch (\Throwable $e) {
+            // ignore
+        }
+    }
+
     protected function buildKey(array $roleCodes): string
     {
         sort($roleCodes);

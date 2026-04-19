@@ -21,11 +21,19 @@ class QuestionIndexRepository
             $response = $client->post('/' . ElasticsearchClient::questionIndex() . '/_search', [
                 'json' => [
                     'query' => [
-                        'multi_match' => [
-                            'query' => $keyword,
-                            'fields' => ['stem^3', 'options_text^2', 'answer_text', 'analysis'],
+                        'bool' => [
+                            'must' => [
+                                'multi_match' => [
+                                    'query' => $keyword,
+                                    'fields' => ['stem^3', 'options_text^2', 'answer_text', 'analysis'],
+                                ],
+                            ],
+                            'filter' => [
+                                'term' => ['status' => 1],
+                            ],
                         ],
                     ],
+                    '_source' => ['question_id'],
                     'size' => 20,
                 ],
             ]);

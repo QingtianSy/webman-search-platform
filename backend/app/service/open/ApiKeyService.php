@@ -8,25 +8,25 @@ use support\adapter\MySqlClient;
 
 class ApiKeyService
 {
-    public function verify(?string $apiKey, ?string $apiSecret): bool
+    public function verify(?string $apiKey, ?string $apiSecret): ?array
     {
         if (empty($apiKey) || empty($apiSecret)) {
-            return false;
+            return null;
         }
         $record = (new ApiKeyRepository())->findByApiKey($apiKey);
         if (!$record) {
-            return false;
+            return null;
         }
         if ((int) ($record['status'] ?? 0) !== 1) {
-            return false;
+            return null;
         }
         if (!empty($record['expire_at']) && strtotime($record['expire_at']) < time()) {
-            return false;
+            return null;
         }
         if (!empty($record['api_secret_hash'])) {
-            return password_verify($apiSecret, $record['api_secret_hash']);
+            return password_verify($apiSecret, $record['api_secret_hash']) ? $record : null;
         }
-        return ($record['api_secret'] ?? '') === $apiSecret;
+        return (($record['api_secret'] ?? '') === $apiSecret) ? $record : null;
     }
 
     public function listByUserId(int $userId): array

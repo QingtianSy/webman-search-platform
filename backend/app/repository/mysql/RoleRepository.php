@@ -30,7 +30,7 @@ class RoleRepository
         }
         try {
             $placeholders = implode(',', array_fill(0, count($ids), '?'));
-            $stmt = $pdo->prepare("SELECT id, name, code, sort, status, created_at, updated_at FROM roles WHERE id IN ($placeholders)");
+            $stmt = $pdo->prepare("SELECT id, name, code, sort, status, created_at, updated_at FROM roles WHERE id IN ($placeholders) AND status = 1");
             $stmt->execute(array_values($ids));
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {

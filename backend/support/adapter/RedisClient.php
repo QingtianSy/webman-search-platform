@@ -7,6 +7,7 @@ use Redis;
 class RedisClient
 {
     protected static ?Redis $redis = null;
+    protected static int $lastPingAt = 0;
 
     public static function config(): array
     {
@@ -22,8 +23,12 @@ class RedisClient
     public static function connection(): ?Redis
     {
         if (self::$redis !== null) {
+            if (time() - self::$lastPingAt < 30) {
+                return self::$redis;
+            }
             try {
                 self::$redis->ping();
+                self::$lastPingAt = time();
                 return self::$redis;
             } catch (\Throwable) {
                 self::$redis = null;
@@ -42,7 +47,9 @@ class RedisClient
             if (isset($cfg['database'])) {
                 $redis->select((int)$cfg['database']);
             }
+            $redis->setOption(Redis::OPT_READ_TIMEOUT, 2);
             self::$redis = $redis;
+            self::$lastPingAt = time();
             return self::$redis;
         } catch (\Throwable $e) {
             error_log("[RedisClient] connection failed: " . $e->getMessage());

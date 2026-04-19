@@ -202,9 +202,9 @@ class EpayClient
     {
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: */*', 'Connection: close']);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
         curl_setopt($ch, CURLOPT_HEADER, false);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         if ($post !== null) {
@@ -212,7 +212,13 @@ class EpayClient
             curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
         }
         $response = curl_exec($ch);
+        if ($response === false) {
+            $error = curl_error($ch);
+            curl_close($ch);
+            error_log("[EpayClient] HTTP request failed: {$error}, URL: {$url}");
+            return '';
+        }
         curl_close($ch);
-        return $response ?: '';
+        return $response;
     }
 }

@@ -78,6 +78,45 @@ class QuestionRepository
         }
     }
 
+    public function countByFilters(array $filters = []): int
+    {
+        $db = MongoClient::connection();
+        if (!$db) {
+            return 0;
+        }
+        try {
+            $query = self::buildQuery($filters);
+            return $db->selectCollection('questions')->countDocuments($query);
+        } catch (\Throwable $e) {
+            error_log("[QuestionRepository] countByFilters failed: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    public function findPage(array $filters = [], int $page = 1, int $pageSize = 20): array
+    {
+        $db = MongoClient::connection();
+        if (!$db) {
+            return [];
+        }
+        try {
+            $query = self::buildQuery($filters);
+            $cursor = $db->selectCollection('questions')->find($query, [
+                'sort' => ['created_at' => -1],
+                'skip' => ($page - 1) * $pageSize,
+                'limit' => $pageSize,
+            ]);
+            $rows = [];
+            foreach ($cursor as $doc) {
+                $rows[] = $this->docToArray($doc);
+            }
+            return $rows;
+        } catch (\Throwable $e) {
+            error_log("[QuestionRepository] findPage failed: " . $e->getMessage());
+            return [];
+        }
+    }
+
     public function findList(array $filters = [], int $limit = 1000): array
     {
         $db = MongoClient::connection();
@@ -85,11 +124,7 @@ class QuestionRepository
             return [];
         }
         try {
-            $query = [];
-            $stem = trim((string) ($filters['stem'] ?? ''));
-            if ($stem !== '') {
-                $query['stem'] = ['$regex' => preg_quote($stem, '/'), '$options' => 'i'];
-            }
+            $query = self::buildQuery($filters);
             $options = ['sort' => ['created_at' => -1]];
             if ($limit > 0) {
                 $options['limit'] = $limit;
@@ -296,7 +331,7 @@ class QuestionRepository
         try {
             $cursor = $db->selectCollection('questions')->find(
                 ['task_no' => $taskNo],
-                ['sort' => ['created_at' => -1]]
+                ['sort' => ['created_at' => -1], 'limit' => 10000]
             );
             $rows = [];
             foreach ($cursor as $doc) {
@@ -307,6 +342,16 @@ class QuestionRepository
             error_log("[QuestionRepository] findByTaskNo failed: " . $e->getMessage());
             return [];
         }
+    }
+
+    protected static function buildQuery(array $filters): array
+    {
+        $query = [];
+        $stem = trim((string) ($filters['stem'] ?? ''));
+        if ($stem !== '') {
+            $query['stem'] = ['$regex' => preg_quote($stem, '/'), '$options' => 'i'];
+        }
+        return $query;
     }
 
     protected function docToArray($doc): array

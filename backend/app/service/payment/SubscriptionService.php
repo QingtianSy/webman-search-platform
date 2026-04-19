@@ -41,6 +41,10 @@ class SubscriptionService
             $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($existing) {
+                if ($duration > 0) {
+                    $baseTime = max(strtotime($existing['expire_at']), time());
+                    $expireAt = date('Y-m-d H:i:s', strtotime("+{$duration} days", $baseTime));
+                }
                 if ($isUnlimited) {
                     $remainQuota = 0;
                 } else {

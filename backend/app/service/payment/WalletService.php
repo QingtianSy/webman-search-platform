@@ -34,13 +34,16 @@ class WalletService
                 $stmt->execute(['user_id' => $userId, 'balance' => $amount, 'total_recharge' => $amount]);
             }
 
-            (new BalanceLogRepository())->create([
+            $logOk = (new BalanceLogRepository())->create([
                 'user_id' => $userId,
                 'type' => 'recharge',
                 'amount' => $amount,
                 'balance_after' => $newBalance,
                 'remark' => '在线充值 ' . $orderNo,
             ]);
+            if (!$logOk) {
+                throw new \PDOException('balance log write failed');
+            }
 
             if ($ownTransaction) {
                 $pdo->commit();

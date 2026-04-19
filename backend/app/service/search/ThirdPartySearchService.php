@@ -8,6 +8,28 @@ use GuzzleHttp\Promise;
 
 class ThirdPartySearchService
 {
+    public function startQuery(int $userId, string $keyword, string $info = '', string $split = '###'): \Closure
+    {
+        if ($userId <= 0) {
+            return fn() => [];
+        }
+
+        $sources = (new UserApiSourceRepository())->findActiveByUserId($userId);
+        if (empty($sources)) {
+            return fn() => [];
+        }
+
+        $client = new Client(['verify' => true]);
+        $promises = [];
+        foreach ($sources as $source) {
+            $promises[$source['id']] = $this->buildRequest($client, $source, $keyword, $info, $split);
+        }
+
+        return function () use ($promises, $sources) {
+            return $this->collectResults($promises, $sources);
+        };
+    }
+
     public function query(int $userId, string $keyword, string $info = '', string $split = '###'): array
     {
         if ($userId <= 0) {
@@ -26,6 +48,11 @@ class ThirdPartySearchService
             $promises[$source['id']] = $this->buildRequest($client, $source, $keyword, $info, $split);
         }
 
+        return $this->collectResults($promises, $sources);
+    }
+
+    private function collectResults(array $promises, array $sources): array
+    {
         $results = Promise\Utils::settle($promises)->wait();
         $apiResults = [];
 

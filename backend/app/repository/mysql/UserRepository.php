@@ -14,7 +14,7 @@ class UserRepository
             return [];
         }
         try {
-            $stmt = $pdo->query('SELECT * FROM users ORDER BY id DESC');
+            $stmt = $pdo->query('SELECT id, username, nickname, email, mobile, avatar, status, created_at, updated_at FROM users ORDER BY id DESC LIMIT 10000');
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {
             error_log("[UserRepository] all failed: " . $e->getMessage());

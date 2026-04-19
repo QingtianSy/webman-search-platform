@@ -2,6 +2,7 @@
 
 namespace app\service\admin;
 
+use app\exception\BusinessException;
 use app\model\admin\User;
 use app\repository\redis\TokenCacheRepository;
 use support\Db;
@@ -68,47 +69,51 @@ class UserAdminService
     {
         $row = User::query()->find($id);
         if (!$row) {
-            return [];
-        }
-        if (!empty($data['username'])) {
-            $row->username = $data['username'];
-        }
-        if (!empty($data['password'])) {
-            $row->password_hash = password_hash($data['password'], PASSWORD_DEFAULT);
-        }
-        if (isset($data['nickname'])) {
-            $row->nickname = $data['nickname'];
-        }
-        if (isset($data['mobile'])) {
-            $row->mobile = $data['mobile'];
-        }
-        if (isset($data['email'])) {
-            $row->email = $data['email'];
-        }
-        if (isset($data['status'])) {
-            $row->status = $data['status'];
-        }
-        $row->save();
-
-        if (isset($data['role_ids'])) {
-            $this->syncRoles($id, $data['role_ids']);
+            throw new BusinessException('用户不存在', 40001);
         }
 
-        if (!empty($data['password']) || (isset($data['status']) && (int) $data['status'] === 0) || isset($data['role_ids'])) {
-            (new TokenCacheRepository())->setUserToken($id, 'REVOKED');
-        }
+        return Db::transaction(function () use ($row, $id, $data) {
+            if (!empty($data['username'])) {
+                $row->username = $data['username'];
+            }
+            if (!empty($data['password'])) {
+                $row->password_hash = password_hash($data['password'], PASSWORD_DEFAULT);
+            }
+            if (isset($data['nickname'])) {
+                $row->nickname = $data['nickname'];
+            }
+            if (isset($data['mobile'])) {
+                $row->mobile = $data['mobile'];
+            }
+            if (isset($data['email'])) {
+                $row->email = $data['email'];
+            }
+            if (isset($data['status'])) {
+                $row->status = $data['status'];
+            }
+            $row->save();
 
-        return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];
+            if (isset($data['role_ids'])) {
+                $this->syncRoles($id, $data['role_ids']);
+            }
+
+            if (!empty($data['password']) || (isset($data['status']) && (int) $data['status'] === 0) || isset($data['role_ids'])) {
+                (new TokenCacheRepository())->setUserToken($id, 'REVOKED');
+            }
+
+            return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];
+        });
     }
 
     public function delete(int $id): array
     {
         $row = User::query()->find($id);
-        if ($row) {
-            (new TokenCacheRepository())->setUserToken($id, 'REVOKED');
-            $row->delete();
-            Db::table('user_role')->where('user_id', $id)->delete();
+        if (!$row) {
+            throw new BusinessException('用户不存在', 40001);
         }
+        (new TokenCacheRepository())->setUserToken($id, 'REVOKED');
+        $row->delete();
+        Db::table('user_role')->where('user_id', $id)->delete();
         return ['success' => true, 'action' => 'delete', 'id' => $id];
     }
 
@@ -116,7 +121,7 @@ class UserAdminService
     {
         $row = User::query()->find($id);
         if (!$row) {
-            return [];
+            throw new BusinessException('用户不存在', 40001);
         }
         $row->status = $row->status == 1 ? 0 : 1;
         $row->save();
@@ -130,6 +135,9 @@ class UserAdminService
 
     public function assignRoles(int $userId, array $roleIds): array
     {
+        if (!User::query()->where('id', $userId)->exists()) {
+            throw new BusinessException('用户不存在', 40001);
+        }
         $this->syncRoles($userId, $roleIds);
         (new TokenCacheRepository())->setUserToken($userId, 'REVOKED');
         return ['success' => true, 'action' => 'assign_roles', 'user_id' => $userId, 'role_ids' => $roleIds];
@@ -137,12 +145,17 @@ class UserAdminService
 
     protected function syncRoles(int $userId, array $roleIds): void
     {
+        $validIds = array_filter(array_map('intval', $roleIds), fn($id) => $id > 0);
+        if (!empty($validIds)) {
+            $existCount = Db::table('roles')->whereIn('id', $validIds)->count();
+            if ($existCount !== count($validIds)) {
+                throw new BusinessException('部分角色不存在', 40001);
+            }
+        }
         Db::table('user_role')->where('user_id', $userId)->delete();
         $rows = [];
-        foreach ($roleIds as $roleId) {
-            if ((int) $roleId > 0) {
-                $rows[] = ['user_id' => $userId, 'role_id' => (int) $roleId];
-            }
+        foreach ($validIds as $roleId) {
+            $rows[] = ['user_id' => $userId, 'role_id' => $roleId];
         }
         if ($rows) {
             Db::table('user_role')->insert($rows);

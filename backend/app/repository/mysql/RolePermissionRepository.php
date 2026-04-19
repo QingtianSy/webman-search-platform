@@ -15,7 +15,7 @@ class RolePermissionRepository
         }
         try {
             $placeholders = implode(',', array_fill(0, count($roleIds), '?'));
-            $sql = "SELECT p.code FROM role_permission rp INNER JOIN permissions p ON p.id = rp.permission_id WHERE rp.role_id IN ($placeholders)";
+            $sql = "SELECT DISTINCT p.code FROM role_permission rp INNER JOIN permissions p ON p.id = rp.permission_id AND p.status = 1 INNER JOIN roles r ON r.id = rp.role_id AND r.status = 1 WHERE rp.role_id IN ($placeholders)";
             $stmt = $pdo->prepare($sql);
             $stmt->execute(array_values($roleIds));
             return array_values(array_unique(array_filter(array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'code'))));
@@ -53,7 +53,7 @@ class RolePermissionRepository
             $sql = "SELECT DISTINCT p.code FROM permissions p "
                 . "INNER JOIN role_permission rp ON rp.permission_id = p.id "
                 . "INNER JOIN roles r ON r.id = rp.role_id "
-                . "WHERE r.code IN ({$placeholders}) AND r.status = 1";
+                . "WHERE r.code IN ({$placeholders}) AND r.status = 1 AND p.status = 1";
             $stmt = $pdo->prepare($sql);
             $stmt->execute(array_values($roleCodes));
             return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];

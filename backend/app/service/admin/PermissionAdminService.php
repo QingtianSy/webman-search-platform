@@ -2,7 +2,9 @@
 
 namespace app\service\admin;
 
+use app\exception\BusinessException;
 use app\model\admin\Permission;
+use app\repository\redis\PermissionCacheRepository;
 use support\Db;
 use support\Pagination;
 
@@ -48,20 +50,23 @@ class PermissionAdminService
     {
         $row = Permission::query()->find($id);
         if (!$row) {
-            return [];
+            throw new BusinessException('权限不存在', 40001);
         }
         $row->fill($data);
         $row->save();
+        (new PermissionCacheRepository())->clearAll();
         return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];
     }
 
     public function delete(int $id): array
     {
         $row = Permission::query()->find($id);
-        if ($row) {
-            $row->delete();
-            Db::table('role_permission')->where('permission_id', $id)->delete();
+        if (!$row) {
+            throw new BusinessException('权限不存在', 40001);
         }
+        $row->delete();
+        Db::table('role_permission')->where('permission_id', $id)->delete();
+        (new PermissionCacheRepository())->clearAll();
         return ['success' => true, 'action' => 'delete', 'id' => $id];
     }
 }

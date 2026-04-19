@@ -2,12 +2,14 @@
 
 namespace app\controller\user;
 
-use app\common\user\UserListBuilder;
 use app\common\user\UserQuery;
+use app\repository\mysql\CollectAccountRepository;
+use app\repository\mysql\CollectTaskRepository;
 use app\repository\mysql\OperateLogRepository;
 use app\service\user\CollectService;
 use app\validate\user\CollectValidate;
 use support\ApiResponse;
+use support\Pagination;
 use support\Request;
 
 class CollectController
@@ -16,16 +18,20 @@ class CollectController
     {
         $userId = (int) ($request->userId ?? 0);
         $query = UserQuery::parse($request->get());
-        $list = (new CollectService())->accounts($userId);
-        return ApiResponse::success(UserListBuilder::make($list, $query['page'], $query['page_size']));
+        $repo = new CollectAccountRepository();
+        $total = $repo->countByUserId($userId);
+        $list = $repo->findPageByUserId($userId, $query['page'], $query['page_size']);
+        return ApiResponse::success(Pagination::format($list, $total, $query['page'], $query['page_size']));
     }
 
     public function tasks(Request $request)
     {
         $userId = (int) ($request->userId ?? 0);
         $query = UserQuery::parse($request->get());
-        $list = (new CollectService())->tasks($userId);
-        return ApiResponse::success(UserListBuilder::make($list, $query['page'], $query['page_size']));
+        $repo = new CollectTaskRepository();
+        $total = $repo->countAll($userId);
+        $list = $repo->findPage($query['page'], $query['page_size'], $userId);
+        return ApiResponse::success(Pagination::format($list, $total, $query['page'], $query['page_size']));
     }
 
     public function detail(Request $request)

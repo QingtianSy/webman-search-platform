@@ -36,7 +36,7 @@ class QuestionCategoryAdminService
     {
         $row = QuestionCategory::query()->find($id);
         if (!$row) {
-            return [];
+            throw new BusinessException('分类不存在', 40001);
         }
         $row->fill($data);
         $row->save();
@@ -49,9 +49,10 @@ class QuestionCategoryAdminService
             throw new BusinessException('该分类下存在子分类，无法删除', ResponseCode::PARAM_ERROR);
         }
         $row = QuestionCategory::query()->find($id);
-        if ($row) {
-            $row->delete();
+        if (!$row) {
+            throw new BusinessException('分类不存在', 40001);
         }
+        $row->delete();
         return ['success' => true, 'action' => 'delete', 'id' => $id];
     }
 }

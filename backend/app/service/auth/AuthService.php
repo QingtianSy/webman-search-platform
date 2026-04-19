@@ -47,9 +47,7 @@ class AuthService
         $roleIds = (new UserRoleRepository())->roleIdsByUserId($userId);
         $roles = (new RoleRepository())->findByIds($roleIds);
         $permissions = (new RolePermissionRepository())->permissionCodesByRoleIds($roleIds);
-        $menus = array_values(array_filter((new MenuRepository())->all(), function ($row) use ($permissions) {
-            return in_array((string) ($row['permission_code'] ?? ''), $permissions, true);
-        }));
+        $menus = (new MenuRepository())->findByPermissionCodes($permissions);
 
         unset($user['password'], $user['password_hash'], $user['type']);
 
@@ -101,30 +99,34 @@ class AuthService
             throw new BusinessException('用户名已存在', ResponseCode::PARAM_ERROR);
         }
 
-        $user = new User();
-        $user->username = $username;
-        $user->password_hash = password_hash($data['password'], PASSWORD_DEFAULT);
-        $user->nickname = $data['nickname'] ?? '';
-        $user->status = 1;
-        $user->save();
+        $user = Db::transaction(function () use ($data, $username) {
+            $user = new User();
+            $user->username = $username;
+            $user->password_hash = password_hash($data['password'], PASSWORD_DEFAULT);
+            $user->nickname = $data['nickname'] ?? '';
+            $user->status = 1;
+            $user->save();
 
-        Db::table('wallets')->insert([
-            'user_id' => $user->id,
-            'balance' => 0,
-            'frozen_balance' => 0,
-            'total_recharge' => 0,
-            'total_consume' => 0,
-            'created_at' => date('Y-m-d H:i:s'),
-            'updated_at' => date('Y-m-d H:i:s'),
-        ]);
-
-        $userRole = Db::table('roles')->where('code', 'user')->first();
-        if ($userRole) {
-            Db::table('user_role')->insert([
+            Db::table('wallets')->insert([
                 'user_id' => $user->id,
-                'role_id' => $userRole->id,
+                'balance' => 0,
+                'frozen_balance' => 0,
+                'total_recharge' => 0,
+                'total_consume' => 0,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ]);
-        }
+
+            $userRole = Db::table('roles')->where('code', 'user')->first();
+            if ($userRole) {
+                Db::table('user_role')->insert([
+                    'user_id' => $user->id,
+                    'role_id' => $userRole->id,
+                ]);
+            }
+
+            return $user;
+        });
 
         return $this->buildAuthPayload($user->toArray());
     }

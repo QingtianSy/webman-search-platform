@@ -14,10 +14,43 @@ class DocArticleRepository
             return [];
         }
         try {
-            $stmt = $pdo->query('SELECT id, category_id, slug, title, summary, content_md, status, created_at, updated_at FROM docs_articles ORDER BY id DESC');
+            $stmt = $pdo->query('SELECT id, category_id, slug, title, summary, content_md, status, created_at, updated_at FROM docs_articles ORDER BY id DESC LIMIT 10000');
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {
             error_log("[DocArticleRepository] all failed: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function countAll(): int
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return 0;
+        }
+        try {
+            return (int) $pdo->query('SELECT COUNT(*) FROM docs_articles')->fetchColumn();
+        } catch (\PDOException $e) {
+            error_log("[DocArticleRepository] countAll failed: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    public function findPage(int $page, int $pageSize): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return [];
+        }
+        try {
+            $offset = ($page - 1) * $pageSize;
+            $stmt = $pdo->prepare('SELECT id, category_id, slug, title, summary, content_md, status, created_at, updated_at FROM docs_articles ORDER BY id DESC LIMIT :limit OFFSET :offset');
+            $stmt->bindValue('limit', $pageSize, PDO::PARAM_INT);
+            $stmt->bindValue('offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            error_log("[DocArticleRepository] findPage failed: " . $e->getMessage());
             return [];
         }
     }
@@ -75,6 +108,9 @@ class DocArticleRepository
                 'summary' => $data['summary'] ?? '',
                 'content_md' => $data['content_md'] ?? '',
             ]);
+            if ($stmt->rowCount() === 0) {
+                return [];
+            }
             return ['id' => $id] + $data;
         } catch (\PDOException $e) {
             error_log("[DocArticleRepository] update failed: " . $e->getMessage());

@@ -50,7 +50,7 @@ class MenuAdminService
     {
         $row = Menu::query()->find($id);
         if (!$row) {
-            return [];
+            throw new BusinessException('菜单不存在', 40001);
         }
         $row->fill($data);
         $row->save();
@@ -63,9 +63,10 @@ class MenuAdminService
             throw new BusinessException('该菜单下存在子菜单，无法删除', ResponseCode::PARAM_ERROR);
         }
         $row = Menu::query()->find($id);
-        if ($row) {
-            $row->delete();
+        if (!$row) {
+            throw new BusinessException('菜单不存在', 40001);
         }
+        $row->delete();
         return ['success' => true, 'action' => 'delete', 'id' => $id];
     }
 }

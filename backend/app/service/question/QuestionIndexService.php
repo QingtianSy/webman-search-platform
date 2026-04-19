@@ -16,17 +16,25 @@ class QuestionIndexService
         return (new QuestionIndexRepository())->indexQuestion($question);
     }
 
-    public function syncAll(int $batchSize = 100): array
+    public function syncAll(int $batchSize = 500): array
     {
         $repo = new QuestionRepository();
         $esRepo = new QuestionIndexRepository();
 
-        $all = $repo->findList([], 0);
-        $total = count($all);
+        $total = $repo->countByFilters([]);
         $indexed = 0;
+        $page = 1;
 
-        foreach (array_chunk($all, $batchSize) as $batch) {
+        while (true) {
+            $batch = $repo->findPage([], $page, $batchSize);
+            if (empty($batch)) {
+                break;
+            }
             $indexed += $esRepo->bulkIndex($batch);
+            if (count($batch) < $batchSize) {
+                break;
+            }
+            $page++;
         }
 
         return [

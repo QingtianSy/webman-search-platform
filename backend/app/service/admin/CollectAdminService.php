@@ -2,9 +2,10 @@
 
 namespace app\service\admin;
 
-use app\common\admin\AdminListBuilder;
+use app\exception\BusinessException;
 use app\repository\mysql\CollectTaskDetailRepository;
 use app\repository\mysql\CollectTaskRepository;
+use support\Pagination;
 
 class CollectAdminService
 {
@@ -12,11 +13,10 @@ class CollectAdminService
     {
         $query += ['page' => 1, 'page_size' => 20];
         $repo = new CollectTaskRepository();
-        $list = isset($query['user_id']) && $query['user_id'] > 0
-            ? $repo->listByUserId((int) $query['user_id'])
-            : $repo->all();
-
-        return AdminListBuilder::make($list, (int) $query['page'], (int) $query['page_size']);
+        $userId = isset($query['user_id']) && $query['user_id'] > 0 ? (int) $query['user_id'] : null;
+        $total = $repo->countAll($userId);
+        $list = $repo->findPage((int) $query['page'], (int) $query['page_size'], $userId);
+        return Pagination::format($list, $total, (int) $query['page'], (int) $query['page_size']);
     }
 
     public function detail(string $taskNo): array
@@ -28,7 +28,14 @@ class CollectAdminService
     {
         $repo = new CollectTaskRepository();
         $task = $repo->findByTaskNo($taskNo);
-        if ($task && !empty($task['runner_script'])) {
+        if (!$task) {
+            throw new BusinessException('采集任务不存在', 40001);
+        }
+        $status = (int) $task['status'];
+        if (!in_array($status, [0, 1], true)) {
+            throw new BusinessException('当前任务状态不可停止', 40001);
+        }
+        if (!empty($task['runner_script'])) {
             $pid = (int) $task['runner_script'];
             if ($pid > 0) {
                 @exec("kill {$pid} 2>/dev/null");
@@ -45,6 +52,14 @@ class CollectAdminService
     public function retry(string $taskNo): array
     {
         $repo = new CollectTaskRepository();
+        $task = $repo->findByTaskNo($taskNo);
+        if (!$task) {
+            throw new BusinessException('采集任务不存在', 40001);
+        }
+        $status = (int) $task['status'];
+        if (!in_array($status, [3, 4], true)) {
+            throw new BusinessException('当前任务状态不可重试', 40001);
+        }
         $repo->updateStatus($taskNo, 0, '');
         $repo->clearRunnerScript($taskNo);
         return [

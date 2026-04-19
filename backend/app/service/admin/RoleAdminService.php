@@ -2,7 +2,9 @@
 
 namespace app\service\admin;
 
+use app\exception\BusinessException;
 use app\model\admin\Role;
+use app\repository\redis\PermissionCacheRepository;
 use support\Db;
 use support\Pagination;
 
@@ -54,43 +56,57 @@ class RoleAdminService
     {
         $row = Role::query()->find($id);
         if (!$row) {
-            return [];
+            throw new BusinessException('角色不存在', 40001);
         }
         $permissionIds = $data['permission_ids'] ?? null;
         unset($data['permission_ids']);
-        $row->fill($data);
-        $row->save();
-        if (is_array($permissionIds)) {
-            $this->syncPermissions($id, $permissionIds);
-        }
-        return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];
+        return Db::transaction(function () use ($row, $id, $data, $permissionIds) {
+            $row->fill($data);
+            $row->save();
+            if (is_array($permissionIds)) {
+                $this->syncPermissions($id, $permissionIds);
+            }
+            (new PermissionCacheRepository())->clearAll();
+            return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];
+        });
     }
 
     public function delete(int $id): array
     {
         $row = Role::query()->find($id);
-        if ($row) {
-            $row->delete();
-            Db::table('role_permission')->where('role_id', $id)->delete();
-            Db::table('user_role')->where('role_id', $id)->delete();
+        if (!$row) {
+            throw new BusinessException('角色不存在', 40001);
         }
+        $row->delete();
+        Db::table('role_permission')->where('role_id', $id)->delete();
+        Db::table('user_role')->where('role_id', $id)->delete();
+        (new PermissionCacheRepository())->clearAll();
         return ['success' => true, 'action' => 'delete', 'id' => $id];
     }
 
     public function assignPermissions(int $roleId, array $permissionIds): array
     {
+        if (!Role::query()->where('id', $roleId)->exists()) {
+            throw new BusinessException('角色不存在', 40001);
+        }
         $this->syncPermissions($roleId, $permissionIds);
+        (new PermissionCacheRepository())->clearAll();
         return ['success' => true, 'action' => 'assign_permissions', 'role_id' => $roleId, 'permission_ids' => $permissionIds];
     }
 
     protected function syncPermissions(int $roleId, array $permissionIds): void
     {
+        $validIds = array_filter(array_map('intval', $permissionIds), fn($id) => $id > 0);
+        if (!empty($validIds)) {
+            $existCount = Db::table('permissions')->whereIn('id', $validIds)->where('status', 1)->count();
+            if ($existCount !== count($validIds)) {
+                throw new BusinessException('部分权限不存在或已禁用', 40001);
+            }
+        }
         Db::table('role_permission')->where('role_id', $roleId)->delete();
         $rows = [];
-        foreach ($permissionIds as $pid) {
-            if ((int) $pid > 0) {
-                $rows[] = ['role_id' => $roleId, 'permission_id' => (int) $pid];
-            }
+        foreach ($validIds as $pid) {
+            $rows[] = ['role_id' => $roleId, 'permission_id' => $pid];
         }
         if ($rows) {
             Db::table('role_permission')->insert($rows);

@@ -2,10 +2,11 @@
 
 namespace app\service\admin;
 
-use app\common\admin\AdminListBuilder;
+use app\exception\BusinessException;
 use app\service\question\QuestionService;
 use app\repository\mongo\QuestionRepository;
 use app\service\question\QuestionIndexService;
+use support\Pagination;
 
 class QuestionAdminService
 {
@@ -19,8 +20,10 @@ class QuestionAdminService
             'stem' => (string) ($query['keyword'] ?? ''),
         ];
 
-        $list = (new QuestionService())->getList($filters)['list'] ?? [];
-        return AdminListBuilder::make($list, $page, $pageSize);
+        $repo = new QuestionRepository();
+        $total = $repo->countByFilters($filters);
+        $list = $repo->findPage($filters, $page, $pageSize);
+        return Pagination::format($list, $total, $page, $pageSize);
     }
 
     public function detail(string $id): array
@@ -38,10 +41,14 @@ class QuestionAdminService
         $data['md5'] = md5(($data['stem'] ?? '') . ($data['options_text'] ?? '') . ($data['answer_text'] ?? ''));
 
         $db = \support\adapter\MongoClient::connection();
-        if ($db) {
-            $db->selectCollection('questions')->insertOne($data);
+        if (!$db) {
+            throw new BusinessException('MongoDB 连接不可用，无法创建题目', 50001);
         }
-        (new QuestionIndexService())->sync($data['question_id']);
+        $db->selectCollection('questions')->insertOne($data);
+
+        if (!(new QuestionIndexService())->sync($data['question_id'])) {
+            error_log("[QuestionAdminService] ES sync failed after create: {$data['question_id']}");
+        }
 
         return [
             'created' => true,
@@ -52,8 +59,11 @@ class QuestionAdminService
     public function update(string $id, array $data): array
     {
         $result = (new QuestionRepository())->update($id, $data);
-        if (!empty($result)) {
-            (new QuestionIndexService())->sync($id);
+        if (empty($result)) {
+            throw new BusinessException('题目不存在', 40001);
+        }
+        if (!(new QuestionIndexService())->sync($id)) {
+            error_log("[QuestionAdminService] ES sync failed after update: {$id}");
         }
         return $result;
     }
@@ -61,8 +71,13 @@ class QuestionAdminService
     public function delete(string $id): array
     {
         $deleted = (new QuestionRepository())->delete($id);
-        (new QuestionIndexService())->delete($id);
-        return ['deleted' => $deleted];
+        if (!$deleted) {
+            throw new BusinessException('题目不存在', 40001);
+        }
+        if (!(new QuestionIndexService())->delete($id)) {
+            error_log("[QuestionAdminService] ES delete failed after delete: {$id}");
+        }
+        return ['deleted' => true];
     }
 
     public function export(array $query = []): array
@@ -70,7 +85,7 @@ class QuestionAdminService
         $filters = [
             'stem' => trim((string) ($query['keyword'] ?? '')),
         ];
-        $list = (new QuestionService())->getList($filters)['list'] ?? [];
+        $list = (new QuestionRepository())->findList($filters, 0);
 
         $headers = ['题目ID', 'MD5', '题型', '来源', '课程', '题干', '选项', '答案', '状态', '创建时间'];
         $rows = array_map(fn($r) => [

@@ -41,6 +41,7 @@ class UserAuthMiddleware implements MiddlewareInterface
             $rolesFromDb = !empty($roleIds)
                 ? (new RolePermissionRepository())->roleCodesByIds($roleIds)
                 : [];
+            (new TokenCacheRepository())->setUserToken($userId, $token);
         }
 
         $request->userId = $userId;

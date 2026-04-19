@@ -2,6 +2,7 @@
 
 namespace app\service\proxy;
 
+use app\exception\BusinessException;
 use app\repository\mysql\ProxyRepository;
 
 class ProxyService
@@ -42,13 +43,19 @@ class ProxyService
     public function update(int $id, array $data): array
     {
         $ok = $this->repo->update($id, $data);
-        return ['success' => $ok];
+        if (!$ok) {
+            throw new BusinessException('代理不存在', 40001);
+        }
+        return ['success' => true];
     }
 
     public function delete(int $id): array
     {
         $ok = $this->repo->delete($id);
-        return ['success' => $ok];
+        if (!$ok) {
+            throw new BusinessException('代理不存在', 40001);
+        }
+        return ['success' => true];
     }
 
     public function detail(int $id): array
@@ -89,9 +96,8 @@ class ProxyService
     public function quickAdd(string $rawLines): array
     {
         $lines = array_filter(array_map('trim', explode("\n", $rawLines)));
-        $added = 0;
+        $inserted = [];
         $failed = [];
-        $probeService = new ProxyProbeService();
 
         foreach ($lines as $line) {
             $parts = preg_split('/\s+/', $line, 2);
@@ -125,53 +131,64 @@ class ProxyService
                 continue;
             }
 
-            $result = $probeService->probe(
-                $parsed['protocol'],
-                $parsed['host'],
-                $parsed['port'],
-                $parsed['username'] ?? null,
-                $parsed['password'] ?? null
-            );
-
-            $probeData = [
-                'latency_ms' => $result['latency_ms'],
-                'status' => $result['success'] ? 1 : 2,
+            $inserted[] = [
+                'id' => $id,
+                'protocol' => $parsed['protocol'],
+                'host' => $parsed['host'],
+                'port' => $parsed['port'],
+                'username' => $parsed['username'] ?? null,
+                'password' => $parsed['password'] ?? null,
+                'userProvince' => $userProvince,
+                'userCity' => $userCity,
             ];
-            if ($userProvince !== '' || $userCity !== '') {
-                $probeData['country'] = '中国';
-                $probeData['country_code'] = 'CN';
-                $probeData['province'] = $userProvince;
-                $probeData['city'] = $userCity;
-            } else {
-                $probeData['country'] = $result['country'];
-                $probeData['country_code'] = $result['country_code'];
-                $probeData['province'] = $result['province'];
-                $probeData['city'] = $result['city'];
-            }
-
-            $this->repo->updateProbeResult($id, $probeData);
-            $added++;
         }
 
-        return ['added' => $added, 'failed' => $failed, 'failed_count' => count($failed)];
+        if (!empty($inserted)) {
+            $probeResults = (new ProxyProbeService())->probeBatch($inserted);
+
+            foreach ($inserted as $rec) {
+                $id = $rec['id'];
+                $result = $probeResults[$id] ?? [
+                    'success' => false, 'latency_ms' => null,
+                    'country' => null, 'country_code' => null,
+                    'province' => null, 'city' => null,
+                ];
+
+                $probeData = [
+                    'latency_ms' => $result['latency_ms'],
+                    'status' => $result['success'] ? 1 : 2,
+                ];
+                if ($rec['userProvince'] !== '' || $rec['userCity'] !== '') {
+                    $probeData['country'] = '中国';
+                    $probeData['country_code'] = 'CN';
+                    $probeData['province'] = $rec['userProvince'];
+                    $probeData['city'] = $rec['userCity'];
+                } else {
+                    $probeData['country'] = $result['country'];
+                    $probeData['country_code'] = $result['country_code'];
+                    $probeData['province'] = $result['province'];
+                    $probeData['city'] = $result['city'];
+                }
+
+                $this->repo->updateProbeResult($id, $probeData);
+            }
+        }
+
+        return ['added' => count($inserted), 'failed' => $failed, 'failed_count' => count($failed)];
     }
 
     public function batchImport(array $items): array
     {
-        $added = 0;
+        $valid = [];
         $failed = 0;
         foreach ($items as $item) {
             if (empty($item['protocol']) || empty($item['host']) || empty($item['port'])) {
                 $failed++;
                 continue;
             }
-            $id = $this->repo->create($item);
-            if ($id <= 0) {
-                $failed++;
-                continue;
-            }
-            $added++;
+            $valid[] = $item;
         }
+        $added = !empty($valid) ? $this->repo->batchCreate($valid) : 0;
         return ['added' => $added, 'failed' => $failed];
     }
 
@@ -183,19 +200,22 @@ class ProxyService
     public function probeAll(): array
     {
         $all = $this->repo->all();
-        $probeService = new ProxyProbeService();
+        if (empty($all)) {
+            return [];
+        }
+
+        $probeResults = (new ProxyProbeService())->probeBatch($all);
         $results = [];
 
         foreach ($all as $proxy) {
-            $result = $probeService->probe(
-                $proxy['protocol'],
-                $proxy['host'],
-                (int) $proxy['port'],
-                $proxy['username'] ?? null,
-                $proxy['password'] ?? null
-            );
+            $id = (int) $proxy['id'];
+            $result = $probeResults[$id] ?? [
+                'success' => false, 'latency_ms' => null,
+                'country' => null, 'country_code' => null,
+                'province' => null, 'city' => null, 'exit_ip' => null,
+            ];
 
-            $this->repo->updateProbeResult((int) $proxy['id'], [
+            $this->repo->updateProbeResult($id, [
                 'country' => $result['country'],
                 'country_code' => $result['country_code'],
                 'province' => $result['province'],

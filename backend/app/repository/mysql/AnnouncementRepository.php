@@ -14,7 +14,7 @@ class AnnouncementRepository
             return [];
         }
         try {
-            $stmt = $pdo->query('SELECT id, title, content, type, status, publish_at, created_at, updated_at FROM announcements ORDER BY id DESC');
+            $stmt = $pdo->query('SELECT id, title, content, type, status, publish_at, created_at, updated_at FROM announcements ORDER BY id DESC LIMIT 10000');
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {
             error_log("[AnnouncementRepository] latest failed: " . $e->getMessage());

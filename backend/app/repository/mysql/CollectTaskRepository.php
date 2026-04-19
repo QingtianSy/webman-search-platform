@@ -14,10 +14,54 @@ class CollectTaskRepository
             return [];
         }
         try {
-            $stmt = $pdo->query('SELECT id, task_no, user_id, account_id, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks ORDER BY id DESC');
+            $stmt = $pdo->query('SELECT id, task_no, user_id, account_id, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks ORDER BY id DESC LIMIT 10000');
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {
             error_log("[CollectTaskRepository] all failed: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function countAll(?int $userId = null): int
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return 0;
+        }
+        try {
+            if ($userId !== null && $userId > 0) {
+                $stmt = $pdo->prepare('SELECT COUNT(*) FROM collect_tasks WHERE user_id = :user_id');
+                $stmt->execute(['user_id' => $userId]);
+            } else {
+                $stmt = $pdo->query('SELECT COUNT(*) FROM collect_tasks');
+            }
+            return (int) $stmt->fetchColumn();
+        } catch (\PDOException $e) {
+            error_log("[CollectTaskRepository] countAll failed: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    public function findPage(int $page, int $pageSize, ?int $userId = null): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return [];
+        }
+        try {
+            $offset = ($page - 1) * $pageSize;
+            if ($userId !== null && $userId > 0) {
+                $stmt = $pdo->prepare('SELECT id, task_no, user_id, account_id, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks WHERE user_id = :user_id ORDER BY id DESC LIMIT :limit OFFSET :offset');
+                $stmt->bindValue('user_id', $userId, PDO::PARAM_INT);
+            } else {
+                $stmt = $pdo->prepare('SELECT id, task_no, user_id, account_id, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks ORDER BY id DESC LIMIT :limit OFFSET :offset');
+            }
+            $stmt->bindValue('limit', $pageSize, PDO::PARAM_INT);
+            $stmt->bindValue('offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            error_log("[CollectTaskRepository] findPage failed: " . $e->getMessage());
             return [];
         }
     }
@@ -29,7 +73,7 @@ class CollectTaskRepository
             return [];
         }
         try {
-            $stmt = $pdo->prepare('SELECT id, task_no, user_id, account_id, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks WHERE user_id = :user_id ORDER BY id DESC');
+            $stmt = $pdo->prepare('SELECT id, task_no, user_id, account_id, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks WHERE user_id = :user_id ORDER BY id DESC LIMIT 10000');
             $stmt->execute(['user_id' => $userId]);
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {

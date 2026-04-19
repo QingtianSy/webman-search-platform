@@ -3,6 +3,7 @@
 namespace app\controller\user;
 
 use app\repository\mysql\OperateLogRepository;
+use app\repository\mysql\SystemConfigRepository;
 use app\service\payment\OrderService;
 use app\service\payment\PaymentService;
 use support\ApiResponse;
@@ -19,6 +20,10 @@ class PaymentController
         $payType = $request->input('pay_type', 'alipay');
         $planId = null;
         $amount = '0';
+
+        if (!in_array($type, [1, 2], true)) {
+            return ApiResponse::error(40001, '不支持的订单类型');
+        }
 
         if (!in_array($payType, ['alipay', 'wxpay', 'qqpay', 'bank'])) {
             return ApiResponse::error(40001, '不支持的支付方式');
@@ -42,8 +47,12 @@ class PaymentController
             $amount = $plan['price'];
         } else {
             $amount = $request->input('amount', '0');
-            if (bccomp($amount, '0.01', 2) < 0) {
-                return ApiResponse::error(40001, '充值金额不能小于0.01');
+            $paymentConfigs = (new SystemConfigRepository())->getByGroup('payment');
+            $cfgMap = array_column($paymentConfigs, 'config_value', 'config_key');
+            $minAmount = $cfgMap['payment_min_amount'] ?? '0.01';
+            $maxAmount = $cfgMap['payment_max_amount'] ?? '10000';
+            if (!is_numeric($amount) || bccomp($amount, $minAmount, 2) < 0 || bccomp($amount, $maxAmount, 2) > 0) {
+                return ApiResponse::error(40001, "充值金额须在 {$minAmount} ~ {$maxAmount} 之间");
             }
         }
 

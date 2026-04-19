@@ -10,6 +10,7 @@ use app\service\log\LogService;
 use app\service\question\QuestionService;
 use app\service\quota\QuotaService;
 use app\service\search\ThirdPartySearchService;
+use Workerman\Timer;
 
 class SearchService
 {
@@ -32,6 +33,11 @@ class SearchService
             'user_id' => $userId,
         ]);
 
+        $apiResultsFn = null;
+        if ($userId > 0) {
+            $apiResultsFn = (new ThirdPartySearchService())->startQuery($userId, $keyword, $info, $split);
+        }
+
         $esHits = (new QuestionIndexRepository())->search($keyword);
         $questionIds = array_map(fn ($row) => (string) ($row['question_id'] ?? ''), $esHits);
         $questionIds = array_values(array_filter($questionIds));
@@ -50,9 +56,9 @@ class SearchService
         $consumeQuota = ($hitCount > 0 && $userId > 0) ? 1 : 0;
 
         $apiResults = [];
-        if ($userId > 0) {
+        if ($apiResultsFn !== null) {
             try {
-                $apiResults = (new ThirdPartySearchService())->query($userId, $keyword, $info, $split);
+                $apiResults = $apiResultsFn();
             } catch (\Throwable $e) {
                 error_log("[SearchService] third-party search failed: " . $e->getMessage());
             }
@@ -78,7 +84,7 @@ class SearchService
 
         $sourceType = $hitCount > 0 && $hasApiHits ? 'es+api' : ($hasApiHits ? 'api' : 'es');
 
-        (new SearchLogRepository())->create([
+        $logData = [
             'log_no' => $logNo,
             'user_id' => $userId ?: null,
             'api_key_id' => $apiKeyId,
@@ -89,16 +95,23 @@ class SearchService
             'source_type' => $sourceType,
             'consume_quota' => $consumeQuota,
             'cost_ms' => $costMs,
-        ]);
-
-        (new SearchLogDetailRepository())->create([
+        ];
+        $detailData = [
             'log_no' => $logNo,
             'keyword' => $keyword,
             'hit_count' => $totalHitCount,
             'question_ids' => $questionIds,
             'api_hit_count' => $apiHitCount,
             'cost_ms' => $costMs,
-        ]);
+        ];
+        Timer::add(0.001, function () use ($logData, $detailData) {
+            try {
+                (new SearchLogRepository())->create($logData);
+                (new SearchLogDetailRepository())->create($detailData);
+            } catch (\Throwable $e) {
+                error_log("[SearchService] deferred log write failed: " . $e->getMessage());
+            }
+        }, [], false);
 
         return [
             'log_no' => $logNo,

@@ -14,10 +14,43 @@ class SystemConfigRepository
             return [];
         }
         try {
-            $stmt = $pdo->query('SELECT id, group_code, config_key, config_value, value_type, status, created_at, updated_at FROM system_configs ORDER BY id DESC');
+            $stmt = $pdo->query('SELECT id, group_code, config_key, config_value, value_type, status, created_at, updated_at FROM system_configs ORDER BY id DESC LIMIT 10000');
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {
             error_log("[SystemConfigRepository] all failed: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function countAll(): int
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return 0;
+        }
+        try {
+            return (int) $pdo->query('SELECT COUNT(*) FROM system_configs')->fetchColumn();
+        } catch (\PDOException $e) {
+            error_log("[SystemConfigRepository] countAll failed: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    public function findPage(int $page, int $pageSize): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return [];
+        }
+        try {
+            $offset = ($page - 1) * $pageSize;
+            $stmt = $pdo->prepare('SELECT id, group_code, config_key, config_value, value_type, status, created_at, updated_at FROM system_configs ORDER BY id DESC LIMIT :limit OFFSET :offset');
+            $stmt->bindValue('limit', $pageSize, PDO::PARAM_INT);
+            $stmt->bindValue('offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            error_log("[SystemConfigRepository] findPage failed: " . $e->getMessage());
             return [];
         }
     }

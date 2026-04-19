@@ -8,6 +8,7 @@ use PDOException;
 class MySqlClient
 {
     protected static ?PDO $pdo = null;
+    protected static int $lastPingAt = 0;
 
     public static function config(): array
     {
@@ -29,8 +30,12 @@ class MySqlClient
     public static function pdo(): ?PDO
     {
         if (self::$pdo !== null) {
+            if (time() - self::$lastPingAt < 30) {
+                return self::$pdo;
+            }
             try {
                 self::$pdo->query('SELECT 1');
+                self::$lastPingAt = time();
                 return self::$pdo;
             } catch (\Throwable) {
                 self::$pdo = null;
@@ -45,8 +50,11 @@ class MySqlClient
                 [
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_TIMEOUT => 5,
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 ]
             );
+            self::$lastPingAt = time();
             return self::$pdo;
         } catch (PDOException $e) {
             error_log(sprintf(

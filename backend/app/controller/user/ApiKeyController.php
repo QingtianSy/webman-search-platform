@@ -2,12 +2,13 @@
 
 namespace app\controller\user;
 
-use app\common\user\UserListBuilder;
 use app\common\user\UserQuery;
+use app\repository\mysql\ApiKeyRepository;
 use app\repository\mysql\OperateLogRepository;
 use app\service\user\ApiKeyService;
 use app\validate\user\ApiKeyValidate;
 use support\ApiResponse;
+use support\Pagination;
 use support\Request;
 
 class ApiKeyController
@@ -16,8 +17,10 @@ class ApiKeyController
     {
         $userId = (int) ($request->userId ?? 0);
         $query = UserQuery::parse($request->get());
-        $list = (new ApiKeyService())->listByUserId($userId);
-        return ApiResponse::success(UserListBuilder::make($list, $query['page'], $query['page_size']));
+        $repo = new ApiKeyRepository();
+        $total = $repo->countByUserId($userId);
+        $list = $repo->findPageByUserId($userId, $query['page'], $query['page_size']);
+        return ApiResponse::success(Pagination::format($list, $total, $query['page'], $query['page_size']));
     }
 
     public function detail(Request $request)

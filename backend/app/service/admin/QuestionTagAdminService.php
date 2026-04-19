@@ -2,6 +2,7 @@
 
 namespace app\service\admin;
 
+use app\exception\BusinessException;
 use app\model\admin\QuestionTag;
 use support\Pagination;
 
@@ -34,7 +35,7 @@ class QuestionTagAdminService
     {
         $row = QuestionTag::query()->find($id);
         if (!$row) {
-            return [];
+            throw new BusinessException('标签不存在', 40001);
         }
         $row->fill($data);
         $row->save();
@@ -44,9 +45,10 @@ class QuestionTagAdminService
     public function delete(int $id): array
     {
         $row = QuestionTag::query()->find($id);
-        if ($row) {
-            $row->delete();
+        if (!$row) {
+            throw new BusinessException('标签不存在', 40001);
         }
+        $row->delete();
         return ['success' => true, 'action' => 'delete', 'id' => $id];
     }
 }

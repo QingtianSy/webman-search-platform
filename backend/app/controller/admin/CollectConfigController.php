@@ -42,6 +42,9 @@ class CollectConfigController
             return ApiResponse::error(40001, '不允许修改该配置');
         }
         $row = (new SystemConfigRepository())->updateByKey($key, $value);
+        if (empty($row)) {
+            return ApiResponse::error(40001, '配置项不存在');
+        }
         return ApiResponse::success($row);
     }
 }
