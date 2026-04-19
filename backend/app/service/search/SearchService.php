@@ -9,6 +9,7 @@ use app\repository\mysql\SearchLogRepository;
 use app\service\log\LogService;
 use app\service\question\QuestionService;
 use app\service\quota\QuotaService;
+use app\service\search\ThirdPartySearchService;
 
 class SearchService
 {
@@ -48,8 +49,27 @@ class SearchService
         $costMs = (int) (microtime(true) * 1000) - $startMs;
         $consumeQuota = ($hitCount > 0 && $userId > 0) ? 1 : 0;
 
+        $apiResults = [];
+        if ($userId > 0) {
+            try {
+                $apiResults = (new ThirdPartySearchService())->query($userId, $keyword, $info, $split);
+            } catch (\Throwable $e) {
+                error_log("[SearchService] third-party search failed: " . $e->getMessage());
+            }
+        }
+
+        $hasApiHits = false;
+        foreach ($apiResults as $ar) {
+            if (($ar['status'] ?? '') === 'success' && !empty($ar['data'])) {
+                $hasApiHits = true;
+                break;
+            }
+        }
+
         if ($hitCount === 0 && $userId > 0 && isset($quotaService)) {
-            if (!$quotaService->refund($userId, 1)) {
+            if ($hasApiHits) {
+                $consumeQuota = 1;
+            } elseif (!$quotaService->refund($userId, 1)) {
                 error_log("[SearchService] WARN: refund failed for user={$userId} log_no={$logNo}, quota may be incorrectly deducted");
                 $consumeQuota = 1;
             }
@@ -81,6 +101,7 @@ class SearchService
             'hit_count' => $hitCount,
             'consume_quota' => $consumeQuota,
             'list' => $list,
+            'api_results' => $apiResults,
             'keyword' => $keyword,
             'info' => $info,
             'split' => $split,
