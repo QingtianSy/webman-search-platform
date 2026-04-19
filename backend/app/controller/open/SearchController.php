@@ -2,6 +2,7 @@
 
 namespace app\controller\open;
 
+use app\service\quota\QuotaService;
 use app\service\search\SearchService;
 use support\ApiResponse;
 use support\Request;
