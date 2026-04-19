@@ -11,7 +11,7 @@ use app\service\quota\QuotaService;
 
 class SearchService
 {
-    public function query(string $keyword, string $info = '', string $split = '###'): array
+    public function query(int $userId, string $keyword, string $info = '', string $split = '###', ?int $apiKeyId = null): array
     {
         $logService = new LogService();
         $startMs = (int) (microtime(true) * 1000);
@@ -20,6 +20,7 @@ class SearchService
         $logService->info('search.query', [
             'keyword' => $keyword,
             'log_no' => $logNo,
+            'user_id' => $userId,
         ]);
 
         $esHits = (new QuestionIndexRepository())->search($keyword);
@@ -30,7 +31,6 @@ class SearchService
         $costMs = (int) (microtime(true) * 1000) - $startMs;
         $consumeQuota = $hitCount > 0 ? 1 : 0;
 
-        $userId = $this->getCurrentUserId();
         if ($consumeQuota > 0 && $userId > 0) {
             (new QuotaService())->consume($userId, $consumeQuota);
         }
@@ -38,7 +38,7 @@ class SearchService
         (new SearchLogRepository())->create([
             'log_no' => $logNo,
             'user_id' => $userId ?: null,
-            'api_key_id' => null,
+            'api_key_id' => $apiKeyId,
             'keyword' => $keyword,
             'question_type' => null,
             'status' => 1,
@@ -65,15 +65,5 @@ class SearchService
             'info' => $info,
             'split' => $split,
         ];
-    }
-
-    protected function getCurrentUserId(): int
-    {
-        try {
-            $request = request();
-            return $request ? (int) ($request->userId ?? 0) : 0;
-        } catch (\Throwable) {
-            return 0;
-        }
     }
 }

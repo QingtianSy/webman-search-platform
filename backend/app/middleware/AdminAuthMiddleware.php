@@ -26,6 +26,8 @@ class AdminAuthMiddleware implements MiddlewareInterface
         if (empty(array_intersect($roles, $adminRoles)) && ($decoded['payload']['default_portal'] ?? '') !== 'admin') {
             return ApiResponse::error(40003, '无权限');
         }
+        $request->userId = (int) ($decoded['payload']['uid'] ?? 0);
+        $request->userRoles = $roles;
         return $handler($request);
     }
 }

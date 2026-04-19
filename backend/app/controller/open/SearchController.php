@@ -2,7 +2,6 @@
 
 namespace app\controller\open;
 
-use app\repository\mysql\ApiKeyRepository;
 use app\service\quota\QuotaService;
 use app\service\search\SearchService;
 use support\ApiResponse;
@@ -20,8 +19,17 @@ class SearchController
             return ApiResponse::error(40001, '搜索关键词最少2个字符');
         }
 
-        $searchService = new SearchService();
-        $result = $searchService->query($keyword, $info, $split);
+        $userId = (int) ($request->apiKeyUserId ?? 0);
+        $apiKeyId = (int) ($request->apiKeyId ?? 0);
+
+        if ($userId > 0) {
+            $remainQuota = (new QuotaService())->getUserQuota($userId);
+            if ($remainQuota <= 0) {
+                return ApiResponse::error(40006, '额度不足');
+            }
+        }
+
+        $result = (new SearchService())->query($userId, $keyword, $info, $split, $apiKeyId);
 
         if (empty($result['list'])) {
             return ApiResponse::error(40004, '未找到匹配结果');
@@ -43,22 +51,11 @@ class SearchController
 
     public function quotaDetail(Request $request)
     {
-        $userId = $this->resolveUserId($request);
+        $userId = (int) ($request->apiKeyUserId ?? 0);
+        $quota = (new QuotaService())->getUserQuota($userId);
         return ApiResponse::success([
-            'remain_quota' => (new QuotaService())->getUserQuota($userId),
-            'is_unlimited' => 0,
+            'remain_quota' => $quota,
+            'is_unlimited' => $quota >= 999999 ? 1 : 0,
         ]);
-    }
-
-    protected function resolveUserId(Request $request): int
-    {
-        $apiKey = (string) $request->header('x-api-key', '');
-        if ($apiKey !== '') {
-            $keyInfo = (new ApiKeyRepository())->findByApiKey($apiKey);
-            if (!empty($keyInfo['user_id'])) {
-                return (int) $keyInfo['user_id'];
-            }
-        }
-        return 0;
     }
 }

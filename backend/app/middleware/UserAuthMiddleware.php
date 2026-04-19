@@ -21,6 +21,8 @@ class UserAuthMiddleware implements MiddlewareInterface
         if (empty($decoded)) {
             return ApiResponse::error(40002, 'Token 无效');
         }
+        $request->userId = (int) ($decoded['payload']['uid'] ?? 0);
+        $request->userRoles = $decoded['payload']['roles'] ?? [];
         return $handler($request);
     }
 }
