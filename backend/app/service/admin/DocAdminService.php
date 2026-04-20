@@ -20,10 +20,19 @@ class DocAdminService
     public function create(array $data): array
     {
         $row = (new DocArticleRepository())->create($data);
+        if (isset($row['error'])) {
+            if ($row['error'] === 'duplicate_slug') {
+                throw new BusinessException('slug 已存在', 40001);
+            }
+            throw new BusinessException('文档创建失败', 40001);
+        }
+        if (empty($row) || empty($row['id'])) {
+            throw new BusinessException('文档创建失败', 40001);
+        }
         return [
             'success' => true,
             'action' => 'create',
-            'id' => $row['id'] ?? null,
+            'id' => $row['id'],
             'data' => $row,
         ];
     }
@@ -31,6 +40,12 @@ class DocAdminService
     public function update(int $id, array $data): array
     {
         $row = (new DocArticleRepository())->update($id, $data);
+        if (isset($row['error'])) {
+            if ($row['error'] === 'duplicate_slug') {
+                throw new BusinessException('slug 已存在', 40001);
+            }
+            throw new BusinessException('文档更新失败', 40001);
+        }
         if (empty($row)) {
             throw new BusinessException('文档不存在', 40001);
         }

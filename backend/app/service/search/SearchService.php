@@ -19,7 +19,7 @@ class SearchService
     {
         $logService = new LogService();
         $startMs = (int) (microtime(true) * 1000);
-        $logNo = 'SL' . date('YmdHis') . mt_rand(1000, 9999);
+        $logNo = 'SL' . date('YmdHis') . bin2hex(random_bytes(6));
 
         $quotaService = null;
         if ($userId > 0) {
@@ -142,7 +142,20 @@ class SearchService
         ];
         Timer::add(0.001, function () use ($logData, $detailData) {
             try {
-                (new SearchLogRepository())->create($logData);
+                $repo = new SearchLogRepository();
+                $result = $repo->create($logData);
+                if ($result === 'duplicate') {
+                    $originalNo = $logData['log_no'];
+                    $retryNo = 'SL' . date('YmdHis') . bin2hex(random_bytes(6));
+                    $logData['log_no'] = $retryNo;
+                    $detailData['log_no'] = $retryNo;
+                    $result = $repo->create($logData);
+                    error_log("[SearchService] log_no collision retry: original={$originalNo} retry={$retryNo} result={$result}");
+                }
+                if ($result !== 'ok') {
+                    error_log("[SearchService] main search log write failed ({$result}), skip detail");
+                    return;
+                }
                 (new SearchLogDetailRepository())->create($detailData);
             } catch (\Throwable $e) {
                 error_log("[SearchService] deferred log write failed: " . $e->getMessage());

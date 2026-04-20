@@ -17,9 +17,9 @@ class CsvExporter
         $tmpFile = tempnam($csvDir, 'csv_');
         $fp = fopen($tmpFile, 'w');
         fwrite($fp, "\xEF\xBB\xBF");
-        fputcsv($fp, $headers);
+        fputcsv($fp, array_map([self::class, 'escapeCell'], $headers));
         foreach ($rows as $row) {
-            fputcsv($fp, $row);
+            fputcsv($fp, array_map([self::class, 'escapeCell'], (array) $row));
         }
         fclose($fp);
 
@@ -27,6 +27,24 @@ class CsvExporter
             'Content-Type' => 'text/csv; charset=utf-8',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
+    }
+
+    // 以 =+-@\t\r 开头的单元格在 Excel/WPS 中会被当作公式执行（CSV 注入）。
+    // 统一在前缀加单引号阻断，参考 OWASP CSV Injection Prevention Cheat Sheet。
+    private static function escapeCell($value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+        $str = (string) $value;
+        if ($str === '') {
+            return $str;
+        }
+        $first = $str[0];
+        if ($first === '=' || $first === '+' || $first === '-' || $first === '@' || $first === "\t" || $first === "\r") {
+            return "'" . $str;
+        }
+        return $str;
     }
 
     private static function cleanOldFiles(string $dir): void

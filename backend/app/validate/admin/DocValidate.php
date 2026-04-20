@@ -13,9 +13,13 @@ class DocValidate
         if ($title === '') {
             throw new BusinessException('文档标题不能为空', ResponseCode::PARAM_ERROR);
         }
+        $slug = trim((string) ($data['slug'] ?? ''));
+        if ($slug === '') {
+            throw new BusinessException('文档 slug 不能为空', ResponseCode::PARAM_ERROR);
+        }
         return [
             'category_id' => (int) ($data['category_id'] ?? 1),
-            'slug' => (string) ($data['slug'] ?? 'new-doc'),
+            'slug' => $slug,
             'title' => $title,
             'summary' => (string) ($data['summary'] ?? ''),
             'content_md' => (string) ($data['content_md'] ?? ''),
@@ -46,7 +50,11 @@ class DocValidate
             $result['category_id'] = (int) $data['category_id'];
         }
         if (isset($data['slug'])) {
-            $result['slug'] = (string) $data['slug'];
+            $slug = trim((string) $data['slug']);
+            if ($slug === '') {
+                throw new BusinessException('文档 slug 不能为空', ResponseCode::PARAM_ERROR);
+            }
+            $result['slug'] = $slug;
         }
         if (count($result) <= 1) {
             throw new BusinessException('没有需要更新的字段', ResponseCode::PARAM_ERROR);

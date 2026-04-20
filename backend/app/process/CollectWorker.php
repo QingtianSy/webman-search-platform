@@ -199,7 +199,10 @@ class CollectWorker
         }
 
         try {
-            $imported = $this->questionRepo->importFromJsonl($jsonlFile, $taskNo);
+            $importResult = $this->questionRepo->importFromJsonl($jsonlFile, $taskNo);
+            $imported = (int) ($importResult['imported'] ?? 0);
+            $importFailed = (int) ($importResult['failed'] ?? 0);
+            $importSkipped = (int) ($importResult['skipped'] ?? 0);
             $esIndexed = 0;
             if ($imported > 0) {
                 $questions = $this->questionRepo->findByTaskNo($taskNo);
@@ -209,12 +212,26 @@ class CollectWorker
             }
             $esFailed = $imported - $esIndexed;
             $this->taskRepo->updateProgress($taskNo, $imported, $esIndexed, $esFailed);
+            $notes = [];
+            if ($importFailed > 0) {
+                $notes[] = "Mongo部分失败: {$importFailed}条";
+            }
+            if ($importSkipped > 0) {
+                $notes[] = "跳过无效行: {$importSkipped}条";
+            }
             if ($esFailed > 0) {
-                $this->taskRepo->updateStatus($taskNo, 4, "ES索引部分失败: {$esFailed}/{$imported}条未索引");
+                $notes[] = "ES索引部分失败: {$esFailed}/{$imported}条未索引";
+            }
+            if (!empty($notes)) {
+                $this->taskRepo->updateStatus($taskNo, 4, implode('; ', $notes));
             } else {
                 $this->taskRepo->updateStatus($taskNo, 2);
             }
-            error_log("[CollectWorker] imported task={$taskNo} mongo={$imported} es_ok={$esIndexed} es_fail={$esFailed}");
+            $reasonsLog = '';
+            if (!empty($importResult['failed_reasons'])) {
+                $reasonsLog = ' import_reasons=' . json_encode(array_slice($importResult['failed_reasons'], 0, 3), JSON_UNESCAPED_UNICODE);
+            }
+            error_log("[CollectWorker] imported task={$taskNo} mongo={$imported} mongo_fail={$importFailed} mongo_skip={$importSkipped} es_ok={$esIndexed} es_fail={$esFailed}{$reasonsLog}");
         } catch (\Throwable $e) {
             $this->taskRepo->updateStatus($taskNo, 3, '导入失败: ' . $e->getMessage());
             error_log("[CollectWorker] import failed task={$taskNo}: " . $e->getMessage());

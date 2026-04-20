@@ -5,6 +5,7 @@ namespace app\service\admin;
 use app\exception\BusinessException;
 use app\model\admin\User;
 use app\repository\redis\TokenCacheRepository;
+use app\service\auth\JwtService;
 use support\Db;
 use support\Pagination;
 
@@ -58,15 +59,20 @@ class UserAdminService
         if ($existing) {
             throw new BusinessException('用户名已存在', 40001);
         }
-        $row = new User();
-        $row->username = $data['username'];
-        $row->password_hash = password_hash($data['password'], PASSWORD_DEFAULT);
-        $row->nickname = $data['nickname'] ?? '';
-        $row->mobile = $data['mobile'] ?? '';
-        $row->email = $data['email'] ?? '';
-        $row->status = $data['status'] ?? 1;
-        $row->save();
-        return ['success' => true, 'action' => 'create', 'id' => $row->id, 'data' => $row->makeHidden(['password', 'password_hash'])->toArray()];
+        return Db::transaction(function () use ($data) {
+            $row = new User();
+            $row->username = $data['username'];
+            $row->password_hash = password_hash($data['password'], PASSWORD_DEFAULT);
+            $row->nickname = $data['nickname'] ?? '';
+            $row->mobile = $data['mobile'] ?? '';
+            $row->email = $data['email'] ?? '';
+            $row->status = $data['status'] ?? 1;
+            $row->save();
+
+            $this->provisionDefaults((int) $row->id, $data['role_ids'] ?? null);
+
+            return ['success' => true, 'action' => 'create', 'id' => $row->id, 'data' => $row->makeHidden(['password', 'password_hash'])->toArray()];
+        });
     }
 
     public function update(int $id, array $data): array
@@ -105,9 +111,7 @@ class UserAdminService
             }
 
             if (!empty($data['password']) || (isset($data['status']) && (int) $data['status'] === 0) || isset($data['role_ids'])) {
-                if (!(new TokenCacheRepository())->setUserToken($id, 'REVOKED')) {
-                    $row->touch();
-                }
+                $this->revokeToken($id);
             }
 
             return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->makeHidden(['password', 'password_hash'])->toArray()];
@@ -120,15 +124,15 @@ class UserAdminService
         if (!$row) {
             throw new BusinessException('用户不存在', 40001);
         }
-        $tokenRepo = new TokenCacheRepository();
-        if (!$tokenRepo->setUserToken($id, 'REVOKED')) {
-            $tokenRepo->deleteToken($id);
-        }
-        Db::table('users')->where('id', $id)->update(['updated_at' => date('Y-m-d H:i:s')]);
-        $row->delete();
-        Db::table('user_role')->where('user_id', $id)->delete();
-        Db::table('user_api_keys')->where('user_id', $id)->delete();
-        return ['success' => true, 'action' => 'delete', 'id' => $id];
+        $this->revokeToken($id);
+        return Db::transaction(function () use ($row, $id) {
+            $row->delete();
+            Db::table('user_role')->where('user_id', $id)->delete();
+            Db::table('user_api_keys')->where('user_id', $id)->delete();
+            Db::table('wallets')->where('user_id', $id)->delete();
+            Db::table('user_subscriptions')->where('user_id', $id)->delete();
+            return ['success' => true, 'action' => 'delete', 'id' => $id];
+        });
     }
 
     public function toggleStatus(int $id): array
@@ -137,17 +141,18 @@ class UserAdminService
         if (!$row) {
             throw new BusinessException('用户不存在', 40001);
         }
-        $row->status = $row->status == 1 ? 0 : 1;
-        $row->save();
 
-        if ((int) $row->status === 0) {
-            if (!(new TokenCacheRepository())->setUserToken($id, 'REVOKED')) {
-                $row->touch();
+        return Db::transaction(function () use ($row, $id) {
+            $row->status = $row->status == 1 ? 0 : 1;
+            $row->save();
+
+            if ((int) $row->status === 0) {
+                $this->revokeToken($id);
+                Db::table('user_api_keys')->where('user_id', $id)->update(['status' => 0]);
             }
-            Db::table('user_api_keys')->where('user_id', $id)->update(['status' => 0]);
-        }
 
-        return ['success' => true, 'action' => 'toggle_status', 'id' => $id, 'status' => $row->status];
+            return ['success' => true, 'action' => 'toggle_status', 'id' => $id, 'status' => $row->status];
+        });
     }
 
     public function assignRoles(int $userId, array $roleIds): array
@@ -156,13 +161,63 @@ class UserAdminService
         if (!$user) {
             throw new BusinessException('用户不存在', 40001);
         }
-        $this->syncRoles($userId, $roleIds);
-        $user->touch();
-        $tokenRepo = new TokenCacheRepository();
-        if (!$tokenRepo->setUserToken($userId, 'REVOKED')) {
-            $tokenRepo->deleteToken($userId);
+        return Db::transaction(function () use ($user, $userId, $roleIds) {
+            $this->syncRoles($userId, $roleIds);
+            $this->revokeToken($userId);
+            return ['success' => true, 'action' => 'assign_roles', 'user_id' => $userId, 'role_ids' => $roleIds];
+        });
+    }
+
+    // 吊销用户所有已签发 token。
+    // 1) DB 写 sessions_invalidated_at(DATETIME(3)) —— 这是权威失效源；用户资料更新（昵称/头像等）不写此列。
+    // 2) Redis 尽力 REVOKED/del 做快速路径；Redis 不可用不阻断，中间件会用 DB 兜底。
+    // 调用方在事务内外皆可：事务内调用时 DB 写随外层 commit 一起落盘，中间件在 commit 后才能看到。
+    protected function revokeToken(int $userId): void
+    {
+        $now = JwtService::nowDatetime3();
+        $updated = Db::table('users')->where('id', $userId)->update(['sessions_invalidated_at' => $now]);
+        if ($updated === 0) {
+            // 行不存在（已删除）则跳过；仍尝试清理 Redis。
+            error_log("[UserAdminService] revokeToken: user={$userId} not found, skipping DB invalidation");
         }
-        return ['success' => true, 'action' => 'assign_roles', 'user_id' => $userId, 'role_ids' => $roleIds];
+
+        $tokenRepo = new TokenCacheRepository();
+        if ($tokenRepo->setUserToken($userId, 'REVOKED')) {
+            return;
+        }
+        if ($tokenRepo->deleteToken($userId)) {
+            return;
+        }
+        error_log("[UserAdminService] revokeToken cache invalidation skipped for user={$userId}; relying on DB sessions_invalidated_at fallback");
+    }
+
+    // 与 AuthService::register 保持同步：新建用户必须初始化钱包与默认角色。
+    protected function provisionDefaults(int $userId, ?array $roleIds): void
+    {
+        if (!Db::table('wallets')->where('user_id', $userId)->exists()) {
+            Db::table('wallets')->insert([
+                'user_id' => $userId,
+                'balance' => 0,
+                'frozen_balance' => 0,
+                'total_recharge' => 0,
+                'total_consume' => 0,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        if (is_array($roleIds)) {
+            $this->syncRoles($userId, $roleIds);
+            return;
+        }
+
+        $userRole = Db::table('roles')->where('code', 'user')->first();
+        if ($userRole) {
+            Db::table('user_role')->insert([
+                'user_id' => $userId,
+                'role_id' => $userRole->id,
+            ]);
+        }
     }
 
     protected function syncRoles(int $userId, array $roleIds): void

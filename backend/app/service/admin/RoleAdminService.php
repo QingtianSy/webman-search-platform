@@ -7,6 +7,7 @@ use app\model\admin\Role;
 use app\repository\mysql\UserRoleRepository;
 use app\repository\redis\PermissionCacheRepository;
 use app\repository\redis\TokenCacheRepository;
+use app\service\auth\JwtService;
 use support\Db;
 use support\Pagination;
 
@@ -65,7 +66,7 @@ class RoleAdminService
         }
         $permissionIds = $data['permission_ids'] ?? null;
         unset($data['permission_ids'], $data['id']);
-        return Db::transaction(function () use ($row, $id, $data, $permissionIds) {
+        $result = Db::transaction(function () use ($row, $id, $data, $permissionIds) {
             if (!empty($data['code']) && $data['code'] !== $row->code) {
                 if (Role::query()->where('code', $data['code'])->where('id', '!=', $id)->exists()) {
                     throw new BusinessException('角色编码已存在', 40001);
@@ -77,10 +78,16 @@ class RoleAdminService
             if (is_array($permissionIds)) {
                 $this->syncPermissions($id, $permissionIds);
             }
-            (new PermissionCacheRepository())->clearAll();
-            $this->revokeUserTokens($affectedUserIds);
-            return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];
+            return [
+                'response' => ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()],
+                'affected_user_ids' => $affectedUserIds,
+            ];
         });
+        // 事务提交后再清缓存 / 吊销 token，避免事务中途清掉缓存后，
+        // 并发读请求用事务外的旧 DB 状态把缓存重新填成旧数据。
+        (new PermissionCacheRepository())->clearAll();
+        $this->revokeUserTokens($result['affected_user_ids']);
+        return $result['response'];
     }
 
     public function delete(int $id): array
@@ -89,10 +96,13 @@ class RoleAdminService
         if (!$row) {
             throw new BusinessException('角色不存在', 40001);
         }
-        $affectedUserIds = (new UserRoleRepository())->userIdsByRoleId($id);
-        $row->delete();
-        Db::table('role_permission')->where('role_id', $id)->delete();
-        Db::table('user_role')->where('role_id', $id)->delete();
+        $affectedUserIds = Db::transaction(function () use ($row, $id) {
+            $ids = (new UserRoleRepository())->userIdsByRoleId($id);
+            $row->delete();
+            Db::table('role_permission')->where('role_id', $id)->delete();
+            Db::table('user_role')->where('role_id', $id)->delete();
+            return $ids;
+        });
         (new PermissionCacheRepository())->clearAll();
         $this->revokeUserTokens($affectedUserIds);
         return ['success' => true, 'action' => 'delete', 'id' => $id];
@@ -103,8 +113,11 @@ class RoleAdminService
         if (!Role::query()->where('id', $roleId)->exists()) {
             throw new BusinessException('角色不存在', 40001);
         }
-        $affectedUserIds = (new UserRoleRepository())->userIdsByRoleId($roleId);
-        $this->syncPermissions($roleId, $permissionIds);
+        $affectedUserIds = Db::transaction(function () use ($roleId, $permissionIds) {
+            $ids = (new UserRoleRepository())->userIdsByRoleId($roleId);
+            $this->syncPermissions($roleId, $permissionIds);
+            return $ids;
+        });
         (new PermissionCacheRepository())->clearAll();
         $this->revokeUserTokens($affectedUserIds);
         return ['success' => true, 'action' => 'assign_permissions', 'role_id' => $roleId, 'permission_ids' => $permissionIds];
@@ -157,7 +170,8 @@ class RoleAdminService
         if (empty($userIds)) {
             return;
         }
-        Db::table('users')->whereIn('id', $userIds)->update(['updated_at' => date('Y-m-d H:i:s')]);
+        // 写 sessions_invalidated_at 作为权威失效源；Redis 仅作为快速路径，不可用时中间件用 DB 兜底。
+        Db::table('users')->whereIn('id', $userIds)->update(['sessions_invalidated_at' => JwtService::nowDatetime3()]);
         $tokenRepo = new TokenCacheRepository();
         foreach ($userIds as $uid) {
             if (!$tokenRepo->setUserToken($uid, 'REVOKED')) {

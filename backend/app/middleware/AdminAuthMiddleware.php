@@ -63,17 +63,25 @@ class AdminAuthMiddleware implements MiddlewareInterface
             return ApiResponse::error(40002, 'Token 已失效，请重新登录');
         }
 
-        if (!$redisConnected) {
-            error_log("[AdminAuthMiddleware] Redis unavailable, falling back to DB verification for user {$userId}");
-            $user = (new UserRepository())->findById($userId);
-            if (!$user || (int) ($user['status'] ?? 0) !== 1) {
-                return ApiResponse::error(40002, '用户不存在或已被禁用');
+        // DB 校验：即便 Redis 命中旧 token，也用 users.sessions_invalidated_at(DATETIME(3))
+        // 对照 JWT iat_ms 拦截已吊销 token。仅密码/禁用/角色变更/删号写该列。
+        $user = (new UserRepository())->findById($userId);
+        if (!$user || (int) ($user['status'] ?? 0) !== 1) {
+            return ApiResponse::error(40002, '用户不存在或已被禁用');
+        }
+        $invalidatedMs = JwtService::datetimeToMs($user['sessions_invalidated_at'] ?? null);
+        if ($invalidatedMs > 0) {
+            $iatMs = (int) ($decoded['iat_ms'] ?? 0);
+            if ($iatMs <= 0) {
+                $iatMs = ((int) ($decoded['iat'] ?? 0)) * 1000;
             }
-            $iat = (int) ($decoded['iat'] ?? 0);
-            $updatedAt = strtotime($user['updated_at'] ?? '');
-            if ($updatedAt && $iat && $updatedAt > $iat) {
+            if ($iatMs > 0 && $invalidatedMs > $iatMs) {
                 return ApiResponse::error(40002, 'Token 已失效，请重新登录');
             }
+        }
+
+        if (!$redisConnected) {
+            error_log("[AdminAuthMiddleware] Redis unavailable, falling back to DB verification for user {$userId}");
         }
 
         $roleIds = (new \app\repository\mysql\UserRoleRepository())->roleIdsByUserId($userId);

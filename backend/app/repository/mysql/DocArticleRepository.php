@@ -71,17 +71,42 @@ class DocArticleRepository
         }
     }
 
+    public function existsBySlug(string $slug, ?int $excludeId = null): bool
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return false;
+        }
+        try {
+            if ($excludeId !== null) {
+                $stmt = $pdo->prepare('SELECT id FROM docs_articles WHERE slug = :slug AND id <> :id LIMIT 1');
+                $stmt->execute(['slug' => $slug, 'id' => $excludeId]);
+            } else {
+                $stmt = $pdo->prepare('SELECT id FROM docs_articles WHERE slug = :slug LIMIT 1');
+                $stmt->execute(['slug' => $slug]);
+            }
+            return (bool) $stmt->fetchColumn();
+        } catch (\PDOException $e) {
+            error_log("[DocArticleRepository] existsBySlug failed: " . $e->getMessage());
+            return false;
+        }
+    }
+
     public function create(array $data): array
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
             return [];
         }
+        $slug = $data['slug'] ?? 'new-doc';
+        if ($this->existsBySlug($slug)) {
+            return ['error' => 'duplicate_slug'];
+        }
         try {
             $stmt = $pdo->prepare('INSERT INTO docs_articles (category_id, slug, title, summary, content_md, status, created_at, updated_at) VALUES (:category_id, :slug, :title, :summary, :content_md, :status, NOW(), NOW())');
             $stmt->execute([
                 'category_id' => $data['category_id'] ?? 1,
-                'slug' => $data['slug'] ?? 'new-doc',
+                'slug' => $slug,
                 'title' => $data['title'] ?? '',
                 'summary' => $data['summary'] ?? '',
                 'content_md' => $data['content_md'] ?? '',
@@ -90,7 +115,10 @@ class DocArticleRepository
             return ['id' => (int) $pdo->lastInsertId()] + $data;
         } catch (\PDOException $e) {
             error_log("[DocArticleRepository] create failed: " . $e->getMessage());
-            return [];
+            if ($e->getCode() === '23000' || (isset($e->errorInfo[1]) && $e->errorInfo[1] === 1062)) {
+                return ['error' => 'duplicate_slug'];
+            }
+            return ['error' => 'db_error'];
         }
     }
 
@@ -105,6 +133,10 @@ class DocArticleRepository
             $check->execute(['id' => $id]);
             if (!$check->fetch()) {
                 return [];
+            }
+
+            if (array_key_exists('slug', $data) && $this->existsBySlug((string) $data['slug'], $id)) {
+                return ['error' => 'duplicate_slug'];
             }
 
             $sets = ['updated_at = NOW()'];
@@ -122,7 +154,10 @@ class DocArticleRepository
             return ['id' => $id] + $data;
         } catch (\PDOException $e) {
             error_log("[DocArticleRepository] update failed: " . $e->getMessage());
-            return [];
+            if ($e->getCode() === '23000' || (isset($e->errorInfo[1]) && $e->errorInfo[1] === 1062)) {
+                return ['error' => 'duplicate_slug'];
+            }
+            return ['error' => 'db_error'];
         }
     }
 

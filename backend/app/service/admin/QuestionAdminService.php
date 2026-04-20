@@ -83,7 +83,7 @@ class QuestionAdminService
         }
         $result['es_synced'] = $esSynced;
         if (!$esSynced) {
-            $result['es_warning'] = 'ES索引同步失败，搜索结果可能暂时不���含���题目';
+            $result['es_warning'] = 'ES索引同步失败，搜索结果可能暂时不包含此题目';
         }
         return $result;
     }

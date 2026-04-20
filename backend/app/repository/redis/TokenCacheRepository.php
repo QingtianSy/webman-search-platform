@@ -62,14 +62,14 @@ class TokenCacheRepository
     {
         $redis = RedisClient::connection();
         if (!$redis) {
-            return true;
+            return false;
         }
         try {
             $redis->del(RedisClient::key(self::PREFIX, $userId));
             return true;
         } catch (\Throwable $e) {
             error_log("[TokenCacheRepository] deleteToken failed: " . $e->getMessage());
-            return true;
+            return false;
         }
     }
 }

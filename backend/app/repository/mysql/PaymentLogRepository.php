@@ -19,8 +19,11 @@ class PaymentLogRepository
             $total = (int) $countStmt->fetchColumn();
 
             $offset = ($page - 1) * $pageSize;
-            $stmt = $pdo->prepare("SELECT id, user_id, order_no, amount, pay_method, status, remark, created_at FROM payment_logs WHERE user_id = :user_id ORDER BY created_at DESC LIMIT {$pageSize} OFFSET {$offset}");
-            $stmt->execute(['user_id' => $userId]);
+            $stmt = $pdo->prepare('SELECT id, user_id, order_no, amount, pay_method, status, remark, created_at FROM payment_logs WHERE user_id = :user_id ORDER BY created_at DESC LIMIT :limit OFFSET :offset');
+            $stmt->bindValue('user_id', $userId, PDO::PARAM_INT);
+            $stmt->bindValue('limit', $pageSize, PDO::PARAM_INT);
+            $stmt->bindValue('offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
             $list = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             return ['list' => $list, 'total' => $total, 'page' => $page, 'page_size' => $pageSize];

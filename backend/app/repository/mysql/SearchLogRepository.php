@@ -7,15 +7,15 @@ use support\adapter\MySqlClient;
 
 class SearchLogRepository
 {
-    public function create(array $data): bool
+    public function create(array $data): string
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
-            return false;
+            return 'error';
         }
         try {
             $stmt = $pdo->prepare('INSERT INTO search_logs (log_no, user_id, api_key_id, keyword, question_type, status, hit_count, source_type, consume_quota, cost_ms, created_at) VALUES (:log_no, :user_id, :api_key_id, :keyword, :question_type, :status, :hit_count, :source_type, :consume_quota, :cost_ms, NOW())');
-            return $stmt->execute([
+            $ok = $stmt->execute([
                 'log_no' => $data['log_no'] ?? uniqid('SL'),
                 'user_id' => $data['user_id'] ?? null,
                 'api_key_id' => $data['api_key_id'] ?? null,
@@ -27,9 +27,14 @@ class SearchLogRepository
                 'consume_quota' => $data['consume_quota'] ?? 0,
                 'cost_ms' => $data['cost_ms'] ?? 0,
             ]);
+            return $ok ? 'ok' : 'error';
         } catch (\PDOException $e) {
+            if ($e->getCode() === '23000' || (isset($e->errorInfo[1]) && $e->errorInfo[1] === 1062)) {
+                error_log("[SearchLogRepository] duplicate log_no: " . ($data['log_no'] ?? ''));
+                return 'duplicate';
+            }
             error_log("[SearchLogRepository] create failed: " . $e->getMessage());
-            return false;
+            return 'error';
         }
     }
 }

@@ -40,18 +40,28 @@ class UserAuthMiddleware implements MiddlewareInterface
             return ApiResponse::error(40002, 'Token 已失效，请重新登录');
         }
 
+        // DB 校验：即便 Redis 命中旧 token（比如 REVOKED 写失败漏网），
+        // 依然用 users.sessions_invalidated_at(DATETIME(3)) 对照 JWT iat_ms 把已吊销 token 拦下。
+        // 只有显式吊销动作（密码修改/禁用/角色变更/删号）才会写这一列；昵称、头像、邮箱等资料更新不写。
+        $user = (new UserRepository())->findById($userId);
+        if (!$user || (int) ($user['status'] ?? 0) !== 1) {
+            return ApiResponse::error(40002, '用户不存在或已被禁用');
+        }
+        $invalidatedMs = JwtService::datetimeToMs($user['sessions_invalidated_at'] ?? null);
+        if ($invalidatedMs > 0) {
+            $iatMs = (int) ($decoded['iat_ms'] ?? 0);
+            if ($iatMs <= 0) {
+                // 升级前签发的老 token 没有 iat_ms，退化到秒级兜底比较。
+                $iatMs = ((int) ($decoded['iat'] ?? 0)) * 1000;
+            }
+            if ($iatMs > 0 && $invalidatedMs > $iatMs) {
+                return ApiResponse::error(40002, 'Token 已失效，请重新登录');
+            }
+        }
+
         $rolesFromDb = null;
         if (!$redisConnected) {
             error_log("[UserAuthMiddleware] Redis unavailable, falling back to DB verification for user {$userId}");
-            $user = (new UserRepository())->findById($userId);
-            if (!$user || (int) ($user['status'] ?? 0) !== 1) {
-                return ApiResponse::error(40002, '用户不存在或已被禁用');
-            }
-            $iat = (int) ($decoded['iat'] ?? 0);
-            $updatedAt = strtotime($user['updated_at'] ?? '');
-            if ($updatedAt && $iat && $updatedAt > $iat) {
-                return ApiResponse::error(40002, 'Token 已失效，请重新登录');
-            }
             $roleIds = (new UserRoleRepository())->roleIdsByUserId($userId);
             $rolesFromDb = !empty($roleIds)
                 ? (new RolePermissionRepository())->roleCodesByIds($roleIds)

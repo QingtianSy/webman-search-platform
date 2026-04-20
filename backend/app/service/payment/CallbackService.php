@@ -4,6 +4,7 @@ namespace app\service\payment;
 
 use app\repository\mysql\OrderRepository;
 use app\repository\mysql\PaymentLogRepository;
+use app\repository\redis\QuotaCacheRepository;
 use support\adapter\EpayClient;
 use support\adapter\MySqlClient;
 
@@ -95,6 +96,11 @@ class CallbackService
             }
 
             $pdo->commit();
+            // 订阅激活链路的额度缓存失效必须在 CallbackService 自己的 commit 之后，
+            // SubscriptionService::activate 在外层事务场景下不自己删缓存，由这里兜底。
+            if ($type === 2) {
+                (new QuotaCacheRepository())->deleteUserQuota((int) $order['user_id']);
+            }
             return true;
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) {

@@ -9,6 +9,8 @@ use GuzzleHttp\Promise;
 
 class ThirdPartySearchService
 {
+    private const MAX_PER_SOURCE_TIMEOUT = 15;
+
     public function startQuery(int $userId, string $keyword, string $info = '', string $split = '###'): \Closure
     {
         if ($userId <= 0) {
@@ -76,7 +78,7 @@ class ThirdPartySearchService
             $result = $results[$id];
             if ($result['state'] === 'rejected') {
                 $entry['error'] = $result['reason'] instanceof \Throwable
-                    ? $result['reason']->getMessage()
+                    ? $this->sanitizeErrorMessage($result['reason']->getMessage())
                     : '请求失败';
                 $apiResults[] = $entry;
                 continue;
@@ -130,6 +132,9 @@ class ThirdPartySearchService
         $method = strtoupper($source['method'] ?? 'GET');
         $url = $source['url'] ?? '';
         $timeout = (int) ($source['timeout'] ?? 10);
+        if ($timeout <= 0 || $timeout > self::MAX_PER_SOURCE_TIMEOUT) {
+            $timeout = self::MAX_PER_SOURCE_TIMEOUT;
+        }
 
         $queryParams = [];
         $bodyParams = [];
@@ -239,5 +244,17 @@ class ThirdPartySearchService
             $current = $current[$key];
         }
         return $current;
+    }
+
+    // Guzzle 异常可能把 URL（含 user:pass@host）和 Authorization 头带进 message，
+    // 这里统一脱敏并截断，避免泄漏到 api_results.error 与日志。
+    private function sanitizeErrorMessage(string $message): string
+    {
+        $message = preg_replace('#([a-z][a-z0-9+.-]*://)[^/@\s]+@#i', '$1***@', $message) ?? $message;
+        $message = preg_replace('/(Authorization|X-[A-Za-z0-9-]*Key|X-[A-Za-z0-9-]*Token|Cookie)\s*:\s*[^\r\n]*/i', '$1: ***', $message) ?? $message;
+        if (mb_strlen($message) > 200) {
+            $message = mb_substr($message, 0, 200) . '...';
+        }
+        return $message;
     }
 }

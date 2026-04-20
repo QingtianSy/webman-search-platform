@@ -77,11 +77,14 @@ class SubscriptionService
                 ]);
             }
 
-            (new QuotaCacheRepository())->deleteUserQuota($userId);
-
             if ($ownTransaction) {
                 $pdo->commit();
+                // 缓存删除必须在事务提交之后：否则并发读请求在事务期间 miss 后，
+                // 会查到提交前的旧快照并把它回填缓存，commit 完成后 DB 是新值、缓存是旧值。
+                (new QuotaCacheRepository())->deleteUserQuota($userId);
             }
+            // 当调用方拥有事务（如 CallbackService）时，由调用方在自己 commit 后负责失效缓存，
+            // 避免在外层事务未提交时就删缓存、触发同样的旧值回填问题。
             return true;
         } catch (\PDOException $e) {
             if ($ownTransaction && $pdo->inTransaction()) {

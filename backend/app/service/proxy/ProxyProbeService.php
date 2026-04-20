@@ -186,7 +186,7 @@ class ProxyProbeService
                 return $data;
             }
         } catch (\Throwable $e) {
-            error_log("[ProxyProbe] ip-api failed: " . $e->getMessage());
+            error_log("[ProxyProbe] ip-api failed: " . self::sanitizeMessage($e->getMessage()));
         }
         return [];
     }
@@ -198,9 +198,19 @@ class ProxyProbeService
             $data = json_decode((string) $resp->getBody(), true);
             return $data['origin'] ?? '';
         } catch (\Throwable $e) {
-            error_log("[ProxyProbe] httpbin failed: " . $e->getMessage());
+            error_log("[ProxyProbe] httpbin failed: " . self::sanitizeMessage($e->getMessage()));
         }
         return '';
+    }
+
+    // cURL/Guzzle 错误会把 proxy URL 中的 user:pass@host 带进 message，写日志前先脱敏。
+    private static function sanitizeMessage(string $message): string
+    {
+        $message = preg_replace('#([a-z][a-z0-9+.-]*://)[^/@\s]+@#i', '$1***@', $message) ?? $message;
+        if (mb_strlen($message) > 200) {
+            $message = mb_substr($message, 0, 200) . '...';
+        }
+        return $message;
     }
 
     protected function buildProxyUrl(string $protocol, string $host, int $port, ?string $username, ?string $password): string

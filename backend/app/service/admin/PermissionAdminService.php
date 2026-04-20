@@ -73,8 +73,10 @@ class PermissionAdminService
         if (!$row) {
             throw new BusinessException('权限不存在', 40001);
         }
-        $row->delete();
-        Db::table('role_permission')->where('permission_id', $id)->delete();
+        Db::transaction(function () use ($row, $id) {
+            $row->delete();
+            Db::table('role_permission')->where('permission_id', $id)->delete();
+        });
         (new PermissionCacheRepository())->clearAll();
         return ['success' => true, 'action' => 'delete', 'id' => $id];
     }

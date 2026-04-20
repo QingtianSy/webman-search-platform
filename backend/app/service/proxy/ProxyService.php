@@ -108,7 +108,7 @@ class ProxyService
 
             $parsed = $this->parseProxyUrl($urlPart);
             if ($parsed === null) {
-                $failed[] = $line;
+                $failed[] = self::maskLineCredentials($line);
                 continue;
             }
 
@@ -129,7 +129,7 @@ class ProxyService
 
             $id = $this->repo->create($parsed);
             if ($id <= 0) {
-                $failed[] = $line;
+                $failed[] = self::maskLineCredentials($line);
                 continue;
             }
 
@@ -295,5 +295,10 @@ class ProxyService
             $row['username'] = '****';
         }
         return $row;
+    }
+
+    private static function maskLineCredentials(string $line): string
+    {
+        return preg_replace('#([a-z][a-z0-9+.-]*://)[^/@\s]+@#i', '$1***@', $line) ?? $line;
     }
 }

@@ -31,9 +31,9 @@ class RateLimitMiddleware implements MiddlewareInterface
             $key = "ip:{$identifier}:" . $request->path();
         }
 
-        $count = (new RateLimitRepository())->hit($key, $this->ttl);
+        $result = (new RateLimitRepository())->hit($key, $this->ttl);
 
-        if ($count > $this->maxAttempts) {
+        if (!$result['available'] || $result['count'] > $this->maxAttempts) {
             return ApiResponse::error(42900, '请求过于频繁，请稍后再试');
         }
 

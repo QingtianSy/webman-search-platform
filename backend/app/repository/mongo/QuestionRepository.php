@@ -226,7 +226,7 @@ class QuestionRepository
         }
     }
 
-    public function importFromJsonl(string $filePath, string $taskNo): int
+    public function importFromJsonl(string $filePath, string $taskNo): array
     {
         $db = MongoClient::connection();
         if (!$db) {
@@ -241,6 +241,9 @@ class QuestionRepository
         $collection = $db->selectCollection('questions');
         $now = date('Y-m-d H:i:s');
         $imported = 0;
+        $skipped = 0;
+        $failed = 0;
+        $failedReasons = [];
         $batch = [];
         $batchSize = 100;
 
@@ -251,6 +254,7 @@ class QuestionRepository
             }
             $item = json_decode($line, true);
             if (!$item || empty($item['question'])) {
+                $skipped++;
                 continue;
             }
 
@@ -258,17 +262,36 @@ class QuestionRepository
             $batch[] = $doc;
 
             if (count($batch) >= $batchSize) {
-                $imported += $this->insertBatchDedup($collection, $batch);
+                $res = $this->insertBatchDedup($collection, $batch);
+                $imported += $res['inserted'];
+                $failed += $res['failed'];
+                foreach ($res['reasons'] as $reason) {
+                    if (count($failedReasons) < 20) {
+                        $failedReasons[] = $reason;
+                    }
+                }
                 $batch = [];
             }
         }
         fclose($handle);
 
         if (!empty($batch)) {
-            $imported += $this->insertBatchDedup($collection, $batch);
+            $res = $this->insertBatchDedup($collection, $batch);
+            $imported += $res['inserted'];
+            $failed += $res['failed'];
+            foreach ($res['reasons'] as $reason) {
+                if (count($failedReasons) < 20) {
+                    $failedReasons[] = $reason;
+                }
+            }
         }
 
-        return $imported;
+        return [
+            'imported' => $imported,
+            'skipped' => $skipped,
+            'failed' => $failed,
+            'failed_reasons' => $failedReasons,
+        ];
     }
 
     protected function buildDocFromRaw(array $item, string $taskNo, string $now): array
@@ -324,17 +347,26 @@ class QuestionRepository
         return $options;
     }
 
-    protected function insertBatchDedup($collection, array $batch): int
+    protected function insertBatchDedup($collection, array $batch): array
     {
         if (empty($batch)) {
-            return 0;
+            return ['inserted' => 0, 'failed' => 0, 'reasons' => []];
         }
         try {
             $result = $collection->insertMany($batch, ['ordered' => false]);
-            return $result->getInsertedCount();
+            return ['inserted' => $result->getInsertedCount(), 'failed' => 0, 'reasons' => []];
         } catch (\MongoDB\Driver\Exception\BulkWriteException $e) {
             $writeResult = $e->getWriteResult();
-            return $writeResult->getInsertedCount();
+            $inserted = $writeResult->getInsertedCount();
+            $writeErrors = $writeResult->getWriteErrors();
+            $reasons = [];
+            foreach ($writeErrors as $err) {
+                $reasons[] = $err->getMessage();
+            }
+            return ['inserted' => $inserted, 'failed' => count($batch) - $inserted, 'reasons' => $reasons];
+        } catch (\Throwable $e) {
+            error_log("[QuestionRepository] insertBatchDedup failed: " . $e->getMessage());
+            return ['inserted' => 0, 'failed' => count($batch), 'reasons' => [$e->getMessage()]];
         }
     }
 

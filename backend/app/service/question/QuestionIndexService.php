@@ -51,21 +51,20 @@ class QuestionIndexService
 
     public function rebuild(int $batchSize = 500): array
     {
-        $esRepo = new QuestionIndexRepository();
+        // 先验证数据源可用再动 ES：否则 Mongo 不可用时会把 ES 清空留下空库。
+        if (!MongoClient::connection()) {
+            return ['error' => 'MongoDB连接不可用，无法读取题目数据', 'rebuilt' => false];
+        }
+        $repo = new QuestionRepository();
+        $total = $repo->countByFilters([]);
 
+        $esRepo = new QuestionIndexRepository();
         if (!$esRepo->deleteIndex()) {
             return ['error' => 'ES索引删除失败，请检查ES连接配置', 'rebuilt' => false];
         }
         if (!$esRepo->createIndex()) {
             return ['error' => 'ES索引创建失败，请检查ES连接配置', 'rebuilt' => false];
         }
-
-        if (!MongoClient::connection()) {
-            return ['error' => 'MongoDB连接不可用，无法读取题目数据', 'rebuilt' => false];
-        }
-
-        $repo = new QuestionRepository();
-        $total = $repo->countByFilters([]);
         $indexed = 0;
         $page = 1;
 
