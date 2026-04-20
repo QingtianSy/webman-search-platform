@@ -8,7 +8,7 @@ use support\adapter\MySqlClient;
 
 class SubscriptionService
 {
-    public function activate(int $userId, int $planId, string $orderNo): bool
+    public function activate(int $userId, int $planId, string $orderNo, ?array $planSnapshot = null): bool
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
@@ -20,9 +20,13 @@ class SubscriptionService
                 $pdo->beginTransaction();
             }
 
-            $stmt = $pdo->prepare('SELECT id, name, duration, quota, is_unlimited FROM plans WHERE id = :id AND status = 1 LIMIT 1');
-            $stmt->execute(['id' => $planId]);
-            $plan = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($planSnapshot) {
+                $plan = $planSnapshot;
+            } else {
+                $stmt = $pdo->prepare('SELECT id, name, duration, quota, is_unlimited FROM plans WHERE id = :id AND status = 1 LIMIT 1');
+                $stmt->execute(['id' => $planId]);
+                $plan = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
             if (!$plan) {
                 if ($ownTransaction) {
                     $pdo->rollBack();
@@ -36,14 +40,16 @@ class SubscriptionService
             $quota = (int) $plan['quota'];
             $isUnlimited = (int) $plan['is_unlimited'];
 
-            $stmt = $pdo->prepare('SELECT id, is_unlimited, remain_quota, expire_at FROM user_subscriptions WHERE user_id = :user_id AND (expire_at IS NULL OR expire_at > NOW()) ORDER BY id DESC LIMIT 1');
+            $stmt = $pdo->prepare('SELECT id, is_unlimited, remain_quota, expire_at FROM user_subscriptions WHERE user_id = :user_id AND (expire_at IS NULL OR expire_at > NOW()) ORDER BY id DESC LIMIT 1 FOR UPDATE');
             $stmt->execute(['user_id' => $userId]);
             $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($existing) {
-                if ($duration > 0) {
+                if ($duration > 0 && $existing['expire_at'] !== null) {
                     $baseTime = max(strtotime($existing['expire_at']), time());
                     $expireAt = date('Y-m-d H:i:s', strtotime("+{$duration} days", $baseTime));
+                } elseif ($existing['expire_at'] === null) {
+                    $expireAt = null;
                 }
                 if ($isUnlimited) {
                     $remainQuota = 0;

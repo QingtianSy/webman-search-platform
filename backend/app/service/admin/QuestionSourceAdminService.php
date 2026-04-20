@@ -25,6 +25,9 @@ class QuestionSourceAdminService
 
     public function create(array $data): array
     {
+        if (QuestionSource::query()->where('code', $data['code'] ?? '')->exists()) {
+            throw new BusinessException('来源编码已存在', 40001);
+        }
         $row = new QuestionSource();
         $row->fill($data);
         $row->save();
@@ -36,6 +39,11 @@ class QuestionSourceAdminService
         $row = QuestionSource::query()->find($id);
         if (!$row) {
             throw new BusinessException('来源不存在', 40001);
+        }
+        if (!empty($data['code']) && $data['code'] !== $row->code) {
+            if (QuestionSource::query()->where('code', $data['code'])->where('id', '!=', $id)->exists()) {
+                throw new BusinessException('来源编码已存在', 40001);
+            }
         }
         unset($data['id']);
         $row->fill($data);

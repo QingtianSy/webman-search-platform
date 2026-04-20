@@ -82,11 +82,11 @@ class CollectTaskRepository
         }
     }
 
-    public function updateStatus(string $taskNo, int $status, string $errorMessage = ''): array
+    public function updateStatus(string $taskNo, int $status, string $errorMessage = ''): bool
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
-            return [];
+            return false;
         }
         try {
             $stmt = $pdo->prepare('UPDATE collect_tasks SET status = :status, error_message = :error_message, updated_at = NOW() WHERE task_no = :task_no');
@@ -95,14 +95,10 @@ class CollectTaskRepository
                 'status' => $status,
                 'error_message' => $errorMessage,
             ]);
-            return [
-                'task_no' => $taskNo,
-                'status' => $status,
-                'error_message' => $errorMessage,
-            ];
+            return $stmt->rowCount() > 0;
         } catch (\PDOException $e) {
             error_log("[CollectTaskRepository] updateStatus failed: " . $e->getMessage());
-            return [];
+            return false;
         }
     }
 
@@ -173,7 +169,12 @@ class CollectTaskRepository
             $task['status'] = 1;
             return $task;
         } catch (\Throwable $e) {
-            $pdo->rollBack();
+            try {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+            } catch (\Throwable) {
+            }
             error_log("[CollectTaskRepository] claimPending failed: " . $e->getMessage());
             return null;
         }

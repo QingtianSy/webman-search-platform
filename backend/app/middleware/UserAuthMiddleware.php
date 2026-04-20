@@ -26,13 +26,22 @@ class UserAuthMiddleware implements MiddlewareInterface
             return ApiResponse::error(40002, 'Token 无效');
         }
         $userId = (int) ($decoded['payload']['uid'] ?? 0);
-        $storedToken = (new TokenCacheRepository())->getUserToken($userId);
+        $tokenCache = new TokenCacheRepository();
+        $tokenStatus = $tokenCache->getUserTokenWithStatus($userId);
+        $storedToken = $tokenStatus['token'];
+        $redisConnected = $tokenStatus['connected'];
+
         if ($storedToken !== null && $storedToken !== $token) {
             return ApiResponse::error(40002, 'Token 已失效，请重新登录');
         }
 
+        // Redis connected but key missing: token was evicted/flushed — require re-login
+        if ($redisConnected && $storedToken === null) {
+            return ApiResponse::error(40002, 'Token 已失效，请重新登录');
+        }
+
         $rolesFromDb = null;
-        if ($storedToken === null) {
+        if (!$redisConnected) {
             error_log("[UserAuthMiddleware] Redis unavailable, falling back to DB verification for user {$userId}");
             $user = (new UserRepository())->findById($userId);
             if (!$user || (int) ($user['status'] ?? 0) !== 1) {
@@ -47,7 +56,6 @@ class UserAuthMiddleware implements MiddlewareInterface
             $rolesFromDb = !empty($roleIds)
                 ? (new RolePermissionRepository())->roleCodesByIds($roleIds)
                 : [];
-            (new TokenCacheRepository())->setUserToken($userId, $token);
         }
 
         $request->userId = $userId;

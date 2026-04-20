@@ -40,6 +40,9 @@ class PermissionAdminService
 
     public function create(array $data): array
     {
+        if (Permission::query()->where('code', $data['code'] ?? '')->exists()) {
+            throw new BusinessException('权限编码已存在', 40001);
+        }
         $row = new Permission();
         $row->fill($data);
         $row->save();
@@ -51,6 +54,11 @@ class PermissionAdminService
         $row = Permission::query()->find($id);
         if (!$row) {
             throw new BusinessException('权限不存在', 40001);
+        }
+        if (!empty($data['code']) && $data['code'] !== $row->code) {
+            if (Permission::query()->where('code', $data['code'])->where('id', '!=', $id)->exists()) {
+                throw new BusinessException('权限编码已存在', 40001);
+            }
         }
         unset($data['id']);
         $row->fill($data);

@@ -48,6 +48,9 @@ class RoleAdminService
 
     public function create(array $data): array
     {
+        if (Role::query()->where('code', $data['code'] ?? '')->exists()) {
+            throw new BusinessException('角色编码已存在', 40001);
+        }
         $row = new Role();
         $row->fill($data);
         $row->save();
@@ -63,6 +66,11 @@ class RoleAdminService
         $permissionIds = $data['permission_ids'] ?? null;
         unset($data['permission_ids'], $data['id']);
         return Db::transaction(function () use ($row, $id, $data, $permissionIds) {
+            if (!empty($data['code']) && $data['code'] !== $row->code) {
+                if (Role::query()->where('code', $data['code'])->where('id', '!=', $id)->exists()) {
+                    throw new BusinessException('角色编码已存在', 40001);
+                }
+            }
             $affectedUserIds = (new UserRoleRepository())->userIdsByRoleId($id);
             $row->fill($data);
             $row->save();
@@ -152,7 +160,9 @@ class RoleAdminService
         Db::table('users')->whereIn('id', $userIds)->update(['updated_at' => date('Y-m-d H:i:s')]);
         $tokenRepo = new TokenCacheRepository();
         foreach ($userIds as $uid) {
-            $tokenRepo->setUserToken($uid, 'REVOKED');
+            if (!$tokenRepo->setUserToken($uid, 'REVOKED')) {
+                $tokenRepo->deleteToken($uid);
+            }
         }
     }
 }

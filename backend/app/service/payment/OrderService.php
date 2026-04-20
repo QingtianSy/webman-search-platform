@@ -11,7 +11,7 @@ class OrderService
         return 'P' . date('YmdHis') . bin2hex(random_bytes(6));
     }
 
-    public function create(int $userId, int $type, string $amount, string $payType, ?int $planId = null): array
+    public function create(int $userId, int $type, string $amount, string $payType, ?int $planId = null, ?array $planSnapshot = null): array
     {
         $repo = new OrderRepository();
         for ($attempt = 0; $attempt < 3; $attempt++) {
@@ -21,6 +21,10 @@ class OrderService
                 'user_id' => $userId,
                 'type' => $type,
                 'plan_id' => $planId,
+                'plan_name' => $planSnapshot['name'] ?? null,
+                'plan_duration' => $planSnapshot['duration'] ?? null,
+                'plan_quota' => $planSnapshot['quota'] ?? null,
+                'plan_is_unlimited' => $planSnapshot['is_unlimited'] ?? null,
                 'amount' => $amount,
                 'pay_type' => $payType,
             ]);

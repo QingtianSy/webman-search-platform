@@ -2,6 +2,7 @@
 
 namespace app\controller\admin;
 
+use app\repository\redis\TokenCacheRepository;
 use app\service\auth\AuthService;
 use app\service\auth\JwtService;
 use support\ApiResponse;
@@ -27,6 +28,15 @@ class AuthController
             'username' => $user['username'],
             'roles' => $payload['roles'],
         ]);
+
+        $stored = (new TokenCacheRepository())->setUserToken((int) $user['id'], $token);
+        if (!$stored) {
+            $redisStatus = (new TokenCacheRepository())->getUserTokenWithStatus((int) $user['id']);
+            if ($redisStatus['connected']) {
+                return ApiResponse::error(500, '登录服务异常，请稍后重试');
+            }
+            error_log("[AdminAuthController] setUserToken failed for user {$user['id']}, Redis unavailable — token issued without cache");
+        }
 
         return ApiResponse::success([
             'token' => $token,

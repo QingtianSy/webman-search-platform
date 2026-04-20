@@ -50,13 +50,20 @@ class AdminAuthMiddleware implements MiddlewareInterface
             return ApiResponse::error(40002, 'Token 无效');
         }
         $userId = (int) ($decoded['payload']['uid'] ?? 0);
-        $storedToken = (new TokenCacheRepository())->getUserToken($userId);
+        $tokenCache = new TokenCacheRepository();
+        $tokenStatus = $tokenCache->getUserTokenWithStatus($userId);
+        $storedToken = $tokenStatus['token'];
+        $redisConnected = $tokenStatus['connected'];
+
         if ($storedToken !== null && $storedToken !== $token) {
             return ApiResponse::error(40002, 'Token 已失效，请重新登录');
         }
 
-        $rolesFromDb = null;
-        if ($storedToken === null) {
+        if ($redisConnected && $storedToken === null) {
+            return ApiResponse::error(40002, 'Token 已失效，请重新登录');
+        }
+
+        if (!$redisConnected) {
             error_log("[AdminAuthMiddleware] Redis unavailable, falling back to DB verification for user {$userId}");
             $user = (new UserRepository())->findById($userId);
             if (!$user || (int) ($user['status'] ?? 0) !== 1) {
@@ -67,18 +74,15 @@ class AdminAuthMiddleware implements MiddlewareInterface
             if ($updatedAt && $iat && $updatedAt > $iat) {
                 return ApiResponse::error(40002, 'Token 已失效，请重新登录');
             }
-            $roleIds = (new \app\repository\mysql\UserRoleRepository())->roleIdsByUserId($userId);
-            if (!empty($roleIds)) {
-                $rolesFromDb = (new RolePermissionRepository())->roleCodesByIds($roleIds);
-            } else {
-                $rolesFromDb = [];
-            }
-            (new TokenCacheRepository())->setUserToken($userId, $token);
         }
 
-        $roles = $rolesFromDb ?? ($decoded['payload']['roles'] ?? []);
+        $roleIds = (new \app\repository\mysql\UserRoleRepository())->roleIdsByUserId($userId);
+        $roles = !empty($roleIds)
+            ? (new RolePermissionRepository())->roleCodesByIds($roleIds)
+            : [];
+
         $adminRoles = ['admin', 'super_admin', 'operator'];
-        if (empty(array_intersect($roles, $adminRoles)) && ($decoded['payload']['default_portal'] ?? '') !== 'admin') {
+        if (empty(array_intersect($roles, $adminRoles))) {
             return ApiResponse::error(40003, '无权限');
         }
 
@@ -104,7 +108,7 @@ class AdminAuthMiddleware implements MiddlewareInterface
     {
         $sub = str_replace('/api/v1/admin', '', $path);
         foreach (self::ROUTE_PERMISSION_MAP as $prefix => $permission) {
-            if (str_starts_with($sub, $prefix)) {
+            if ($sub === $prefix || str_starts_with($sub, $prefix . '/')) {
                 return $permission;
             }
         }

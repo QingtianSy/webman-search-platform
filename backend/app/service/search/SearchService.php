@@ -87,11 +87,39 @@ class SearchService
 
         $consumeQuota = 0;
         if ($totalHitCount > 0 && $userId > 0 && $quotaService !== null) {
-            $consumeQuota = $quotaService->consume($userId, 1) ? 1 : 0;
+            if (!$quotaService->consume($userId, 1)) {
+                $this->writeSearchLog($logNo, $userId, $apiKeyId, $keyword, $totalHitCount, $searchSource, $hasApiHits, 0, $costMs, $questionIds, $apiHitCount);
+                throw new BusinessException('额度不足', 40006);
+            }
+            $consumeQuota = 1;
         }
 
-        $sourceType = $hitCount > 0 && $hasApiHits ? $searchSource . '+api' : ($hasApiHits ? 'api' : $searchSource);
+        $this->writeSearchLog($logNo, $userId, $apiKeyId, $keyword, $totalHitCount, $searchSource, $hasApiHits, $consumeQuota, $costMs, $questionIds, $apiHitCount);
 
+        $safeApiResults = array_map(fn($r) => [
+            'source_id' => $r['source_id'] ?? null,
+            'source_name' => $r['source_name'] ?? '',
+            'status' => $r['status'] ?? 'error',
+            'data' => $r['data'] ?? [],
+        ], $apiResults);
+
+        return [
+            'log_no' => $logNo,
+            'hit_count' => $totalHitCount,
+            'consume_quota' => $consumeQuota,
+            'list' => $list,
+            'api_results' => $safeApiResults,
+            'keyword' => $keyword,
+            'info' => $info,
+            'split' => $split,
+        ];
+    }
+
+    protected function writeSearchLog(string $logNo, int $userId, ?int $apiKeyId, string $keyword, int $totalHitCount, string $searchSource, bool $hasApiHits, int $consumeQuota, int $costMs, array $questionIds, int $apiHitCount): void
+    {
+        $sourceType = $totalHitCount > 0 && $hasApiHits
+            ? ($totalHitCount - $apiHitCount > 0 ? $searchSource . '+api' : 'api')
+            : $searchSource;
         $logData = [
             'log_no' => $logNo,
             'user_id' => $userId ?: null,
@@ -120,16 +148,5 @@ class SearchService
                 error_log("[SearchService] deferred log write failed: " . $e->getMessage());
             }
         }, [], false);
-
-        return [
-            'log_no' => $logNo,
-            'hit_count' => $totalHitCount,
-            'consume_quota' => $consumeQuota,
-            'list' => $list,
-            'api_results' => $apiResults,
-            'keyword' => $keyword,
-            'info' => $info,
-            'split' => $split,
-        ];
     }
 }

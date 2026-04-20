@@ -11,10 +11,15 @@ class PaymentCallbackController
 {
     public function notify(Request $request)
     {
-        $params = $request->get();
-        $service = new CallbackService();
-        $ok = $service->handleNotify($params);
-        return new Response(200, [], $ok ? 'success' : 'fail');
+        try {
+            $params = $request->all();
+            $service = new CallbackService();
+            $ok = $service->handleNotify($params);
+            return new Response(200, [], $ok ? 'success' : 'fail');
+        } catch (\Throwable $e) {
+            error_log("[PaymentCallbackController] notify exception: " . $e->getMessage());
+            return new Response(200, [], 'fail');
+        }
     }
 
     public function returnUrl(Request $request)

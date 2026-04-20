@@ -62,7 +62,16 @@ class CallbackService
             if ($type === 1) {
                 $fulfilled = (new WalletService())->recharge((int) $order['user_id'], $order['amount'], $orderNo);
             } elseif ($type === 2) {
-                $fulfilled = (new SubscriptionService())->activate((int) $order['user_id'], (int) $order['plan_id'], $orderNo);
+                $planSnapshot = null;
+                if (!empty($order['plan_name'])) {
+                    $planSnapshot = [
+                        'name' => $order['plan_name'],
+                        'duration' => (int) ($order['plan_duration'] ?? 0),
+                        'quota' => (int) ($order['plan_quota'] ?? 0),
+                        'is_unlimited' => (int) ($order['plan_is_unlimited'] ?? 0),
+                    ];
+                }
+                $fulfilled = (new SubscriptionService())->activate((int) $order['user_id'], (int) $order['plan_id'], $orderNo, $planSnapshot);
             }
 
             if (!$fulfilled) {

@@ -25,6 +25,24 @@ class TokenCacheRepository
         }
     }
 
+    /**
+     * @return array{connected: bool, token: ?string}
+     */
+    public function getUserTokenWithStatus(int $userId): array
+    {
+        $redis = RedisClient::connection();
+        if (!$redis) {
+            return ['connected' => false, 'token' => null];
+        }
+        try {
+            $val = $redis->get(RedisClient::key(self::PREFIX, $userId));
+            return ['connected' => true, 'token' => $val === false ? null : (string) $val];
+        } catch (\Throwable $e) {
+            error_log("[TokenCacheRepository] getUserToken failed: " . $e->getMessage());
+            return ['connected' => false, 'token' => null];
+        }
+    }
+
     public function getUserToken(int $userId): ?string
     {
         $redis = RedisClient::connection();

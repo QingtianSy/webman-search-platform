@@ -35,7 +35,7 @@ class ApiKeyService
         if (!empty($record['api_secret_hash'])) {
             return password_verify($apiSecret, $record['api_secret_hash']) ? $record : null;
         }
-        return (($record['api_secret'] ?? '') === $apiSecret) ? $record : null;
+        return hash_equals(($record['api_secret'] ?? ''), $apiSecret) ? $record : null;
     }
 
     public function listByUserId(int $userId): array

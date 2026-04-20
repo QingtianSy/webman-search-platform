@@ -25,6 +25,9 @@ class PlanAdminService
 
     public function create(array $data): array
     {
+        if (Plan::query()->where('code', $data['code'] ?? '')->exists()) {
+            throw new BusinessException('套餐编码已存在', 40001);
+        }
         if (isset($data['features']) && is_array($data['features'])) {
             $data['features'] = json_encode($data['features'], JSON_UNESCAPED_UNICODE);
         }
@@ -39,6 +42,11 @@ class PlanAdminService
         $row = Plan::query()->find($id);
         if (!$row) {
             throw new BusinessException('套餐不存在', 40001);
+        }
+        if (!empty($data['code']) && $data['code'] !== $row->code) {
+            if (Plan::query()->where('code', $data['code'])->where('id', '!=', $id)->exists()) {
+                throw new BusinessException('套餐编码已存在', 40001);
+            }
         }
         if (isset($data['features']) && is_array($data['features'])) {
             $data['features'] = json_encode($data['features'], JSON_UNESCAPED_UNICODE);

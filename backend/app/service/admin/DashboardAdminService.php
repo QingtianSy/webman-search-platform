@@ -2,6 +2,7 @@
 
 namespace app\service\admin;
 
+use app\repository\mongo\QuestionRepository;
 use support\adapter\MySqlClient;
 use support\adapter\RedisClient;
 
@@ -30,10 +31,10 @@ SELECT
   (SELECT COUNT(*) FROM search_logs) AS total_searches,
   (SELECT COUNT(*) FROM search_logs WHERE created_at >= CURDATE()) AS today_searches,
   (SELECT COALESCE(SUM(amount),0) FROM `order` WHERE status=1) AS total_order_amount,
-  (SELECT COALESCE(SUM(amount),0) FROM `order` WHERE status=1 AND paid_at >= CURDATE()) AS today_order_amount,
-  (SELECT COUNT(*) FROM questions) AS total_questions
+  (SELECT COALESCE(SUM(amount),0) FROM `order` WHERE status=1 AND paid_at >= CURDATE()) AS today_order_amount
 SQL;
             $row = $pdo->query($sql)->fetch(\PDO::FETCH_ASSOC);
+            $totalQuestions = (new QuestionRepository())->countByFilters([]);
             $stats = [
                 'total_users' => (int) ($row['total_users'] ?? 0),
                 'today_users' => (int) ($row['today_users'] ?? 0),
@@ -41,7 +42,7 @@ SQL;
                 'today_searches' => (int) ($row['today_searches'] ?? 0),
                 'total_order_amount' => number_format((float) ($row['total_order_amount'] ?? 0), 2, '.', ''),
                 'today_order_amount' => number_format((float) ($row['today_order_amount'] ?? 0), 2, '.', ''),
-                'total_questions' => (int) ($row['total_questions'] ?? 0),
+                'total_questions' => $totalQuestions,
             ];
             $this->toCache($stats);
             return $stats;
@@ -58,7 +59,7 @@ SQL;
             return null;
         }
         try {
-            $val = $redis->get(RedisClient::key(self::CACHE_KEY));
+            $val = $redis->get(RedisClient::key(self::CACHE_KEY, 'v1'));
             if ($val === false) {
                 return null;
             }
@@ -76,7 +77,7 @@ SQL;
             return;
         }
         try {
-            $redis->setex(RedisClient::key(self::CACHE_KEY), self::CACHE_TTL, json_encode($stats));
+            $redis->setex(RedisClient::key(self::CACHE_KEY, 'v1'), self::CACHE_TTL, json_encode($stats));
         } catch (\Throwable) {
         }
     }

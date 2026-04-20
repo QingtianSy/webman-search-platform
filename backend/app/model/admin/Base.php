@@ -13,4 +13,5 @@ use support\Model;
  */
 class Base extends Model
 {
+    protected $guarded = [];
 }

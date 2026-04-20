@@ -26,6 +26,17 @@ class EpayClient
         $this->merchantPrivateKey = $cfg['epay_merchant_private_key'] ?? '';
     }
 
+    public function isConfigured(): bool
+    {
+        if ($this->apiurl === '/' || $this->pid === '' || $this->key === '') {
+            return false;
+        }
+        if ($this->signType === 'RSA' && ($this->merchantPrivateKey === '' || $this->platformPublicKey === '')) {
+            return false;
+        }
+        return true;
+    }
+
     private static function loadConfig(): array
     {
         if (self::$configCache !== null) {
@@ -84,7 +95,7 @@ class EpayClient
         }
 
         $sign = $arr['sign'];
-        return $sign === $this->md5Sign($this->getSignContent($arr));
+        return hash_equals($this->md5Sign($this->getSignContent($arr)), $sign);
     }
 
     public function queryOrder(string $tradeNo): array

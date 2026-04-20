@@ -37,7 +37,14 @@ class AuthController
             'default_portal' => $payload['default_portal'] ?? 'user',
         ]);
 
-        (new TokenCacheRepository())->setUserToken((int) $user['id'], $token);
+        $stored = (new TokenCacheRepository())->setUserToken((int) $user['id'], $token);
+        if (!$stored) {
+            $redisStatus = (new TokenCacheRepository())->getUserTokenWithStatus((int) $user['id']);
+            if ($redisStatus['connected']) {
+                return ApiResponse::error(500, '登录服务异常，请稍后重试');
+            }
+            error_log("[AuthController] login setUserToken failed for user {$user['id']}, Redis unavailable — token issued without cache");
+        }
 
         return ApiResponse::success([
             'token' => $token,
@@ -97,7 +104,14 @@ class AuthController
             'default_portal' => $payload['default_portal'] ?? 'user',
         ]);
 
-        (new TokenCacheRepository())->setUserToken((int) $user['id'], $token);
+        $stored = (new TokenCacheRepository())->setUserToken((int) $user['id'], $token);
+        if (!$stored) {
+            $redisStatus = (new TokenCacheRepository())->getUserTokenWithStatus((int) $user['id']);
+            if ($redisStatus['connected']) {
+                return ApiResponse::error(500, '注册服务异常，请稍后重��');
+            }
+            error_log("[AuthController] register setUserToken failed for user {$user['id']}, Redis unavailable — token issued without cache");
+        }
 
         return ApiResponse::success([
             'token' => $token,

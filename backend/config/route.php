@@ -92,7 +92,7 @@ Route::group('/api/v1/user', function () {
     Route::get('/log/payment', [LogController::class, 'payment']);
     Route::get('/log/login', [LogController::class, 'login']);
     Route::get('/log/operate', [LogController::class, 'operate']);
-    Route::post('/search/query', [UserSearchController::class, 'query']);
+    Route::post('/search/query', [UserSearchController::class, 'query'])->middleware([new RateLimitMiddleware(30, 60, 'user')]);
     Route::get('/search/logs', [UserSearchController::class, 'logs']);
     Route::get('/api-source/list', [UserApiSourceController::class, 'index']);
     Route::get('/api-source/detail', [UserApiSourceController::class, 'detail']);
@@ -206,5 +206,5 @@ Route::group('/open/v1', function () {
 Route::get('/open/v1/health', [OpenHealthController::class, 'index']);
 
 // 支付回调（无需认证）
-Route::get('/callback/epay/notify', [PaymentCallbackController::class, 'notify']);
+Route::any('/callback/epay/notify', [PaymentCallbackController::class, 'notify']);
 Route::get('/callback/epay/return', [PaymentCallbackController::class, 'returnUrl']);

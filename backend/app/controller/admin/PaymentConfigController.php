@@ -2,6 +2,7 @@
 
 namespace app\controller\admin;
 
+use app\repository\mysql\SystemConfigRepository;
 use app\service\admin\SystemConfigAdminService;
 use support\adapter\EpayClient;
 use support\ApiResponse;
@@ -40,6 +41,15 @@ class PaymentConfigController
         if (!in_array($key, self::ALLOWED_KEYS, true)) {
             return ApiResponse::error(40001, '不允许修改该配置');
         }
+
+        if ($key === 'epay_sign_type' && strtoupper($value) === 'RSA') {
+            $rows = (new SystemConfigRepository())->getByGroup('payment');
+            $cfgMap = array_column($rows, 'config_value', 'config_key');
+            if (empty($cfgMap['epay_merchant_private_key']) || empty($cfgMap['epay_platform_public_key'])) {
+                return ApiResponse::error(40001, '切换到 RSA 签名前，请先配置商户私钥和平台公钥');
+            }
+        }
+
         $result = (new SystemConfigAdminService())->update($key, $value);
         EpayClient::clearConfigCache();
         return ApiResponse::success($result, '支付配置更新成功');

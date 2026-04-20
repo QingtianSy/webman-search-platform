@@ -13,8 +13,8 @@ class QuestionAdminService
     public function getList(array $query = []): array
     {
         $query += ['keyword' => '', 'page' => 1, 'page_size' => 20];
-        $page = (int) $query['page'];
-        $pageSize = (int) $query['page_size'];
+        $page = max(1, (int) $query['page']);
+        $pageSize = min(200, max(1, (int) $query['page_size']));
 
         $filters = [
             'stem' => (string) ($query['keyword'] ?? ''),
@@ -64,6 +64,15 @@ class QuestionAdminService
 
     public function update(string $id, array $data): array
     {
+        if (isset($data['stem']) || isset($data['options_text']) || isset($data['answer_text'])) {
+            $existing = (new QuestionRepository())->findByQuestionId($id);
+            $stem = $data['stem'] ?? ($existing['stem'] ?? '');
+            $options = $data['options_text'] ?? ($existing['options_text'] ?? '');
+            $answer = $data['answer_text'] ?? ($existing['answer_text'] ?? '');
+            $data['stem_plain'] = $stem;
+            $data['md5'] = md5($stem . $options . $answer);
+        }
+        $data['updated_at'] = date('Y-m-d H:i:s');
         $result = (new QuestionRepository())->update($id, $data);
         if (empty($result)) {
             throw new BusinessException('题目不存在', 40001);

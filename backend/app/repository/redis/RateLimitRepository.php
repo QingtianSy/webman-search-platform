@@ -15,10 +15,8 @@ class RateLimitRepository
         }
         try {
             $fullKey = 'ratelimit:' . $key;
-            $count = $redis->incr($fullKey);
-            if ($count === 1) {
-                $redis->expire($fullKey, $ttl);
-            }
+            $lua = "local c = redis.call('INCR',KEYS[1]) if c == 1 then redis.call('EXPIRE',KEYS[1],ARGV[1]) end return c";
+            $count = $redis->eval($lua, [$fullKey, $ttl], 1);
             return (int) $count;
         } catch (\Throwable $e) {
             error_log("[RateLimitRepository] hit failed: " . $e->getMessage());

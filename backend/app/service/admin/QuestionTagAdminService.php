@@ -25,6 +25,9 @@ class QuestionTagAdminService
 
     public function create(array $data): array
     {
+        if (QuestionTag::query()->where('name', $data['name'] ?? '')->exists()) {
+            throw new BusinessException('标签名称已存在', 40001);
+        }
         $row = new QuestionTag();
         $row->fill($data);
         $row->save();
@@ -36,6 +39,11 @@ class QuestionTagAdminService
         $row = QuestionTag::query()->find($id);
         if (!$row) {
             throw new BusinessException('标签不存在', 40001);
+        }
+        if (!empty($data['name']) && $data['name'] !== $row->name) {
+            if (QuestionTag::query()->where('name', $data['name'])->where('id', '!=', $id)->exists()) {
+                throw new BusinessException('标签名称已存在', 40001);
+            }
         }
         unset($data['id']);
         $row->fill($data);

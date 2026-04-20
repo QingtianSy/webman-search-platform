@@ -25,6 +25,9 @@ class QuestionTypeAdminService
 
     public function create(array $data): array
     {
+        if (QuestionType::query()->where('code', $data['code'] ?? '')->exists()) {
+            throw new BusinessException('题型编码已存在', 40001);
+        }
         $row = new QuestionType();
         $row->fill($data);
         $row->save();
@@ -36,6 +39,11 @@ class QuestionTypeAdminService
         $row = QuestionType::query()->find($id);
         if (!$row) {
             throw new BusinessException('题型不存在', 40001);
+        }
+        if (!empty($data['code']) && $data['code'] !== $row->code) {
+            if (QuestionType::query()->where('code', $data['code'])->where('id', '!=', $id)->exists()) {
+                throw new BusinessException('题型编码已存在', 40001);
+            }
         }
         unset($data['id']);
         $row->fill($data);

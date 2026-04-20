@@ -54,6 +54,10 @@ class UserAdminService
 
     public function create(array $data): array
     {
+        $existing = User::query()->where('username', $data['username'])->exists();
+        if ($existing) {
+            throw new BusinessException('用户名已存在', 40001);
+        }
         $row = new User();
         $row->username = $data['username'];
         $row->password_hash = password_hash($data['password'], PASSWORD_DEFAULT);
@@ -62,7 +66,7 @@ class UserAdminService
         $row->email = $data['email'] ?? '';
         $row->status = $data['status'] ?? 1;
         $row->save();
-        return ['success' => true, 'action' => 'create', 'id' => $row->id, 'data' => $row->toArray()];
+        return ['success' => true, 'action' => 'create', 'id' => $row->id, 'data' => $row->makeHidden(['password', 'password_hash'])->toArray()];
     }
 
     public function update(int $id, array $data): array
@@ -73,7 +77,10 @@ class UserAdminService
         }
 
         return Db::transaction(function () use ($row, $id, $data) {
-            if (!empty($data['username'])) {
+            if (!empty($data['username']) && $data['username'] !== $row->username) {
+                if (User::query()->where('username', $data['username'])->where('id', '!=', $id)->exists()) {
+                    throw new BusinessException('用户名已存在', 40001);
+                }
                 $row->username = $data['username'];
             }
             if (!empty($data['password'])) {
@@ -98,10 +105,12 @@ class UserAdminService
             }
 
             if (!empty($data['password']) || (isset($data['status']) && (int) $data['status'] === 0) || isset($data['role_ids'])) {
-                (new TokenCacheRepository())->setUserToken($id, 'REVOKED');
+                if (!(new TokenCacheRepository())->setUserToken($id, 'REVOKED')) {
+                    $row->touch();
+                }
             }
 
-            return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->toArray()];
+            return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->makeHidden(['password', 'password_hash'])->toArray()];
         });
     }
 
@@ -111,7 +120,11 @@ class UserAdminService
         if (!$row) {
             throw new BusinessException('用户不存在', 40001);
         }
-        (new TokenCacheRepository())->setUserToken($id, 'REVOKED');
+        $tokenRepo = new TokenCacheRepository();
+        if (!$tokenRepo->setUserToken($id, 'REVOKED')) {
+            $tokenRepo->deleteToken($id);
+        }
+        Db::table('users')->where('id', $id)->update(['updated_at' => date('Y-m-d H:i:s')]);
         $row->delete();
         Db::table('user_role')->where('user_id', $id)->delete();
         Db::table('user_api_keys')->where('user_id', $id)->delete();
@@ -128,7 +141,9 @@ class UserAdminService
         $row->save();
 
         if ((int) $row->status === 0) {
-            (new TokenCacheRepository())->setUserToken($id, 'REVOKED');
+            if (!(new TokenCacheRepository())->setUserToken($id, 'REVOKED')) {
+                $row->touch();
+            }
             Db::table('user_api_keys')->where('user_id', $id)->update(['status' => 0]);
         }
 
@@ -143,7 +158,10 @@ class UserAdminService
         }
         $this->syncRoles($userId, $roleIds);
         $user->touch();
-        (new TokenCacheRepository())->setUserToken($userId, 'REVOKED');
+        $tokenRepo = new TokenCacheRepository();
+        if (!$tokenRepo->setUserToken($userId, 'REVOKED')) {
+            $tokenRepo->deleteToken($userId);
+        }
         return ['success' => true, 'action' => 'assign_roles', 'user_id' => $userId, 'role_ids' => $roleIds];
     }
 

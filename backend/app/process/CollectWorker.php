@@ -228,15 +228,29 @@ class CollectWorker
         }
         $output = [];
         @exec("kill -0 {$pid} 2>/dev/null; echo \$?", $output);
-        return isset($output[0]) && trim($output[0]) === '0';
+        if (!isset($output[0]) || trim($output[0]) !== '0') {
+            return false;
+        }
+        $cmdline = [];
+        @exec("ps -p {$pid} -o args= 2>/dev/null", $cmdline);
+        $cmd = trim($cmdline[0] ?? '');
+        return $cmd !== '' && (str_contains($cmd, 'run.py') || str_contains($cmd, 'collect'));
     }
 
     protected function killProcess(int $pid): void
     {
-        if ($pid > 0) {
-            $output = [];
-            @exec("kill {$pid} 2>/dev/null", $output);
+        if ($pid <= 0) {
+            return;
         }
+        $cmdline = [];
+        @exec("ps -p {$pid} -o args= 2>/dev/null", $cmdline);
+        $cmd = trim($cmdline[0] ?? '');
+        if ($cmd === '' || (!str_contains($cmd, 'run.py') && !str_contains($cmd, 'collect'))) {
+            error_log("[CollectWorker] skip kill pid={$pid}, not a collect process: {$cmd}");
+            return;
+        }
+        @exec("pkill -P {$pid} 2>/dev/null");
+        @exec("kill {$pid} 2>/dev/null");
     }
 
     protected function tryRecoverPid(string $taskNo): int

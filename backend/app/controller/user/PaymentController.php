@@ -6,6 +6,7 @@ use app\repository\mysql\OperateLogRepository;
 use app\repository\mysql\SystemConfigRepository;
 use app\service\payment\OrderService;
 use app\service\payment\PaymentService;
+use support\adapter\EpayClient;
 use support\ApiResponse;
 use support\Request;
 use PDO;
@@ -29,6 +30,7 @@ class PaymentController
             return ApiResponse::error(40001, '不支持的支付方式');
         }
 
+        $planSnapshot = null;
         if ($type === 2) {
             $planId = (int) $request->input('plan_id', 0);
             if ($planId <= 0) {
@@ -38,13 +40,19 @@ class PaymentController
             if (!$pdo) {
                 return ApiResponse::error(500, '服务异常');
             }
-            $stmt = $pdo->prepare('SELECT id, price, status FROM plans WHERE id = :id LIMIT 1');
+            $stmt = $pdo->prepare('SELECT id, name, price, duration, quota, is_unlimited, status FROM plans WHERE id = :id LIMIT 1');
             $stmt->execute(['id' => $planId]);
             $plan = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$plan || (int) $plan['status'] !== 1) {
                 return ApiResponse::error(40001, '套餐不存在或已下架');
             }
             $amount = $plan['price'];
+            $planSnapshot = [
+                'name' => $plan['name'],
+                'duration' => (int) $plan['duration'],
+                'quota' => (int) $plan['quota'],
+                'is_unlimited' => (int) $plan['is_unlimited'],
+            ];
         } else {
             $amount = $request->input('amount', '0');
             $paymentConfigs = (new SystemConfigRepository())->getByGroup('payment');
@@ -61,13 +69,28 @@ class PaymentController
             return ApiResponse::error(500, '支付服务未配置，请联系管理员');
         }
 
+        if (!(new EpayClient())->isConfigured()) {
+            return ApiResponse::error(500, '支付网关未配置，请联系管理员');
+        }
+
         $orderService = new OrderService();
-        $order = $orderService->create($userId, $type, $amount, $payType, $planId);
+        $order = $orderService->create($userId, $type, $amount, $payType, $planId, $planSnapshot);
         if (empty($order)) {
             return ApiResponse::error(500, '创建订单失败');
         }
 
-        $payUrl = (new PaymentService())->createPayUrl($order);
+        try {
+            $payUrl = (new PaymentService())->createPayUrl($order);
+        } catch (\Throwable $e) {
+            error_log("[PaymentController] createPayUrl failed, cancelling order {$order['order_no']}: " . $e->getMessage());
+            $pdo = MySqlClient::pdo();
+            if ($pdo) {
+                $stmt = $pdo->prepare("UPDATE `order` SET status = 2 WHERE order_no = :no AND status = 0");
+                $stmt->execute(['no' => $order['order_no']]);
+            }
+            return ApiResponse::error(500, '支付链路异常，请联系管理员');
+        }
+
         (new OperateLogRepository())->create(['user_id' => $userId, 'module' => 'payment', 'action' => 'create', 'content' => "创建订单: {$order['order_no']}, 金额: {$amount}", 'ip' => $request->getRealIp()]);
         return ApiResponse::success([
             'order_no' => $order['order_no'],

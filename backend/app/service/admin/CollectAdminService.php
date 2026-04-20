@@ -38,10 +38,20 @@ class CollectAdminService
         if (!empty($task['runner_script'])) {
             $pid = (int) $task['runner_script'];
             if ($pid > 0) {
-                @exec("kill {$pid} 2>/dev/null");
+                $cmdline = [];
+                @exec("ps -p {$pid} -o args= 2>/dev/null", $cmdline);
+                $cmd = trim($cmdline[0] ?? '');
+                if ($cmd !== '' && (str_contains($cmd, 'run.py') || str_contains($cmd, 'collect'))) {
+                    @exec("pkill -P {$pid} 2>/dev/null");
+                    @exec("kill {$pid} 2>/dev/null");
+                } else {
+                    error_log("[CollectAdminService] skip kill pid={$pid}, not a collect process: {$cmd}");
+                }
             }
         }
-        $repo->updateStatus($taskNo, 4, '手动停止');
+        if (!$repo->updateStatus($taskNo, 4, '手动停止')) {
+            throw new BusinessException('停止任务失败，状态未更新', 50001);
+        }
         return [
             'success' => true,
             'action' => 'stop',
@@ -60,7 +70,9 @@ class CollectAdminService
         if (!in_array($status, [3, 4], true)) {
             throw new BusinessException('当前任务状态不可重试', 40001);
         }
-        $repo->updateStatus($taskNo, 0, '');
+        if (!$repo->updateStatus($taskNo, 0, '')) {
+            throw new BusinessException('重试任务失败，状态未更新', 50001);
+        }
         $repo->clearRunnerScript($taskNo);
         return [
             'success' => true,

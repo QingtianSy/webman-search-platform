@@ -85,11 +85,12 @@ class QuotaService
             if ((int) $row['is_unlimited'] === 1) {
                 return true;
             }
-            $stmt = $pdo->prepare('UPDATE user_subscriptions SET remain_quota = remain_quota + :amount, used_quota = GREATEST(used_quota - :amount2, 0), updated_at = NOW() WHERE user_id = :user_id AND (expire_at IS NULL OR expire_at > NOW()) AND is_unlimited = 0 ORDER BY id DESC LIMIT 1');
+            $stmt = $pdo->prepare('UPDATE user_subscriptions SET remain_quota = remain_quota + :amount, used_quota = GREATEST(used_quota - :amount2, 0), updated_at = NOW() WHERE user_id = :user_id AND (expire_at IS NULL OR expire_at > NOW()) AND is_unlimited = 0 AND used_quota >= :min_used ORDER BY id DESC LIMIT 1');
             $ok = $stmt->execute([
                 'amount' => $amount,
                 'amount2' => $amount,
                 'user_id' => $userId,
+                'min_used' => $amount,
             ]);
             $cache->deleteUserQuota($userId);
             return $ok && $stmt->rowCount() > 0;
