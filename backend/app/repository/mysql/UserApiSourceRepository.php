@@ -9,6 +9,7 @@ use support\adapter\MySqlClient;
 class UserApiSourceRepository
 {
     private const COLUMNS = 'id, user_id, name, method, url, keyword_param, keyword_position, type_param, type_position, option_delimiter, option_format, headers, extra_config, data_path, success_code_field, success_code_value, timeout, sort_order, status, remark, created_at, updated_at';
+    private const LIST_COLUMNS = 'id, user_id, name, method, url, keyword_param, keyword_position, type_param, type_position, option_delimiter, option_format, data_path, success_code_field, success_code_value, timeout, sort_order, status, remark, created_at, updated_at';
 
     public function findByUserId(int $userId, array $query = []): array
     {
@@ -25,7 +26,7 @@ class UserApiSourceRepository
             $countStmt->execute(['user_id' => $userId]);
             $total = (int) $countStmt->fetchColumn();
 
-            $stmt = $pdo->prepare('SELECT ' . self::COLUMNS . ' FROM user_api_sources WHERE user_id = :user_id ORDER BY sort_order ASC, id DESC LIMIT :offset, :limit');
+            $stmt = $pdo->prepare('SELECT ' . self::LIST_COLUMNS . ' FROM user_api_sources WHERE user_id = :user_id ORDER BY sort_order ASC, id DESC LIMIT :offset, :limit');
             $stmt->bindValue('user_id', $userId, PDO::PARAM_INT);
             $stmt->bindValue('offset', $offset, PDO::PARAM_INT);
             $stmt->bindValue('limit', $pageSize, PDO::PARAM_INT);

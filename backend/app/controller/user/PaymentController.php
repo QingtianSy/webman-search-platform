@@ -51,7 +51,7 @@ class PaymentController
             $cfgMap = array_column($paymentConfigs, 'config_value', 'config_key');
             $minAmount = $cfgMap['payment_min_amount'] ?? '0.01';
             $maxAmount = $cfgMap['payment_max_amount'] ?? '10000';
-            if (!is_numeric($amount) || bccomp($amount, $minAmount, 2) < 0 || bccomp($amount, $maxAmount, 2) > 0) {
+            if (!preg_match('/^\d+(\.\d{1,2})?$/', $amount) || bccomp($amount, $minAmount, 2) < 0 || bccomp($amount, $maxAmount, 2) > 0) {
                 return ApiResponse::error(40001, "充值金额须在 {$minAmount} ~ {$maxAmount} 之间");
             }
         }

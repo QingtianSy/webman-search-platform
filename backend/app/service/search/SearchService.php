@@ -21,9 +21,10 @@ class SearchService
         $startMs = (int) (microtime(true) * 1000);
         $logNo = 'SL' . date('YmdHis') . mt_rand(1000, 9999);
 
+        $quotaService = null;
         if ($userId > 0) {
             $quotaService = new QuotaService();
-            if (!$quotaService->consume($userId, 1)) {
+            if ($quotaService->getUserQuota($userId) <= 0) {
                 throw new BusinessException('额度不足', 40006);
             }
         }
@@ -65,7 +66,6 @@ class SearchService
         unset($item);
         $hitCount = count($list);
         $costMs = (int) (microtime(true) * 1000) - $startMs;
-        $consumeQuota = ($hitCount > 0 && $userId > 0) ? 1 : 0;
 
         $apiResults = [];
         if ($apiResultsFn !== null) {
@@ -85,13 +85,9 @@ class SearchService
         $hasApiHits = $apiHitCount > 0;
         $totalHitCount = $hitCount + $apiHitCount;
 
-        if ($hitCount === 0 && $userId > 0 && isset($quotaService)) {
-            if ($hasApiHits) {
-                $consumeQuota = 1;
-            } elseif (!$quotaService->refund($userId, 1)) {
-                error_log("[SearchService] WARN: refund failed for user={$userId} log_no={$logNo}, quota may be incorrectly deducted");
-                $consumeQuota = 1;
-            }
+        $consumeQuota = 0;
+        if ($totalHitCount > 0 && $userId > 0 && $quotaService !== null) {
+            $consumeQuota = $quotaService->consume($userId, 1) ? 1 : 0;
         }
 
         $sourceType = $hitCount > 0 && $hasApiHits ? $searchSource . '+api' : ($hasApiHits ? 'api' : $searchSource);

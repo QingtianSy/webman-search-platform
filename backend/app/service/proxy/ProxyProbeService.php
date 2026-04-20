@@ -16,7 +16,7 @@ class ProxyProbeService
         $client = new Client([
             'proxy' => $proxyUrl,
             'timeout' => 10,
-            'verify' => false,
+            'verify' => true,
         ]);
 
         $start = microtime(true);
@@ -86,9 +86,9 @@ class ProxyProbeService
                         'handler' => $handler,
                         'proxy' => $proxyUrl,
                         'timeout' => 10,
-                        'verify' => false,
+                        'verify' => true,
                     ]);
-                    return $client->getAsync('http://ip-api.com/json/?lang=zh-CN', [
+                    return $client->getAsync('https://ip-api.com/json/?lang=zh-CN', [
                         'on_stats' => function (TransferStats $stats) use (&$latencies, $id) {
                             $latencies[$id] = (int) round($stats->getTransferTime() * 1000);
                         },
@@ -133,9 +133,9 @@ class ProxyProbeService
                             'handler' => $handler2,
                             'proxy' => $proxyUrl,
                             'timeout' => 10,
-                            'verify' => false,
+                            'verify' => true,
                         ]);
-                        return $client->getAsync('http://httpbin.org/ip', [
+                        return $client->getAsync('https://httpbin.org/ip', [
                             'on_stats' => function (TransferStats $stats) use (&$latencies2, $id) {
                                 $latencies2[$id] = (int) round($stats->getTransferTime() * 1000);
                             },
@@ -180,7 +180,7 @@ class ProxyProbeService
     protected function probeIpApi(Client $client): array
     {
         try {
-            $resp = $client->get('http://ip-api.com/json/?lang=zh-CN');
+            $resp = $client->get('https://ip-api.com/json/?lang=zh-CN');
             $data = json_decode((string) $resp->getBody(), true);
             if (($data['status'] ?? '') === 'success') {
                 return $data;
@@ -194,7 +194,7 @@ class ProxyProbeService
     protected function probeHttpbin(Client $client): string
     {
         try {
-            $resp = $client->get('http://httpbin.org/ip');
+            $resp = $client->get('https://httpbin.org/ip');
             $data = json_decode((string) $resp->getBody(), true);
             return $data['origin'] ?? '';
         } catch (\Throwable $e) {

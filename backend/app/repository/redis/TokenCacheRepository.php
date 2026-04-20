@@ -15,13 +15,13 @@ class TokenCacheRepository
         }
         $redis = RedisClient::connection();
         if (!$redis) {
-            return true;
+            return false;
         }
         try {
             return $redis->setex(RedisClient::key(self::PREFIX, $userId), $ttl, $token);
         } catch (\Throwable $e) {
             error_log("[TokenCacheRepository] setUserToken failed: " . $e->getMessage());
-            return true;
+            return false;
         }
     }
 

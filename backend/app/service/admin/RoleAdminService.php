@@ -149,6 +149,7 @@ class RoleAdminService
         if (empty($userIds)) {
             return;
         }
+        Db::table('users')->whereIn('id', $userIds)->update(['updated_at' => date('Y-m-d H:i:s')]);
         $tokenRepo = new TokenCacheRepository();
         foreach ($userIds as $uid) {
             $tokenRepo->setUserToken($uid, 'REVOKED');

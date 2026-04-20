@@ -87,7 +87,7 @@ class CollectService
             }
         }
 
-        (new CollectTaskRepository())->create([
+        $result = (new CollectTaskRepository())->create([
             'task_no' => $taskNo,
             'user_id' => $userId,
             'account_id' => 0,
@@ -101,6 +101,9 @@ class CollectService
             'city' => $city,
             'proxy_url' => $proxyUrl,
         ]);
+        if (empty($result)) {
+            throw new BusinessException('任务创建失败，请稍后重试', 500);
+        }
 
         return ['task_no' => $taskNo];
     }

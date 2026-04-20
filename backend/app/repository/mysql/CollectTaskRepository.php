@@ -126,25 +126,30 @@ class CollectTaskRepository
         if (!$pdo) {
             return [];
         }
-        $stmt = $pdo->prepare(
-            'INSERT INTO collect_tasks (task_no, user_id, account_id, account_phone, account_password, school_name, province, city, proxy_url, collect_type, course_ids, course_count, status, created_at, updated_at) '
-            . 'VALUES (:task_no, :user_id, :account_id, :account_phone, :account_password, :school_name, :province, :city, :proxy_url, :collect_type, :course_ids, :course_count, 0, NOW(), NOW())'
-        );
-        $stmt->execute([
-            'task_no' => $data['task_no'],
-            'user_id' => $data['user_id'],
-            'account_id' => $data['account_id'] ?? 0,
-            'account_phone' => $data['account_phone'] ?? '',
-            'account_password' => $data['account_password'] ?? '',
-            'school_name' => $data['school_name'] ?? null,
-            'province' => $data['province'] ?? null,
-            'city' => $data['city'] ?? null,
-            'proxy_url' => $data['proxy_url'] ?? null,
-            'collect_type' => $data['collect_type'] ?? 'courses',
-            'course_ids' => $data['course_ids'] ?? '',
-            'course_count' => $data['course_count'] ?? 0,
-        ]);
-        return $data;
+        try {
+            $stmt = $pdo->prepare(
+                'INSERT INTO collect_tasks (task_no, user_id, account_id, account_phone, account_password, school_name, province, city, proxy_url, collect_type, course_ids, course_count, status, created_at, updated_at) '
+                . 'VALUES (:task_no, :user_id, :account_id, :account_phone, :account_password, :school_name, :province, :city, :proxy_url, :collect_type, :course_ids, :course_count, 0, NOW(), NOW())'
+            );
+            $stmt->execute([
+                'task_no' => $data['task_no'],
+                'user_id' => $data['user_id'],
+                'account_id' => $data['account_id'] ?? 0,
+                'account_phone' => $data['account_phone'] ?? '',
+                'account_password' => $data['account_password'] ?? '',
+                'school_name' => $data['school_name'] ?? null,
+                'province' => $data['province'] ?? null,
+                'city' => $data['city'] ?? null,
+                'proxy_url' => $data['proxy_url'] ?? null,
+                'collect_type' => $data['collect_type'] ?? 'courses',
+                'course_ids' => $data['course_ids'] ?? '',
+                'course_count' => $data['course_count'] ?? 0,
+            ]);
+            return $data;
+        } catch (\PDOException $e) {
+            error_log("[CollectTaskRepository] create failed: " . $e->getMessage());
+            return [];
+        }
     }
 
     public function claimPending(): ?array
