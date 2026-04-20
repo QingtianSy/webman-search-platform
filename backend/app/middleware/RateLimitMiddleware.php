@@ -33,7 +33,15 @@ class RateLimitMiddleware implements MiddlewareInterface
 
         $result = (new RateLimitRepository())->hit($key, $this->ttl);
 
-        if (!$result['available'] || $result['count'] > $this->maxAttempts) {
+        // Redis 不可用时 fail-open：避免把登录/注册/搜索/下单等关键路径全部拦死。
+        // 与 AuthController 的 Redis-down 发 token fail-open 策略、以及中间件的 DB 兜底校验保持一致。
+        // 风险：Redis 不可用期间限流失效，可能出现短时刷请求，但这是可接受的代价（Redis 故障本就罕见且会被告警发现）。
+        if (!$result['available']) {
+            error_log("[RateLimitMiddleware] rate limit backend unavailable (key={$key}), allowing request through");
+            return $handler($request);
+        }
+
+        if ($result['count'] > $this->maxAttempts) {
             return ApiResponse::error(42900, '请求过于频繁，请稍后再试');
         }
 

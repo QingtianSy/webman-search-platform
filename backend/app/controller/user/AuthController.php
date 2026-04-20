@@ -2,7 +2,6 @@
 
 namespace app\controller\user;
 
-use app\repository\redis\TokenCacheRepository;
 use app\service\auth\AuthService;
 use app\service\auth\JwtService;
 use support\ApiResponse;
@@ -23,20 +22,14 @@ class AuthController
         }
 
         $user = $payload['user'];
-        $token = $jwtService->encode([
+        // 登录时 bump users.sessions_invalidated_at = 新 token 的 iat_ms，
+        // 让同一用户早于本次登录签发的所有 token 在中间件被拒，不依赖 Redis 键存活。
+        // Redis 缓存 + DB bump 已在 issueSessionToken 内原子执行。
+        $token = $authService->issueSessionToken((int) $user['id'], [
             'uid' => $user['id'],
             'username' => $user['username'],
             'roles' => $payload['roles'],
         ]);
-
-        $stored = (new TokenCacheRepository())->setUserToken((int) $user['id'], $token);
-        if (!$stored) {
-            $redisStatus = (new TokenCacheRepository())->getUserTokenWithStatus((int) $user['id']);
-            if ($redisStatus['connected']) {
-                return ApiResponse::error(500, '登录服务异常，请稍后重试');
-            }
-            error_log("[UserAuthController] setUserToken failed for user {$user['id']}, Redis unavailable — token issued without cache");
-        }
 
         return ApiResponse::success([
             'token' => $token,

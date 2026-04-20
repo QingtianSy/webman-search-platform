@@ -18,13 +18,15 @@ class JwtService
         return hash_hmac('sha256', $data, $this->getSecret());
     }
 
-    public function encode(array $payload): string
+    public function encode(array $payload, ?int $iatMs = null): string
     {
         $jwtConfig = config('jwt', []);
         $now = time();
         // iat_ms 用于与 users.sessions_invalidated_at(DATETIME(3)) 做毫秒级比较，
         // 消除"密码变更与登录在同一秒"时秒级 iat 的绕过窗口。iat 保留向后兼容。
-        $iatMs = (int) round(microtime(true) * 1000);
+        // 登录/注册链路会外部传入 $iatMs 并把同值写入 sessions_invalidated_at，
+        // 让"本次登录之前签发的所有 token"（iat < invalidated）在中间件处被拦下。
+        $iatMs = $iatMs ?? (int) round(microtime(true) * 1000);
         $data = [
             'payload' => $payload,
             'iat' => $now,
@@ -88,5 +90,13 @@ class JwtService
             $ms -= 1000;
         }
         return date('Y-m-d H:i:s', $sec) . '.' . str_pad((string) $ms, 3, '0', STR_PAD_LEFT);
+    }
+
+    // 把毫秒时间戳转为 MySQL DATETIME(3) 字符串；用于登录时让 sessions_invalidated_at 与新 token 的 iat_ms 严格同值。
+    public static function msToDatetime3(int $ms): string
+    {
+        $sec = intdiv($ms, 1000);
+        $frac = $ms % 1000;
+        return date('Y-m-d H:i:s', $sec) . '.' . str_pad((string) $frac, 3, '0', STR_PAD_LEFT);
     }
 }

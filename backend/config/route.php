@@ -50,6 +50,7 @@ use app\controller\admin\UserController;
 use app\controller\admin\ProxyController;
 use app\controller\admin\CollectConfigController;
 use app\controller\admin\PaymentConfigController;
+use app\controller\admin\DocConfigController;
 use app\controller\user\PaymentController;
 use app\controller\PaymentCallbackController;
 use app\controller\open\HealthController as OpenHealthController;
@@ -192,6 +193,10 @@ Route::group('/api/v1/admin', function () {
     // 支付配置（系统管理）
     Route::get('/payment-config/list', [PaymentConfigController::class, 'list']);
     Route::post('/payment-config/update', [PaymentConfigController::class, 'update']);
+
+    // 文档配置（含 api_key，走专用入口做脱敏展示与合并写入，禁止通用 system-config 入口修改）
+    Route::get('/doc-config/list', [DocConfigController::class, 'list']);
+    Route::post('/doc-config/update', [DocConfigController::class, 'update']);
 
     // 系统监控
     Route::get('/monitor/overview', [MonitorController::class, 'overview']);

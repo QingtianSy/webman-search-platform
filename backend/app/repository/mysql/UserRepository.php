@@ -88,4 +88,23 @@ class UserRepository
             return false;
         }
     }
+
+    // 登录/注册链路把 sessions_invalidated_at 设为"新 token 的 iat_ms 对应的 DATETIME(3)"，
+    // 让中间件 $invalidatedMs > $iatMs 对旧 token 成立、对新 token 不成立，实现"新登录挤掉旧登录"。
+    // 不受 Redis 键丢失影响。
+    // 失败必须显式抛错：吞掉 PDO 异常会导致调用方误认为"旧会话已作废"，中间件仍用旧 token 放行。
+    // 调用方（AuthService::issueSessionToken）据此回滚 Redis 并向上抛 BusinessException。
+    public function bumpSessionInvalidatedAt(int $id, string $datetime3): void
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            throw new \RuntimeException('[UserRepository] bumpSessionInvalidatedAt: MySQL unavailable');
+        }
+        $stmt = $pdo->prepare('UPDATE users SET sessions_invalidated_at = :t WHERE id = :id');
+        $stmt->execute(['t' => $datetime3, 'id' => $id]);
+        if ($stmt->rowCount() === 0) {
+            // 同 iat_ms 重复调用时 rowCount=0 合法，但此处 iat_ms 单调递增，rowCount=0 只会是 user 不存在。
+            throw new \RuntimeException("[UserRepository] bumpSessionInvalidatedAt: user $id not updated");
+        }
+    }
 }

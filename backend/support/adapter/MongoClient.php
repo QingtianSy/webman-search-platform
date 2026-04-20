@@ -51,4 +51,12 @@ class MongoClient
             return null;
         }
     }
+
+    // 强制对后端发起一次 ping，绕过 connection() 内部的 30s 缓存窗口。
+    // 用于 ES 重建等破坏性操作前的连通性门禁：必须拿到实时状态，不能接受缓存。
+    public static function ping(): bool
+    {
+        self::$lastPingAt = 0;
+        return self::connection() !== null;
+    }
 }

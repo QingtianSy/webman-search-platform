@@ -32,10 +32,14 @@ class ApiKeyService
             }
         }
 
-        if (!empty($record['api_secret_hash'])) {
-            return password_verify($apiSecret, $record['api_secret_hash']) ? $record : null;
+        // 只认 bcrypt 哈希。明文列 api_secret 已弃用，存在的话只会是历史数据或误写；
+        // 不再做 hash_equals 兜底，避免 DB dump / error_log / replica 同步环节把明文密钥泄出。
+        // 旧记录若 api_secret_hash 为空，视为失效，强制用户走 create 重新发放。
+        if (empty($record['api_secret_hash'])) {
+            error_log("[OpenApiKeyService] api_secret_hash missing for api_key id=" . ($record['id'] ?? '?') . ", rejecting");
+            return null;
         }
-        return hash_equals(($record['api_secret'] ?? ''), $apiSecret) ? $record : null;
+        return password_verify($apiSecret, $record['api_secret_hash']) ? $record : null;
     }
 
     public function listByUserId(int $userId): array

@@ -184,6 +184,14 @@ class CollectWorker
             unset($this->runningTasks[$taskNo]);
             $this->cleanupPidFile($taskNo);
             error_log("[CollectWorker] python finished task={$taskNo} pid={$pid}");
+            // 先回库确认任务状态：管理员在 Worker 检测到进程退出之前调用 stop()（CollectAdminService::stop）
+            // 会把 status 置为 4（手动停止）。此时不能再走 importResults() 覆盖状态、写入数据，否则管理员的"停止"结果
+            // 会被 status=2/3/4 正常收尾覆盖，而且可能把中途的脏数据导入库。
+            $current = $this->taskRepo->findByTaskNo($taskNo);
+            if ($current && (int) ($current['status'] ?? -1) !== 1) {
+                error_log("[CollectWorker] skip import task={$taskNo} status={$current['status']} error_message={$current['error_message']} (stopped/terminated externally)");
+                continue;
+            }
             $this->importResults($taskNo);
         }
     }

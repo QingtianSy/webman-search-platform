@@ -93,6 +93,18 @@ class QuestionRepository
         }
     }
 
+    // ES 重建等"破坏性写入前必须确认数据源可读"的场景使用：连接失败/查询异常统一抛出，
+    // 避免在 rebuild 途中 Mongo 掉线时静默返回 0/[] 把 ES 清成空索引。
+    public function countByFiltersStrict(array $filters = []): int
+    {
+        $db = MongoClient::connection();
+        if (!$db) {
+            throw new \RuntimeException('MongoDB connection unavailable');
+        }
+        $query = self::buildQuery($filters);
+        return $db->selectCollection('questions')->countDocuments($query);
+    }
+
     public function findPage(array $filters = [], int $page = 1, int $pageSize = 20): array
     {
         $db = MongoClient::connection();
@@ -115,6 +127,26 @@ class QuestionRepository
             error_log("[QuestionRepository] findPage failed: " . $e->getMessage());
             return [];
         }
+    }
+
+    // 严格分页：同 countByFiltersStrict，用于 rebuild 中途 Mongo 掉线时让调用方感知（而非静默返回 []）。
+    public function findPageStrict(array $filters = [], int $page = 1, int $pageSize = 20): array
+    {
+        $db = MongoClient::connection();
+        if (!$db) {
+            throw new \RuntimeException('MongoDB connection unavailable');
+        }
+        $query = self::buildQuery($filters);
+        $cursor = $db->selectCollection('questions')->find($query, [
+            'sort' => ['created_at' => -1],
+            'skip' => ($page - 1) * $pageSize,
+            'limit' => $pageSize,
+        ]);
+        $rows = [];
+        foreach ($cursor as $doc) {
+            $rows[] = $this->docToArray($doc);
+        }
+        return $rows;
     }
 
     public function findList(array $filters = [], int $limit = 1000): array

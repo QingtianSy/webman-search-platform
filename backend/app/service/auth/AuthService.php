@@ -9,6 +9,7 @@ use app\repository\mysql\RolePermissionRepository;
 use app\repository\mysql\RoleRepository;
 use app\repository\mysql\UserRepository;
 use app\repository\mysql\UserRoleRepository;
+use app\repository\redis\TokenCacheRepository;
 use support\Db;
 use support\ResponseCode;
 
@@ -99,7 +100,11 @@ class AuthService
             throw new BusinessException('用户名已存在', ResponseCode::PARAM_ERROR);
         }
 
-        $user = Db::transaction(function () use ($data, $username) {
+        // 把 users/wallets/user_role + sessions_invalidated_at bump 放进同一个事务，
+        // 任一失败整体回滚，不会出现"账号已建、token 签发失败"的半成品。
+        // Redis 缓存放到事务提交之后且容忍失败：DB sessions_invalidated_at 是权威失效源，
+        // 缓存缺失时中间件会回落到 DB 校验。
+        $result = Db::transaction(function () use ($data, $username) {
             $user = new User();
             $user->username = $username;
             $user->password_hash = password_hash($data['password'], PASSWORD_DEFAULT);
@@ -125,9 +130,75 @@ class AuthService
                 ]);
             }
 
-            return $user;
+            $iatMs = (int) round(microtime(true) * 1000);
+            $updated = Db::table('users')->where('id', $user->id)->update([
+                'sessions_invalidated_at' => JwtService::msToDatetime3($iatMs),
+            ]);
+            if ($updated === 0) {
+                // 刚插入的行此处 update 不到 → 底层异常，回滚整个事务
+                throw new \RuntimeException('register: failed to bump sessions_invalidated_at for new user ' . $user->id);
+            }
+
+            return ['user' => $user, 'iat_ms' => $iatMs];
         });
 
-        return $this->buildAuthPayload($user->toArray());
+        $user = $result['user'];
+        $iatMs = $result['iat_ms'];
+        $payload = $this->buildAuthPayload($user->toArray());
+
+        $token = (new JwtService())->encode([
+            'uid' => $user->id,
+            'username' => $user->username,
+            'roles' => $payload['roles'],
+            'default_portal' => $payload['default_portal'] ?? 'user',
+        ], $iatMs);
+
+        // Redis best-effort：写失败（无论连着还是宕机）都不抛错，账号已落库。
+        $cache = new TokenCacheRepository();
+        if (!$cache->setUserToken((int) $user->id, $token)) {
+            error_log("[AuthService] register setUserToken failed for user {$user->id} — token issued, DB bump committed, cache miss will fall back to DB");
+        }
+
+        $payload['token'] = $token;
+        return $payload;
+    }
+
+    // 原子会话签发：先写 Redis（若连着失败→失败）→ 再 bump DB（失败→回滚 Redis）→ 最后返回 token。
+    // 任一步骤失败都抛 BusinessException，不留"token 已签发但缓存/DB 未同步"的中间态。
+    // 中间态会导致两类问题：
+    //   (1) 只 bump 成功：客户端收到 500，但此用户其它活跃会话已被 DB 作废；
+    //   (2) 只 setUserToken 成功：DB 未 bump，旧 token 继续有效，新 token 被 Redis 占位但 bump 未完成。
+    public function issueSessionToken(int $userId, array $jwtPayload): string
+    {
+        $iatMs = (int) round(microtime(true) * 1000);
+        $token = (new JwtService())->encode($jwtPayload, $iatMs);
+
+        $cache = new TokenCacheRepository();
+        $stored = $cache->setUserToken($userId, $token);
+        $redisFailedButConnected = false;
+        if (!$stored) {
+            $status = $cache->getUserTokenWithStatus($userId);
+            if ($status['connected']) {
+                // Redis 连着但写失败 → 直接放弃签发，不 bump DB，保持零副作用
+                throw new BusinessException('会话签发失败，请稍后重试', 50001);
+            }
+            // Redis 不可用 → fail-open：DB 作为权威仍可工作，仅记录
+            $redisFailedButConnected = false;
+            error_log("[AuthService] setUserToken failed for user {$userId}, Redis unavailable — token issued without cache");
+        }
+
+        try {
+            (new UserRepository())->bumpSessionInvalidatedAt($userId, JwtService::msToDatetime3($iatMs));
+        } catch (\Throwable $e) {
+            // DB 失败：Redis 已持新 token 但 sessions_invalidated_at 未推进，旧 token 仍有效，属于不一致。
+            // 回滚 Redis（best-effort）并抛错。
+            if ($stored) {
+                $cache->deleteToken($userId);
+            }
+            error_log("[AuthService] issueSessionToken bump failed for user {$userId}: " . $e->getMessage());
+            throw new BusinessException('会话签发失败，请稍后重试', 50001);
+        }
+
+        return $token;
     }
 }

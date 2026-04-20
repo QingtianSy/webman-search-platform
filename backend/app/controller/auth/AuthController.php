@@ -3,7 +3,6 @@
 namespace app\controller\auth;
 
 use app\repository\mysql\LoginLogRepository;
-use app\repository\redis\TokenCacheRepository;
 use app\service\auth\AuthService;
 use app\service\auth\JwtService;
 use app\validate\auth\RegisterValidate;
@@ -28,23 +27,19 @@ class AuthController
         }
 
         $user = $payload['user'];
-        (new LoginLogRepository())->create(['user_id' => $user['id'], 'ip' => $ip, 'user_agent' => $ua, 'status' => 1]);
 
-        $token = $jwtService->encode([
+        // 登录 bump sessions_invalidated_at，让早于本次登录签发的 token 被中间件拒绝。
+        // Redis 缓存 + DB bump 已在 issueSessionToken 内原子执行。
+        // 登录成功日志必须等 token 签发后才写：若 issueSessionToken 抛错，客户端拿到的是失败，
+        // 此时不应留下一条 status=1 的审计记录。
+        $token = $authService->issueSessionToken((int) $user['id'], [
             'uid' => $user['id'],
             'username' => $user['username'],
             'roles' => $payload['roles'],
             'default_portal' => $payload['default_portal'] ?? 'user',
         ]);
 
-        $stored = (new TokenCacheRepository())->setUserToken((int) $user['id'], $token);
-        if (!$stored) {
-            $redisStatus = (new TokenCacheRepository())->getUserTokenWithStatus((int) $user['id']);
-            if ($redisStatus['connected']) {
-                return ApiResponse::error(500, '登录服务异常，请稍后重试');
-            }
-            error_log("[AuthController] login setUserToken failed for user {$user['id']}, Redis unavailable — token issued without cache");
-        }
+        (new LoginLogRepository())->create(['user_id' => $user['id'], 'ip' => $ip, 'user_agent' => $ua, 'status' => 1]);
 
         return ApiResponse::success([
             'token' => $token,
@@ -96,22 +91,11 @@ class AuthController
         $authService = new AuthService();
         $payload = $authService->register($data);
 
+        // register() 已在事务内完成 users/wallets/user_role + sessions_invalidated_at bump，
+        // 并在 payload 中返回同一 iat_ms 签发的 token，Redis 缓存为 best-effort。
+        // 这样即便 Redis 写失败也不会出现"账号已建但接口回 500"的半成品。
         $user = $payload['user'];
-        $token = (new JwtService())->encode([
-            'uid' => $user['id'],
-            'username' => $user['username'],
-            'roles' => $payload['roles'],
-            'default_portal' => $payload['default_portal'] ?? 'user',
-        ]);
-
-        $stored = (new TokenCacheRepository())->setUserToken((int) $user['id'], $token);
-        if (!$stored) {
-            $redisStatus = (new TokenCacheRepository())->getUserTokenWithStatus((int) $user['id']);
-            if ($redisStatus['connected']) {
-                return ApiResponse::error(500, '注册服务异常，请稍后重��');
-            }
-            error_log("[AuthController] register setUserToken failed for user {$user['id']}, Redis unavailable — token issued without cache");
-        }
+        $token = $payload['token'];
 
         return ApiResponse::success([
             'token' => $token,

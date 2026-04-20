@@ -51,12 +51,19 @@ class QuestionIndexService
 
     public function rebuild(int $batchSize = 500): array
     {
-        // 先验证数据源可用再动 ES：否则 Mongo 不可用时会把 ES 清空留下空库。
-        if (!MongoClient::connection()) {
+        // 强制 ping，绕过 MongoClient::connection() 的 30s 缓存窗口：
+        // 缓存连接"可用"不代表此刻 Mongo 真的可读，破坏 ES 前必须拿实时信号。
+        if (!MongoClient::ping()) {
             return ['error' => 'MongoDB连接不可用，无法读取题目数据', 'rebuilt' => false];
         }
         $repo = new QuestionRepository();
-        $total = $repo->countByFilters([]);
+        try {
+            // 严格 count：失败直接抛出，避免"读失败静默返回 0，ES 被清成空索引"。
+            $total = $repo->countByFiltersStrict([]);
+        } catch (\Throwable $e) {
+            error_log("[QuestionIndexService] rebuild count failed: " . $e->getMessage());
+            return ['error' => 'MongoDB 读取失败，已中止，未改动 ES', 'rebuilt' => false];
+        }
 
         $esRepo = new QuestionIndexRepository();
         if (!$esRepo->deleteIndex()) {
@@ -67,17 +74,24 @@ class QuestionIndexService
         }
         $indexed = 0;
         $page = 1;
+        $readError = null;
 
-        while (true) {
-            $batch = $repo->findPage([], $page, $batchSize);
-            if (empty($batch)) {
-                break;
+        try {
+            while (true) {
+                // 严格分页：Mongo 中途掉线不再静默 break 循环伪装成成功。
+                $batch = $repo->findPageStrict([], $page, $batchSize);
+                if (empty($batch)) {
+                    break;
+                }
+                $indexed += $esRepo->bulkIndex($batch);
+                if (count($batch) < $batchSize) {
+                    break;
+                }
+                $page++;
             }
-            $indexed += $esRepo->bulkIndex($batch);
-            if (count($batch) < $batchSize) {
-                break;
-            }
-            $page++;
+        } catch (\Throwable $e) {
+            $readError = $e->getMessage();
+            error_log("[QuestionIndexService] rebuild read failed mid-loop: {$readError}");
         }
 
         $result = [
@@ -85,7 +99,9 @@ class QuestionIndexService
             'indexed' => $indexed,
             'rebuilt' => true,
         ];
-        if ($indexed < $total) {
+        if ($readError !== null) {
+            $result['es_warning'] = "读取 MongoDB 中途失败，索引可能不完整: {$readError}";
+        } elseif ($indexed < $total) {
             $failed = $total - $indexed;
             $result['es_warning'] = "部分文档索引失败：{$failed}/{$total} 条未成功写入ES";
         }

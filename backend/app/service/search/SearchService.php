@@ -22,11 +22,19 @@ class SearchService
         $logNo = 'SL' . date('YmdHis') . bin2hex(random_bytes(6));
 
         $quotaService = null;
+        $reservedQuota = 0;
         if ($userId > 0) {
             $quotaService = new QuotaService();
+            // 快速路径：缓存命中额度为 0 时直接拒绝，避免后续 DB 往返。
             if ($quotaService->getUserQuota($userId) <= 0) {
                 throw new BusinessException('额度不足', 40006);
             }
+            // 在调用第三方之前原子预扣一次额度，防止并发请求都通过预检后同时打第三方。
+            // 命中为 0 时再 refund，保持"按命中计费"语义。
+            if (!$quotaService->consume($userId, 1)) {
+                throw new BusinessException('额度不足', 40006);
+            }
+            $reservedQuota = 1;
         }
 
         $logService->info('search.query', [
@@ -85,16 +93,21 @@ class SearchService
         $hasApiHits = $apiHitCount > 0;
         $totalHitCount = $hitCount + $apiHitCount;
 
-        $consumeQuota = 0;
-        if ($totalHitCount > 0 && $userId > 0 && $quotaService !== null) {
-            if (!$quotaService->consume($userId, 1)) {
-                $this->writeSearchLog($logNo, $userId, $apiKeyId, $keyword, $totalHitCount, $searchSource, $hasApiHits, 0, $costMs, $questionIds, $apiHitCount);
-                throw new BusinessException('额度不足', 40006);
+        $consumeQuota = $reservedQuota;
+        if ($reservedQuota > 0 && $totalHitCount === 0 && $quotaService !== null) {
+            // 零命中 → 退回预扣的额度，保持"按命中计费"。退款失败仅记录日志，不影响响应。
+            if ($quotaService->refund($userId, 1)) {
+                $consumeQuota = 0;
+            } else {
+                error_log("[SearchService] refund failed after no-hit search: user={$userId} log_no={$logNo}");
             }
-            $consumeQuota = 1;
         }
 
-        $this->writeSearchLog($logNo, $userId, $apiKeyId, $keyword, $totalHitCount, $searchSource, $hasApiHits, $consumeQuota, $costMs, $questionIds, $apiHitCount);
+        // 主日志改为同步写，保证响应里的 log_no 一定可查：
+        //   - 撞键（12 位 hex 概率极低但非零）→ 重新生成 log_no 再试一次
+        //   - 重试仍失败（持续撞键/DB 不可用）→ log_no 置空返回，前端知道"此次无可查询日志号"
+        // 明细（Mongo）仍走 Timer 异步，不阻塞响应。
+        $persistedLogNo = $this->writeSearchLog($logNo, $userId, $apiKeyId, $keyword, $totalHitCount, $searchSource, $hasApiHits, $consumeQuota, $costMs, $questionIds, $apiHitCount);
 
         $safeApiResults = array_map(fn($r) => [
             'source_id' => $r['source_id'] ?? null,
@@ -104,7 +117,7 @@ class SearchService
         ], $apiResults);
 
         return [
-            'log_no' => $logNo,
+            'log_no' => $persistedLogNo,
             'hit_count' => $totalHitCount,
             'consume_quota' => $consumeQuota,
             'list' => $list,
@@ -115,7 +128,7 @@ class SearchService
         ];
     }
 
-    protected function writeSearchLog(string $logNo, int $userId, ?int $apiKeyId, string $keyword, int $totalHitCount, string $searchSource, bool $hasApiHits, int $consumeQuota, int $costMs, array $questionIds, int $apiHitCount): void
+    protected function writeSearchLog(string $logNo, int $userId, ?int $apiKeyId, string $keyword, int $totalHitCount, string $searchSource, bool $hasApiHits, int $consumeQuota, int $costMs, array $questionIds, int $apiHitCount): string
     {
         $sourceType = $totalHitCount > 0 && $hasApiHits
             ? ($totalHitCount - $apiHitCount > 0 ? $searchSource . '+api' : 'api')
@@ -132,6 +145,26 @@ class SearchService
             'consume_quota' => $consumeQuota,
             'cost_ms' => $costMs,
         ];
+
+        // 同步写主日志：撞键重试 1 次，避免把响应里的 log_no 钉死在不可查的号上。
+        $repo = new SearchLogRepository();
+        $result = $repo->create($logData);
+        if ($result === 'duplicate') {
+            $retryNo = 'SL' . date('YmdHis') . bin2hex(random_bytes(6));
+            $logData['log_no'] = $retryNo;
+            $result = $repo->create($logData);
+            if ($result === 'ok') {
+                error_log("[SearchService] log_no collision resolved by retry: original={$logNo} retry={$retryNo}");
+                $logNo = $retryNo;
+            } else {
+                error_log("[SearchService] log_no collision unresolved after retry: original={$logNo} retry={$retryNo} result={$result}");
+                return '';
+            }
+        } elseif ($result !== 'ok') {
+            error_log("[SearchService] main search log write failed ({$result}) log_no={$logNo}");
+            return '';
+        }
+
         $detailData = [
             'log_no' => $logNo,
             'keyword' => $keyword,
@@ -140,26 +173,15 @@ class SearchService
             'api_hit_count' => $apiHitCount,
             'cost_ms' => $costMs,
         ];
-        Timer::add(0.001, function () use ($logData, $detailData) {
+        // 明细写异步：Mongo 偶发失败不影响主日志与响应 log_no 的一致性。
+        Timer::add(0.001, function () use ($detailData) {
             try {
-                $repo = new SearchLogRepository();
-                $result = $repo->create($logData);
-                if ($result === 'duplicate') {
-                    $originalNo = $logData['log_no'];
-                    $retryNo = 'SL' . date('YmdHis') . bin2hex(random_bytes(6));
-                    $logData['log_no'] = $retryNo;
-                    $detailData['log_no'] = $retryNo;
-                    $result = $repo->create($logData);
-                    error_log("[SearchService] log_no collision retry: original={$originalNo} retry={$retryNo} result={$result}");
-                }
-                if ($result !== 'ok') {
-                    error_log("[SearchService] main search log write failed ({$result}), skip detail");
-                    return;
-                }
                 (new SearchLogDetailRepository())->create($detailData);
             } catch (\Throwable $e) {
-                error_log("[SearchService] deferred log write failed: " . $e->getMessage());
+                error_log("[SearchService] deferred detail write failed: " . $e->getMessage());
             }
         }, [], false);
+
+        return $logNo;
     }
 }

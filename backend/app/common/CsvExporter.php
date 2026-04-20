@@ -15,11 +15,27 @@ class CsvExporter
         self::cleanOldFiles($csvDir);
 
         $tmpFile = tempnam($csvDir, 'csv_');
+        if ($tmpFile === false) {
+            throw new \RuntimeException('CSV 导出失败：无法创建临时文件');
+        }
         $fp = fopen($tmpFile, 'w');
-        fwrite($fp, "\xEF\xBB\xBF");
-        fputcsv($fp, array_map([self::class, 'escapeCell'], $headers));
-        foreach ($rows as $row) {
-            fputcsv($fp, array_map([self::class, 'escapeCell'], (array) $row));
+        if ($fp === false) {
+            @unlink($tmpFile);
+            throw new \RuntimeException('CSV 导出失败：无法打开临时文件');
+        }
+        // try-finally 保证 fwrite/fputcsv 中途抛异常时也能关闭 fd，并删除半成品 tmp，避免 fd 泄漏 + 垃圾文件堆积。
+        try {
+            fwrite($fp, "\xEF\xBB\xBF");
+            fputcsv($fp, array_map([self::class, 'escapeCell'], $headers));
+            foreach ($rows as $row) {
+                fputcsv($fp, array_map([self::class, 'escapeCell'], (array) $row));
+            }
+        } catch (\Throwable $e) {
+            if (is_resource($fp)) {
+                fclose($fp);
+            }
+            @unlink($tmpFile);
+            throw $e;
         }
         fclose($fp);
 

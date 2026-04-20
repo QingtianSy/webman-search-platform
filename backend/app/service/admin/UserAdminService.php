@@ -131,6 +131,10 @@ class UserAdminService
             Db::table('user_api_keys')->where('user_id', $id)->delete();
             Db::table('wallets')->where('user_id', $id)->delete();
             Db::table('user_subscriptions')->where('user_id', $id)->delete();
+            // 清理带用户敏感凭据的孤儿行，否则会留下 collect_accounts.cookie_text/token_text
+            // 与 user_api_sources.headers/extra_config 等明文凭据（schema 见 0006/0008 迁移）。
+            Db::table('collect_accounts')->where('user_id', $id)->delete();
+            Db::table('user_api_sources')->where('user_id', $id)->delete();
             return ['success' => true, 'action' => 'delete', 'id' => $id];
         });
     }

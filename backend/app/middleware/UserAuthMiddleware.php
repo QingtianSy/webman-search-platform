@@ -35,10 +35,10 @@ class UserAuthMiddleware implements MiddlewareInterface
             return ApiResponse::error(40002, 'Token 已失效，请重新登录');
         }
 
-        // Redis connected but key missing: token was evicted/flushed — require re-login
-        if ($redisConnected && $storedToken === null) {
-            return ApiResponse::error(40002, 'Token 已失效，请重新登录');
-        }
+        // 注意：此前在 $redisConnected && $storedToken === null 时直接拒绝，这会导致：
+        //   1) Redis 重启/LRU 淘汰后所有合法 JWT 被当成吊销；
+        //   2) Redis 宕机期间 AuthController 允许 fail-open 发 token，Redis 恢复后这些 token 又被判失效。
+        // 吊销由 DB sessions_invalidated_at 权威控制，key 缺失不再视为吊销信号。
 
         // DB 校验：即便 Redis 命中旧 token（比如 REVOKED 写失败漏网），
         // 依然用 users.sessions_invalidated_at(DATETIME(3)) 对照 JWT iat_ms 把已吊销 token 拦下。
