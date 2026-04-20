@@ -62,6 +62,11 @@ class AdminAuthMiddleware implements MiddlewareInterface
             if (!$user || (int) ($user['status'] ?? 0) !== 1) {
                 return ApiResponse::error(40002, '用户不存在或已被禁用');
             }
+            $iat = (int) ($decoded['iat'] ?? 0);
+            $updatedAt = strtotime($user['updated_at'] ?? '');
+            if ($updatedAt && $iat && $updatedAt > $iat) {
+                return ApiResponse::error(40002, 'Token 已失效，请重新登录');
+            }
             $roleIds = (new \app\repository\mysql\UserRoleRepository())->roleIdsByUserId($userId);
             if (!empty($roleIds)) {
                 $rolesFromDb = (new RolePermissionRepository())->roleCodesByIds($roleIds);

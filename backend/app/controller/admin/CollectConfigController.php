@@ -2,15 +2,30 @@
 
 namespace app\controller\admin;
 
-use app\repository\mysql\SystemConfigRepository;
+use app\service\admin\SystemConfigAdminService;
 use support\ApiResponse;
 use support\Request;
 
 class CollectConfigController
 {
+    private const ALLOWED_KEYS = [
+        'collect_concurrency',
+        'collect_course_concurrency',
+        'collect_request_interval_ms',
+        'collect_separator',
+        'collect_output_mode',
+        'collect_timeout_seconds',
+        'collect_rate_backoff_ms',
+        'collect_rate_recovery_count',
+        'collect_login_max_attempts',
+        'collect_progress_interval',
+        'collect_proxy_cooldown_min',
+        'collect_proxy_enabled',
+    ];
+
     public function list(Request $request)
     {
-        $configs = (new SystemConfigRepository())->getByGroup('collect');
+        $configs = (new SystemConfigAdminService())->getByGroup('collect');
         return ApiResponse::success([
             'list' => $configs,
             'total' => count($configs),
@@ -24,41 +39,10 @@ class CollectConfigController
         if ($key === '') {
             return ApiResponse::error(40001, '参数错误');
         }
-        $allowedKeys = [
-            'collect_concurrency',
-            'collect_course_concurrency',
-            'collect_request_interval_ms',
-            'collect_separator',
-            'collect_output_mode',
-            'collect_timeout_seconds',
-            'collect_rate_backoff_ms',
-            'collect_rate_recovery_count',
-            'collect_login_max_attempts',
-            'collect_progress_interval',
-            'collect_proxy_cooldown_min',
-            'collect_proxy_enabled',
-        ];
-        if (!in_array($key, $allowedKeys, true)) {
+        if (!in_array($key, self::ALLOWED_KEYS, true)) {
             return ApiResponse::error(40001, '不允许修改该配置');
         }
-        $numericKeys = [
-            'collect_concurrency',
-            'collect_course_concurrency',
-            'collect_request_interval_ms',
-            'collect_timeout_seconds',
-            'collect_rate_backoff_ms',
-            'collect_rate_recovery_count',
-            'collect_login_max_attempts',
-            'collect_progress_interval',
-            'collect_proxy_cooldown_min',
-        ];
-        if (in_array($key, $numericKeys, true) && !is_numeric($value)) {
-            return ApiResponse::error(40001, '该配置须为数值');
-        }
-        $row = (new SystemConfigRepository())->updateByKey($key, $value);
-        if (empty($row)) {
-            return ApiResponse::error(40001, '配置项不存在');
-        }
-        return ApiResponse::success($row);
+        $result = (new SystemConfigAdminService())->update($key, $value);
+        return ApiResponse::success($result, '采集配置更新成功');
     }
 }

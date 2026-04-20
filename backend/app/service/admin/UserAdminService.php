@@ -137,10 +137,12 @@ class UserAdminService
 
     public function assignRoles(int $userId, array $roleIds): array
     {
-        if (!User::query()->where('id', $userId)->exists()) {
+        $user = User::query()->find($userId);
+        if (!$user) {
             throw new BusinessException('用户不存在', 40001);
         }
         $this->syncRoles($userId, $roleIds);
+        $user->touch();
         (new TokenCacheRepository())->setUserToken($userId, 'REVOKED');
         return ['success' => true, 'action' => 'assign_roles', 'user_id' => $userId, 'role_ids' => $roleIds];
     }

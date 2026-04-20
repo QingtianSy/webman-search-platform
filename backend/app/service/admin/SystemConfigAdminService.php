@@ -24,6 +24,12 @@ class SystemConfigAdminService
         return Pagination::format($list, $total, (int) $query['page'], (int) $query['page_size']);
     }
 
+    public function getByGroup(string $groupCode): array
+    {
+        $list = (new SystemConfigRepository())->getByGroup($groupCode);
+        return array_map([self::class, 'maskRow'], $list);
+    }
+
     public function update(string $key, string $value): array
     {
         $repo = new SystemConfigRepository();
