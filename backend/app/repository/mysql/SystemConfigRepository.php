@@ -71,6 +71,22 @@ class SystemConfigRepository
         }
     }
 
+    public function findByKey(string $key): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            return [];
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT id, group_code, config_key, config_value, value_type, status, created_at, updated_at FROM system_configs WHERE config_key = :config_key LIMIT 1');
+            $stmt->execute(['config_key' => $key]);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            error_log("[SystemConfigRepository] findByKey failed: " . $e->getMessage());
+            return [];
+        }
+    }
+
     public function updateByKey(string $key, string $value): array
     {
         $pdo = MySqlClient::pdo();

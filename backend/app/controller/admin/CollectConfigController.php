@@ -41,6 +41,20 @@ class CollectConfigController
         if (!in_array($key, $allowedKeys, true)) {
             return ApiResponse::error(40001, '不允许修改该配置');
         }
+        $numericKeys = [
+            'collect_concurrency',
+            'collect_course_concurrency',
+            'collect_request_interval_ms',
+            'collect_timeout_seconds',
+            'collect_rate_backoff_ms',
+            'collect_rate_recovery_count',
+            'collect_login_max_attempts',
+            'collect_progress_interval',
+            'collect_proxy_cooldown_min',
+        ];
+        if (in_array($key, $numericKeys, true) && !is_numeric($value)) {
+            return ApiResponse::error(40001, '该配置须为数值');
+        }
         $row = (new SystemConfigRepository())->updateByKey($key, $value);
         if (empty($row)) {
             return ApiResponse::error(40001, '配置项不存在');

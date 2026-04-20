@@ -26,7 +26,14 @@ class SystemConfigAdminService
 
     public function update(string $key, string $value): array
     {
-        $row = (new SystemConfigRepository())->updateByKey($key, $value);
+        $repo = new SystemConfigRepository();
+        $existing = $repo->findByKey($key);
+        if (empty($existing)) {
+            throw new BusinessException('配置项不存在', 40001);
+        }
+        self::validateValueType($value, $existing['value_type'] ?? 'string', $key);
+
+        $row = $repo->updateByKey($key, $value);
         if (empty($row)) {
             throw new BusinessException('配置项不存在', 40001);
         }
@@ -60,11 +67,32 @@ class SystemConfigAdminService
     {
         $data = json_decode($json, true);
         if (!is_array($data)) {
-            return $json;
+            return '{"error":"invalid_json"}';
         }
         if (isset($data['api_key'])) {
             $data['api_key'] = self::maskString($data['api_key']);
         }
         return json_encode($data, JSON_UNESCAPED_UNICODE);
+    }
+
+    private static function validateValueType(string $value, string $type, string $key): void
+    {
+        switch ($type) {
+            case 'number':
+                if (!is_numeric($value)) {
+                    throw new BusinessException("配置项 {$key} 须为数值", 40001);
+                }
+                break;
+            case 'json':
+                if (json_decode($value, true) === null && $value !== 'null') {
+                    throw new BusinessException("配置项 {$key} 须为合法 JSON", 40001);
+                }
+                break;
+            case 'boolean':
+                if (!in_array($value, ['0', '1', 'true', 'false'], true)) {
+                    throw new BusinessException("配置项 {$key} 须为布尔值", 40001);
+                }
+                break;
+        }
     }
 }

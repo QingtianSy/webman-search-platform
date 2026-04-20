@@ -33,6 +33,7 @@ class UserAuthMiddleware implements MiddlewareInterface
 
         $rolesFromDb = null;
         if ($storedToken === null) {
+            error_log("[UserAuthMiddleware] Redis unavailable, falling back to DB verification for user {$userId}");
             $user = (new UserRepository())->findById($userId);
             if (!$user || (int) ($user['status'] ?? 0) !== 1) {
                 return ApiResponse::error(40002, '用户不存在或已被禁用');

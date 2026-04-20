@@ -10,7 +10,8 @@ class RateLimitRepository
     {
         $redis = RedisClient::connection();
         if (!$redis) {
-            return 1;
+            error_log("[RateLimitRepository] Redis unavailable, rejecting request (fail-closed)");
+            return PHP_INT_MAX;
         }
         try {
             $fullKey = 'ratelimit:' . $key;
@@ -21,7 +22,7 @@ class RateLimitRepository
             return (int) $count;
         } catch (\Throwable $e) {
             error_log("[RateLimitRepository] hit failed: " . $e->getMessage());
-            return 1;
+            return PHP_INT_MAX;
         }
     }
 }

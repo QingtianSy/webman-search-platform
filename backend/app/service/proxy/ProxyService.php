@@ -291,6 +291,9 @@ class ProxyService
         if (isset($row['password']) && $row['password'] !== '' && $row['password'] !== null) {
             $row['password'] = '****';
         }
+        if (isset($row['username']) && $row['username'] !== '' && $row['username'] !== null) {
+            $row['username'] = '****';
+        }
         return $row;
     }
 }

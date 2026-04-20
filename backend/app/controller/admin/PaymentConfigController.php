@@ -46,6 +46,9 @@ class PaymentConfigController
         if (!in_array($key, $allowedKeys, true)) {
             return ApiResponse::error(40001, '不允许修改该配置');
         }
+        if (in_array($key, ['payment_min_amount', 'payment_max_amount'], true) && !is_numeric($value)) {
+            return ApiResponse::error(40001, '金额配置须为数值');
+        }
         $row = (new SystemConfigRepository())->updateByKey($key, $value);
         if (empty($row)) {
             return ApiResponse::error(40001, '配置项不存在');
