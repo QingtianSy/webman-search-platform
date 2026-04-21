@@ -1,0 +1,18 @@
+# 凭据 / 配置（禁止入库）
+config.ini
+accounts.txt
+
+# 运行时产物
+results/
+faces/
+error_events.txt
+采集成功.txt
+采集错误.txt
+
+# Python 本地环境
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
