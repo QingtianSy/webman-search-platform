@@ -21,3 +21,11 @@ Thumbs.db
 .idea/
 .vscode/
 .claude/
+
+## 本地工具 / 临时产物
+.mcp.json
+/SDK/
+/ck/
+/xxt/
+/xxt.zip
+/temp_api_doc.png
