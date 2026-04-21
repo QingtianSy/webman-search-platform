@@ -5,7 +5,7 @@ namespace app\middleware;
 use app\repository\redis\RateLimitRepository;
 use support\ApiResponse;
 use support\AppLog;
-use support\Request;
+use Webman\Http\Request;
 use Webman\Http\Response;
 use Webman\MiddlewareInterface;
 
