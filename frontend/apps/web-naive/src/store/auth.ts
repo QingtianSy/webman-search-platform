@@ -10,9 +10,15 @@ import { resetAllStores, useAccessStore, useUserStore } from '@vben/stores';
 import { defineStore } from 'pinia';
 
 import { notification } from '#/adapter/naive';
-import { getAccessCodesApi, getUserInfoApi, loginApi, logoutApi } from '#/api';
+import { getUserInfoApi, loginApi, logoutApi } from '#/api';
 import { $t } from '#/locales';
 
+/**
+ * 登录态 store。与 Vben 原模板的主要差异：
+ *   - loginApi 已在适配层把 user + permissions 打包返回，不再在这里并发二次拉（原版 Promise.all(fetchUserInfo, getAccessCodesApi)）
+ *   - homePath 由 loginApi 内按 default_portal 计算好，这里只负责把 userInfo 灌进 store 并按 homePath 跳转
+ *   - 登出：后端 /auth/logout 已 bump sessions_invalidated_at，本地只需清 store + 回登录页
+ */
 export const useAuthStore = defineStore('auth', () => {
   const accessStore = useAccessStore();
   const userStore = useUserStore();
@@ -20,36 +26,21 @@ export const useAuthStore = defineStore('auth', () => {
 
   const loginLoading = ref(false);
 
-  /**
-   * 异步处理登录操作
-   * Asynchronously handle the login process
-   * @param params 登录表单数据
-   */
   async function authLogin(
     params: Recordable<any>,
     onSuccess?: () => Promise<void> | void,
   ) {
-    // 异步处理用户登录操作并获取 accessToken
     let userInfo: null | UserInfo = null;
     try {
       loginLoading.value = true;
-      const { accessToken } = await loginApi(params);
+      const { accessToken, userInfo: loggedInUser, permissions } =
+        await loginApi(params);
 
-      // 如果成功获取到 accessToken
       if (accessToken) {
-        // 将 accessToken 存储到 accessStore 中
         accessStore.setAccessToken(accessToken);
-
-        // 获取用户信息并存储到 accessStore 中
-        const [fetchUserInfoResult, accessCodes] = await Promise.all([
-          fetchUserInfo(),
-          getAccessCodesApi(),
-        ]);
-
-        userInfo = fetchUserInfoResult;
-
-        userStore.setUserInfo(userInfo);
-        accessStore.setAccessCodes(accessCodes);
+        userStore.setUserInfo(loggedInUser);
+        accessStore.setAccessCodes(permissions);
+        userInfo = loggedInUser;
 
         if (accessStore.loginExpired) {
           accessStore.setLoginExpired(false);
@@ -57,14 +48,14 @@ export const useAuthStore = defineStore('auth', () => {
           onSuccess
             ? await onSuccess?.()
             : await router.push(
-                userInfo.homePath || preferences.app.defaultHomePath,
+                loggedInUser.homePath || preferences.app.defaultHomePath,
               );
         }
 
-        if (userInfo?.realName) {
+        if (loggedInUser?.realName) {
           notification.success({
             content: $t('authentication.loginSuccess'),
-            description: `${$t('authentication.loginSuccessDesc')}:${userInfo?.realName}`,
+            description: `${$t('authentication.loginSuccessDesc')}:${loggedInUser.realName}`,
             duration: 3000,
           });
         }
@@ -73,21 +64,18 @@ export const useAuthStore = defineStore('auth', () => {
       loginLoading.value = false;
     }
 
-    return {
-      userInfo,
-    };
+    return { userInfo };
   }
 
   async function logout(redirect: boolean = true) {
     try {
       await logoutApi();
     } catch {
-      // 不做任何处理
+      // 后端 50001 等情况下 logoutApi 会抛；本地仍然必须清干净，否则用户困在半登录态。
     }
     resetAllStores();
     accessStore.setLoginExpired(false);
 
-    // 回登录页带上当前路由地址
     await router.replace({
       path: LOGIN_PATH,
       query: redirect
@@ -98,6 +86,9 @@ export const useAuthStore = defineStore('auth', () => {
     });
   }
 
+  /**
+   * 刷新页面后用来恢复用户信息。未登录时 /auth/profile 会被 request 拦截器按 40002 处理并跳登录。
+   */
   async function fetchUserInfo() {
     const userInfo = await getUserInfoApi();
     userStore.setUserInfo(userInfo);
