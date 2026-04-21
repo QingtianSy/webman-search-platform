@@ -28,24 +28,48 @@ class ProxyService
         if (!empty($query['keyword'])) {
             $filters['keyword'] = $query['keyword'];
         }
-        $result = $this->repo->list($page, $pageSize, $filters);
+        try {
+            $result = $this->repo->listStrict($page, $pageSize, $filters);
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('代理服务暂不可用，请稍后重试', 50001);
+        }
         $result['list'] = array_map([self::class, 'maskCredentials'], $result['list']);
         return $result;
     }
 
     public function create(array $data): array
     {
-        $id = $this->repo->create($data);
+        try {
+            $id = $this->repo->createStrict($data);
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('代理服务暂不可用，请稍后重试', 50001);
+        }
         if ($id <= 0) {
-            return ['success' => false, 'msg' => '创建失败'];
+            // DB 可用但 lastInsertId 为 0：视为创建失败。
+            throw new BusinessException('创建失败', 40001);
         }
         return ['success' => true, 'id' => $id];
     }
 
     public function update(int $id, array $data): array
     {
-        $ok = $this->repo->update($id, $data);
+        // detail/list 对 username/password 做了 **** 脱敏；如果前端把详情回填到编辑表单再保存，
+        // 这里收到的会是掩码串。直接落库会把真实凭据覆盖成 ****，后续认证代理全挂。
+        // 约定：看到掩码就当"未修改"丢弃，真想改需前端清空再填新值。
+        foreach (['username', 'password'] as $sensitiveField) {
+            if (array_key_exists($sensitiveField, $data)
+                && is_string($data[$sensitiveField])
+                && str_contains($data[$sensitiveField], '****')) {
+                unset($data[$sensitiveField]);
+            }
+        }
+        try {
+            $ok = $this->repo->updateStrict($id, $data);
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('代理服务暂不可用，请稍后重试', 50001);
+        }
         if (!$ok) {
+            // DB 正常但未更新：记录不存在（或本次没有任何可更新字段）。
             throw new BusinessException('代理不存在', 40001);
         }
         return ['success' => true];
@@ -53,7 +77,11 @@ class ProxyService
 
     public function delete(int $id): array
     {
-        $ok = $this->repo->delete($id);
+        try {
+            $ok = $this->repo->deleteStrict($id);
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('代理服务暂不可用，请稍后重试', 50001);
+        }
         if (!$ok) {
             throw new BusinessException('代理不存在', 40001);
         }
@@ -62,12 +90,20 @@ class ProxyService
 
     public function detail(int $id): array
     {
-        return self::maskCredentials($this->repo->findById($id));
+        try {
+            return self::maskCredentials($this->repo->findByIdStrict($id));
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('代理服务暂不可用，请稍后重试', 50001);
+        }
     }
 
     public function probe(int $id): array
     {
-        $proxy = $this->repo->findById($id);
+        try {
+            $proxy = $this->repo->findByIdStrict($id);
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('代理服务暂不可用，请稍后重试', 50001);
+        }
         if (empty($proxy)) {
             return ['success' => false, 'msg' => '代理不存在'];
         }
@@ -82,6 +118,8 @@ class ProxyService
         );
 
         $status = $result['success'] ? 1 : 2;
+        // updateProbeResult 写入探测结果，即使 DB 写失败也不应把一次成功的探测翻成 50001，
+        // 这里保持非严格（记录日志即可），对用户端仅影响后续状态缓存。
         $this->repo->updateProbeResult($id, [
             'country' => $result['country'],
             'country_code' => $result['country_code'],
@@ -101,6 +139,16 @@ class ProxyService
         $inserted = [];
         $failed = [];
 
+        try {
+            return $this->quickAddInternal($lines, $inserted, $failed);
+        } catch (\RuntimeException $e) {
+            // 任何一行 createStrict 抛出都意味着 DB 整体不可用，整批作废为 50001。
+            throw new BusinessException('代理服务暂不可用，请稍后重试', 50001);
+        }
+    }
+
+    private function quickAddInternal(array $lines, array $inserted, array $failed): array
+    {
         foreach ($lines as $line) {
             $parts = preg_split('/\s+/', $line, 2);
             $urlPart = $parts[0];
@@ -127,7 +175,7 @@ class ProxyService
                 }
             }
 
-            $id = $this->repo->create($parsed);
+            $id = $this->repo->createStrict($parsed);
             if ($id <= 0) {
                 $failed[] = self::maskLineCredentials($line);
                 continue;
@@ -190,18 +238,33 @@ class ProxyService
             }
             $valid[] = $item;
         }
-        $added = !empty($valid) ? $this->repo->batchCreate($valid) : 0;
+        if (empty($valid)) {
+            return ['added' => 0, 'failed' => $failed];
+        }
+        try {
+            $added = $this->repo->batchCreateStrict($valid);
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('代理服务暂不可用，请稍后重试', 50001);
+        }
         return ['added' => $added, 'failed' => $failed];
     }
 
     public function batchExport(): array
     {
-        return array_map([self::class, 'maskCredentials'], $this->repo->all());
+        try {
+            return array_map([self::class, 'maskCredentials'], $this->repo->allStrict());
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('代理服务暂不可用，请稍后重试', 50001);
+        }
     }
 
     public function probeAll(): array
     {
-        $all = $this->repo->all();
+        try {
+            $all = $this->repo->allStrict();
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('代理服务暂不可用，请稍后重试', 50001);
+        }
         if (empty($all)) {
             return [];
         }

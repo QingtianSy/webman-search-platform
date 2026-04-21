@@ -55,10 +55,19 @@ class PaymentController
             ];
         } else {
             $amount = $request->input('amount', '0');
-            $paymentConfigs = (new SystemConfigRepository())->getByGroup('payment');
+            try {
+                $paymentConfigs = (new SystemConfigRepository())->getByGroupStrict('payment');
+            } catch (\Throwable $e) {
+                error_log("[PaymentController] read payment config failed: " . $e->getMessage());
+                return ApiResponse::error(50001, '支付配置暂不可用，请稍后重试');
+            }
             $cfgMap = array_column($paymentConfigs, 'config_value', 'config_key');
-            $minAmount = $cfgMap['payment_min_amount'] ?? '0.01';
-            $maxAmount = $cfgMap['payment_max_amount'] ?? '10000';
+            if (!isset($cfgMap['payment_min_amount'], $cfgMap['payment_max_amount'])) {
+                error_log('[PaymentController] payment_min_amount/payment_max_amount missing');
+                return ApiResponse::error(50001, '支付配置未初始化，请联系管理员');
+            }
+            $minAmount = (string) $cfgMap['payment_min_amount'];
+            $maxAmount = (string) $cfgMap['payment_max_amount'];
             if (!preg_match('/^\d+(\.\d{1,2})?$/', $amount) || bccomp($amount, $minAmount, 2) < 0 || bccomp($amount, $maxAmount, 2) > 0) {
                 return ApiResponse::error(40001, "充值金额须在 {$minAmount} ~ {$maxAmount} 之间");
             }

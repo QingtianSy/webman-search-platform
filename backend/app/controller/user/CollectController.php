@@ -3,6 +3,7 @@
 namespace app\controller\user;
 
 use app\common\user\UserQuery;
+use app\exception\BusinessException;
 use app\repository\mysql\CollectAccountRepository;
 use app\repository\mysql\CollectTaskRepository;
 use app\repository\mysql\OperateLogRepository;
@@ -18,9 +19,14 @@ class CollectController
     {
         $userId = (int) ($request->userId ?? 0);
         $query = UserQuery::parse($request->get());
-        $repo = new CollectAccountRepository();
-        $total = $repo->countByUserId($userId);
-        $list = $repo->findPageByUserId($userId, $query['page'], $query['page_size']);
+        try {
+            $repo = new CollectAccountRepository();
+            $total = $repo->countByUserIdStrict($userId);
+            $list = $repo->findPageByUserIdStrict($userId, $query['page'], $query['page_size']);
+        } catch (\RuntimeException $e) {
+            // 之前返回 0/[]，前端以为"没账号"，可能引导用户重新添加已存在的账号；改为 50001 暴露故障。
+            throw new BusinessException('采集账号列表暂不可用，请稍后重试', 50001);
+        }
         return ApiResponse::success(Pagination::format($list, $total, $query['page'], $query['page_size']));
     }
 
@@ -28,9 +34,13 @@ class CollectController
     {
         $userId = (int) ($request->userId ?? 0);
         $query = UserQuery::parse($request->get());
-        $repo = new CollectTaskRepository();
-        $total = $repo->countAll($userId);
-        $list = $repo->findPage($query['page'], $query['page_size'], $userId);
+        try {
+            $repo = new CollectTaskRepository();
+            $total = $repo->countAllStrict($userId);
+            $list = $repo->findPageStrict($query['page'], $query['page_size'], $userId);
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('采集任务列表暂不可用，请稍后重试', 50001);
+        }
         return ApiResponse::success(Pagination::format($list, $total, $query['page'], $query['page_size']));
     }
 

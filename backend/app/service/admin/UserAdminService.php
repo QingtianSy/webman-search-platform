@@ -5,6 +5,7 @@ namespace app\service\admin;
 use app\exception\BusinessException;
 use app\model\admin\User;
 use app\repository\redis\TokenCacheRepository;
+use app\repository\redis\UserAuthCacheRepository;
 use app\service\auth\JwtService;
 use support\Db;
 use support\Pagination;
@@ -112,6 +113,9 @@ class UserAdminService
 
             if (!empty($data['password']) || (isset($data['status']) && (int) $data['status'] === 0) || isset($data['role_ids'])) {
                 $this->revokeToken($id);
+            } elseif (isset($data['status']) || isset($data['nickname']) || isset($data['mobile']) || isset($data['email']) || !empty($data['username'])) {
+                // 资料更新不需要吊销 token，但要把合并鉴权缓存里的旧 status/profile 打掉。
+                (new UserAuthCacheRepository())->bust($id);
             }
 
             return ['success' => true, 'action' => 'update', 'id' => $id, 'data' => $row->makeHidden(['password', 'password_hash'])->toArray()];
@@ -153,6 +157,9 @@ class UserAdminService
             if ((int) $row->status === 0) {
                 $this->revokeToken($id);
                 Db::table('user_api_keys')->where('user_id', $id)->update(['status' => 0]);
+            } else {
+                // 启用（0→1）不写 sessions_invalidated_at，但旧缓存里 status=0 会让已发 token 继续被拦。
+                (new UserAuthCacheRepository())->bust($id);
             }
 
             return ['success' => true, 'action' => 'toggle_status', 'id' => $id, 'status' => $row->status];
@@ -184,6 +191,8 @@ class UserAdminService
             // 行不存在（已删除）则跳过；仍尝试清理 Redis。
             error_log("[UserAdminService] revokeToken: user={$userId} not found, skipping DB invalidation");
         }
+
+        (new UserAuthCacheRepository())->bust($userId);
 
         $tokenRepo = new TokenCacheRepository();
         if ($tokenRepo->setUserToken($userId, 'REVOKED')) {
@@ -226,7 +235,7 @@ class UserAdminService
 
     protected function syncRoles(int $userId, array $roleIds): void
     {
-        $validIds = array_filter(array_map('intval', $roleIds), fn($id) => $id > 0);
+        $validIds = array_values(array_unique(array_filter(array_map('intval', $roleIds), fn($id) => $id > 0)));
         if (!empty($validIds)) {
             $existCount = Db::table('roles')->whereIn('id', $validIds)->where('status', 1)->count();
             if ($existCount !== count($validIds)) {

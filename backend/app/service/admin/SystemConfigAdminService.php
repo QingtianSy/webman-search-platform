@@ -18,28 +18,47 @@ class SystemConfigAdminService
     {
         $query += ['page' => 1, 'page_size' => 20];
         $repo = new SystemConfigRepository();
-        $total = $repo->countAll();
-        $list = $repo->findPage((int) $query['page'], (int) $query['page_size']);
+        try {
+            $total = $repo->countAllStrict();
+            $list = $repo->findPageStrict((int) $query['page'], (int) $query['page_size']);
+        } catch (\RuntimeException $e) {
+            // 之前静默返 0/[]，后台配置页会变成"没有任何配置项"，运维可能误以为配置被清空。
+            throw new BusinessException('配置服务暂不可用，请稍后重试', 50001);
+        }
         $list = array_map([self::class, 'maskRow'], $list);
         return Pagination::format($list, $total, (int) $query['page'], (int) $query['page_size']);
     }
 
     public function getByGroup(string $groupCode): array
     {
-        $list = (new SystemConfigRepository())->getByGroup($groupCode);
+        try {
+            $list = (new SystemConfigRepository())->getByGroupStrict($groupCode);
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('配置服务暂不可用，请稍后重试', 50001);
+        }
         return array_map([self::class, 'maskRow'], $list);
     }
 
     public function update(string $key, string $value): array
     {
         $repo = new SystemConfigRepository();
-        $existing = $repo->findByKey($key);
+        try {
+            $existing = $repo->findByKeyStrict($key);
+        } catch (\Throwable $e) {
+            error_log("[SystemConfigAdminService] update findByKey failed: " . $e->getMessage());
+            throw new BusinessException('配置服务暂不可用，请稍后重试', 50001);
+        }
         if (empty($existing)) {
             throw new BusinessException('配置项不存在', 40001);
         }
         self::validateValueType($value, $existing['value_type'] ?? 'string', $key);
 
-        $row = $repo->updateByKey($key, $value);
+        try {
+            $row = $repo->updateByKeyStrict($key, $value);
+        } catch (\Throwable $e) {
+            error_log("[SystemConfigAdminService] update write failed: " . $e->getMessage());
+            throw new BusinessException('配置服务暂不可用，请稍后重试', 50001);
+        }
         if (empty($row)) {
             throw new BusinessException('配置项不存在', 40001);
         }

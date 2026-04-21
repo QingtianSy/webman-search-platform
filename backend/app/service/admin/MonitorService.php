@@ -117,14 +117,23 @@ class MonitorService
 
     protected function businessInfo(): array
     {
-        $dashboard = (new DashboardAdminService())->overview();
+        // DashboardAdminService 现在在数据源不可用时抛 50001，
+        // monitor 总览不应因此整体 5xx。参照 redisInfo/databaseInfo 的模式返回 error 字段，
+        // 让运维看到"数据库挂了"而不是"今日零搜索"。
+        try {
+            $dashboard = (new DashboardAdminService())->overview();
+        } catch (\Throwable $e) {
+            error_log("[MonitorService] businessInfo dashboard failed: " . $e->getMessage());
+            $dashboard = ['error' => $e->getMessage()];
+        }
 
         $pdo = MySqlClient::pdo();
-        $activeTasks = 0;
+        $activeTasks = null;
         if ($pdo) {
             try {
                 $activeTasks = (int) $pdo->query("SELECT COUNT(*) FROM collect_tasks WHERE status = 1")->fetchColumn();
-            } catch (\Throwable) {
+            } catch (\Throwable $e) {
+                error_log("[MonitorService] activeTasks failed: " . $e->getMessage());
             }
         }
 

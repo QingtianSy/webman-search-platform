@@ -19,6 +19,7 @@ class ProxyController
         if ($id <= 0) {
             return ApiResponse::error(40001, '参数错误');
         }
+        // 服务层 DB 故障会抛 BusinessException(50001)；空数组只可能是真"不存在"。
         $row = (new ProxyService())->detail($id);
         if (empty($row)) {
             return ApiResponse::error(40004, '代理不存在');
@@ -32,10 +33,8 @@ class ProxyController
         if (empty($data['protocol']) || empty($data['host']) || empty($data['port'])) {
             return ApiResponse::error(40001, '协议、地址、端口不能为空');
         }
+        // service 在 DB 故障/创建失败时抛 BusinessException，全局异常处理器统一返回。
         $result = (new ProxyService())->create($data);
-        if (!($result['success'] ?? false)) {
-            return ApiResponse::error(50000, $result['msg'] ?? '创建失败');
-        }
         return ApiResponse::success($result);
     }
 

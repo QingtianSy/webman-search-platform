@@ -2,6 +2,7 @@
 
 namespace app\service\payment;
 
+use app\exception\BusinessException;
 use app\repository\mysql\OrderRepository;
 
 class OrderService
@@ -53,6 +54,11 @@ class OrderService
             'trade_no' => $query['trade_no'] ?? '',
             'amount' => $query['amount'] ?? '',
         ];
-        return (new OrderRepository())->listByUserId($userId, $page, $pageSize, $filters);
+        try {
+            return (new OrderRepository())->listByUserId($userId, $page, $pageSize, $filters);
+        } catch (\Throwable $e) {
+            error_log("[OrderService] listByUserId failed: " . $e->getMessage());
+            throw new BusinessException('订单列表暂不可用，请稍后重试', 50001);
+        }
     }
 }

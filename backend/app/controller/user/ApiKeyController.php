@@ -3,7 +3,6 @@
 namespace app\controller\user;
 
 use app\common\user\UserQuery;
-use app\repository\mysql\ApiKeyRepository;
 use app\repository\mysql\OperateLogRepository;
 use app\service\user\ApiKeyService;
 use app\validate\user\ApiKeyValidate;
@@ -17,10 +16,8 @@ class ApiKeyController
     {
         $userId = (int) ($request->userId ?? 0);
         $query = UserQuery::parse($request->get());
-        $repo = new ApiKeyRepository();
-        $total = $repo->countByUserId($userId);
-        $list = $repo->findPageByUserId($userId, $query['page'], $query['page_size']);
-        return ApiResponse::success(Pagination::format($list, $total, $query['page'], $query['page_size']));
+        $paged = (new ApiKeyService())->listPaginated($userId, $query['page'], $query['page_size']);
+        return ApiResponse::success(Pagination::format($paged['list'], $paged['total'], $query['page'], $query['page_size']));
     }
 
     public function detail(Request $request)

@@ -3,7 +3,6 @@
 namespace app\service\admin;
 
 use app\exception\BusinessException;
-use app\service\question\QuestionService;
 use app\repository\mongo\QuestionRepository;
 use app\service\question\QuestionIndexService;
 use support\Pagination;
@@ -20,15 +19,27 @@ class QuestionAdminService
             'stem' => (string) ($query['keyword'] ?? ''),
         ];
 
+        // 管理端走 strict 路径：Mongo 不可用或查询异常直接抛 50001，
+        // 不再把故障伪装成"空列表"误导排障。
         $repo = new QuestionRepository();
-        $total = $repo->countByFilters($filters);
-        $list = $repo->findPage($filters, $page, $pageSize);
+        try {
+            $total = $repo->countByFiltersStrict($filters);
+            $list = $repo->findPageStrict($filters, $page, $pageSize);
+        } catch (\Throwable $e) {
+            error_log("[QuestionAdminService] getList failed: " . $e->getMessage());
+            throw new BusinessException('题库数据源暂不可用，请稍后重试', 50001);
+        }
         return Pagination::format($list, $total, $page, $pageSize);
     }
 
     public function detail(string $id): array
     {
-        return (new QuestionService())->detail($id);
+        try {
+            return (new QuestionRepository())->findByQuestionIdStrict($id);
+        } catch (\Throwable $e) {
+            error_log("[QuestionAdminService] detail failed: " . $e->getMessage());
+            throw new BusinessException('题库数据源暂不可用，请稍后重试', 50001);
+        }
     }
 
     public function create(array $data): array
@@ -64,8 +75,19 @@ class QuestionAdminService
 
     public function update(string $id, array $data): array
     {
+        $repo = new QuestionRepository();
         if (isset($data['stem']) || isset($data['options_text']) || isset($data['answer_text'])) {
-            $existing = (new QuestionRepository())->findByQuestionId($id);
+            // 前置读原记录用于 md5/stem_plain 重算。走 strict 版：
+            // Mongo 异常时直接抛 50001，避免静默返回 [] 让 md5 被按空串错算写回。
+            try {
+                $existing = $repo->findByQuestionIdStrict($id);
+            } catch (\Throwable $e) {
+                error_log("[QuestionAdminService] update prefetch failed: " . $e->getMessage());
+                throw new BusinessException('题库数据源暂不可用，请稍后重试', 50001);
+            }
+            if (empty($existing)) {
+                throw new BusinessException('题目不存在', 40001);
+            }
             $stem = $data['stem'] ?? ($existing['stem'] ?? '');
             $options = $data['options_text'] ?? ($existing['options_text'] ?? '');
             $answer = $data['answer_text'] ?? ($existing['answer_text'] ?? '');
@@ -73,7 +95,12 @@ class QuestionAdminService
             $data['md5'] = md5($stem . $options . $answer);
         }
         $data['updated_at'] = date('Y-m-d H:i:s');
-        $result = (new QuestionRepository())->update($id, $data);
+        try {
+            $result = $repo->updateStrict($id, $data);
+        } catch (\Throwable $e) {
+            error_log("[QuestionAdminService] update failed: " . $e->getMessage());
+            throw new BusinessException('题库数据源暂不可用，请稍后重试', 50001);
+        }
         if (empty($result)) {
             throw new BusinessException('题目不存在', 40001);
         }
@@ -90,7 +117,12 @@ class QuestionAdminService
 
     public function delete(string $id): array
     {
-        $deleted = (new QuestionRepository())->delete($id);
+        try {
+            $deleted = (new QuestionRepository())->deleteStrict($id);
+        } catch (\Throwable $e) {
+            error_log("[QuestionAdminService] delete failed: " . $e->getMessage());
+            throw new BusinessException('题库数据源暂不可用，请稍后重试', 50001);
+        }
         if (!$deleted) {
             throw new BusinessException('题目不存在', 40001);
         }
@@ -112,11 +144,17 @@ class QuestionAdminService
         ];
         $exportLimit = 50000;
         $repo = new QuestionRepository();
-        $total = $repo->countByFilters($filters);
+        // export 开头先用 strict count 验 Mongo 可用，避免静默导出零行 CSV。
+        try {
+            $total = $repo->countByFiltersStrict($filters);
+        } catch (\Throwable $e) {
+            error_log("[QuestionAdminService] export count failed: " . $e->getMessage());
+            throw new BusinessException('题库数据源暂不可用，请稍后重试', 50001);
+        }
 
         $headers = ['题目ID', 'MD5', '题型', '来源', '课程', '题干', '选项', '答案', '状态', '创建时间'];
         $rows = (function () use ($repo, $filters, $exportLimit) {
-            foreach ($repo->findListIterator($filters, $exportLimit) as $r) {
+            foreach ($repo->findListIteratorStrict($filters, $exportLimit) as $r) {
                 yield [
                     $r['question_id'] ?? '',
                     $r['md5'] ?? '',

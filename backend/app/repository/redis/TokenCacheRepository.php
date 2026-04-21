@@ -3,6 +3,7 @@
 namespace app\repository\redis;
 
 use support\adapter\RedisClient;
+use support\AppLog;
 
 class TokenCacheRepository
 {
@@ -20,7 +21,7 @@ class TokenCacheRepository
         try {
             return $redis->setex(RedisClient::key(self::PREFIX, $userId), $ttl, $token);
         } catch (\Throwable $e) {
-            error_log("[TokenCacheRepository] setUserToken failed: " . $e->getMessage());
+            AppLog::warn("[TokenCacheRepository] setUserToken failed: " . $e->getMessage());
             return false;
         }
     }
@@ -38,7 +39,7 @@ class TokenCacheRepository
             $val = $redis->get(RedisClient::key(self::PREFIX, $userId));
             return ['connected' => true, 'token' => $val === false ? null : (string) $val];
         } catch (\Throwable $e) {
-            error_log("[TokenCacheRepository] getUserToken failed: " . $e->getMessage());
+            AppLog::warn("[TokenCacheRepository] getUserToken failed: " . $e->getMessage());
             return ['connected' => false, 'token' => null];
         }
     }
@@ -53,7 +54,7 @@ class TokenCacheRepository
             $val = $redis->get(RedisClient::key(self::PREFIX, $userId));
             return $val === false ? null : (string) $val;
         } catch (\Throwable $e) {
-            error_log("[TokenCacheRepository] getUserToken failed: " . $e->getMessage());
+            AppLog::warn("[TokenCacheRepository] getUserToken failed: " . $e->getMessage());
             return null;
         }
     }
@@ -68,7 +69,7 @@ class TokenCacheRepository
             $redis->del(RedisClient::key(self::PREFIX, $userId));
             return true;
         } catch (\Throwable $e) {
-            error_log("[TokenCacheRepository] deleteToken failed: " . $e->getMessage());
+            AppLog::warn("[TokenCacheRepository] deleteToken failed: " . $e->getMessage());
             return false;
         }
     }

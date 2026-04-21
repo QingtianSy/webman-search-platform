@@ -38,4 +38,20 @@ class UserRoleRepository
             return [];
         }
     }
+
+    // 严格版本：DB 故障抛 RuntimeException，避免 RBAC 链路把"DB 挂了"伪装成"该用户没角色 → 权限/菜单为空"。
+    public function roleIdsByUserIdStrict(int $userId): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            throw new \RuntimeException('MySQL connection unavailable');
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT role_id FROM user_role WHERE user_id = :user_id');
+            $stmt->execute(['user_id' => $userId]);
+            return array_map('intval', array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'role_id'));
+        } catch (\PDOException $e) {
+            throw new \RuntimeException('user role list failed: ' . $e->getMessage(), 0, $e);
+        }
+    }
 }

@@ -23,6 +23,52 @@ class ApiSourceRepository
         }
     }
 
+    public function countAllStrict(): int
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            throw new \RuntimeException('MySQL connection unavailable');
+        }
+        try {
+            return (int) $pdo->query('SELECT COUNT(*) FROM api_sources')->fetchColumn();
+        } catch (\PDOException $e) {
+            throw new \RuntimeException('api source count failed: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    public function findPageStrict(int $page, int $pageSize): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            throw new \RuntimeException('MySQL connection unavailable');
+        }
+        try {
+            $offset = ($page - 1) * $pageSize;
+            $stmt = $pdo->prepare('SELECT id, name, code, method, url, timeout, retry_times, status, success_code_field, success_code_value, data_path, remark, created_at, updated_at FROM api_sources ORDER BY id DESC LIMIT :limit OFFSET :offset');
+            $stmt->bindValue('limit', $pageSize, PDO::PARAM_INT);
+            $stmt->bindValue('offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            throw new \RuntimeException('api source page query failed: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    public function findByIdStrict(int $id): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            throw new \RuntimeException('MySQL connection unavailable');
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT id, name, code, method, url, timeout, retry_times, status, success_code_field, success_code_value, data_path, remark, created_at, updated_at FROM api_sources WHERE id = :id LIMIT 1');
+            $stmt->execute(['id' => $id]);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            throw new \RuntimeException('api source find failed: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
     public function countAll(): int
     {
         $pdo = MySqlClient::pdo();
@@ -74,7 +120,9 @@ class ApiSourceRepository
 
     public function test(int $id): array
     {
-        $row = $this->findById($id);
+        // 测试入口先严格查：DB 故障抛 RuntimeException 让 admin service 翻 50001，
+        // 而不是伪装成"接口源不存在 / 测试失败"。
+        $row = $this->findByIdStrict($id);
         if (!$row) {
             return [];
         }
@@ -106,12 +154,33 @@ class ApiSourceRepository
                 'tested_at' => date('Y-m-d H:i:s'),
             ];
         } catch (\Throwable $e) {
+            // Guzzle/cURL 原文会带 URL、Basic Auth、解析后的 IP 等内网线索，仅记服务端日志。
+            error_log("[ApiSourceRepository] test http failed id={$id}: " . $e->getMessage());
             return [
                 'id' => $id,
                 'status' => 'error',
-                'message' => $e->getMessage(),
+                'message' => $this->classifyTestError($e),
                 'tested_at' => date('Y-m-d H:i:s'),
             ];
         }
+    }
+
+    protected function classifyTestError(\Throwable $e): string
+    {
+        if ($e instanceof \GuzzleHttp\Exception\ConnectException) {
+            return '连接失败（超时或目标不可达）';
+        }
+        if ($e instanceof \GuzzleHttp\Exception\TooManyRedirectsException) {
+            return '重定向次数超限';
+        }
+        if ($e instanceof \GuzzleHttp\Exception\BadResponseException) {
+            $resp = $e->getResponse();
+            return $resp ? ('HTTP ' . $resp->getStatusCode()) : '响应异常';
+        }
+        if ($e instanceof \GuzzleHttp\Exception\RequestException) {
+            $resp = $e->getResponse();
+            return $resp ? ('HTTP ' . $resp->getStatusCode()) : '请求失败';
+        }
+        return '测试失败（详情见服务端日志）';
     }
 }

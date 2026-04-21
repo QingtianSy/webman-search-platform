@@ -2,7 +2,7 @@
 
 namespace app\service\user;
 
-use app\common\user\UserListBuilder;
+use app\exception\BusinessException;
 use PDO;
 use support\adapter\MySqlClient;
 
@@ -15,7 +15,9 @@ class SearchHistoryService
 
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
-            return UserListBuilder::make([], $page, $pageSize);
+            // 搜索历史空列表与"真的没搜过"视觉上完全一样，会让用户看不到扣费记录、
+            // 找不到 log_no，所以把故障暴露为 50001 让前端区分。
+            throw new BusinessException('搜索历史暂不可用，请稍后重试', 50001);
         }
         try {
             $offset = ($page - 1) * $pageSize;
@@ -38,7 +40,7 @@ class SearchHistoryService
             ];
         } catch (\PDOException $e) {
             error_log("[SearchHistoryService] getList failed: " . $e->getMessage());
-            return UserListBuilder::make([], $page, $pageSize);
+            throw new BusinessException('搜索历史暂不可用，请稍后重试', 50001);
         }
     }
 }

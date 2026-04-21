@@ -7,6 +7,7 @@ use app\model\admin\Role;
 use app\repository\mysql\UserRoleRepository;
 use app\repository\redis\PermissionCacheRepository;
 use app\repository\redis\TokenCacheRepository;
+use app\repository\redis\UserAuthCacheRepository;
 use app\service\auth\JwtService;
 use support\Db;
 use support\Pagination;
@@ -125,7 +126,7 @@ class RoleAdminService
 
     protected function syncPermissions(int $roleId, array $permissionIds): void
     {
-        $validIds = array_filter(array_map('intval', $permissionIds), fn($id) => $id > 0);
+        $validIds = array_values(array_unique(array_filter(array_map('intval', $permissionIds), fn($id) => $id > 0)));
         if (!empty($validIds)) {
             $existCount = Db::table('permissions')->whereIn('id', $validIds)->where('status', 1)->count();
             if ($existCount !== count($validIds)) {
@@ -172,6 +173,7 @@ class RoleAdminService
         }
         // 写 sessions_invalidated_at 作为权威失效源；Redis 仅作为快速路径，不可用时中间件用 DB 兜底。
         Db::table('users')->whereIn('id', $userIds)->update(['sessions_invalidated_at' => JwtService::nowDatetime3()]);
+        (new UserAuthCacheRepository())->bustMany($userIds);
         $tokenRepo = new TokenCacheRepository();
         foreach ($userIds as $uid) {
             if (!$tokenRepo->setUserToken($uid, 'REVOKED')) {

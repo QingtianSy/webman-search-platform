@@ -128,4 +128,17 @@ class AuthController
         }
         return ApiResponse::success($result, '更新成功');
     }
+
+    // 登出：中间件已校验并把 userId 挂到 request 上；service 内把 sessions_invalidated_at 推进到 now，
+    // 同时清 Redis token 缓存与合并鉴权缓存。幂等——重复调用仍会刷新 invalidated_ms。
+    public function logout(Request $request)
+    {
+        $userId = (int) ($request->userId ?? 0);
+        if ($userId <= 0) {
+            // 走到这里说明 UserAuthMiddleware 已放行却没挂 userId，理论不可达；兜底走 40002 而非 500 以便前端清 token。
+            return ApiResponse::error(40002, '未登录');
+        }
+        (new AuthService())->logout($userId);
+        return ApiResponse::success(null, '已登出');
+    }
 }

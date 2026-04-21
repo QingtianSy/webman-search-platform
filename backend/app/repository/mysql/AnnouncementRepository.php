@@ -22,6 +22,21 @@ class AnnouncementRepository
         }
     }
 
+    // 严格版本：DB 故障抛 RuntimeException，避免 Dashboard 把"DB 挂了"伪装成"当前无公告"。
+    public function latestStrict(): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            throw new \RuntimeException('MySQL connection unavailable');
+        }
+        try {
+            $stmt = $pdo->query('SELECT id, title, type, status, publish_at, created_at, updated_at FROM announcements WHERE status = 1 AND (publish_at IS NULL OR publish_at <= NOW()) ORDER BY id DESC LIMIT 10000');
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            throw new \RuntimeException('announcement latest failed: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
     public function create(array $data): array
     {
         $pdo = MySqlClient::pdo();

@@ -31,10 +31,9 @@ class ApiSourceController
     {
         $userId = (int) ($request->userId ?? 0);
         $data = (new ApiSourceValidate())->create($request->post());
+        // service 层在故障/记录不存在两种情况会分别抛 50001 / 40004 BusinessException，
+        // 这里仅负责返回 success。不再做 `empty => 50000` 笼统兜底，避免覆盖 service 的精确状态码。
         $result = (new ApiSourceService())->create($userId, $data);
-        if (empty($result)) {
-            return ApiResponse::error(50000, '创建失败');
-        }
         return ApiResponse::success($result, '接口源创建成功');
     }
 
@@ -45,9 +44,6 @@ class ApiSourceController
         $id = $data['id'];
         unset($data['id']);
         $result = (new ApiSourceService())->update($userId, $id, $data);
-        if (empty($result)) {
-            return ApiResponse::error(40004, '接口源不存在或更新失败');
-        }
         return ApiResponse::success($result, '接口源更新成功');
     }
 
@@ -55,10 +51,7 @@ class ApiSourceController
     {
         $userId = (int) ($request->userId ?? 0);
         $id = (new ApiSourceValidate())->id($request->get());
-        $ok = (new ApiSourceService())->delete($userId, $id);
-        if (!$ok) {
-            return ApiResponse::error(40004, '接口源不存在');
-        }
+        (new ApiSourceService())->delete($userId, $id);
         return ApiResponse::success(['id' => $id], '接口源删除成功');
     }
 
@@ -71,5 +64,26 @@ class ApiSourceController
             return ApiResponse::error(50000, $result['message'] ?? '接口源测试失败', $result);
         }
         return ApiResponse::success($result, '接口源测试完成');
+    }
+
+    // 异步测试：投递后立即返回 task_id，前端走 testResult 轮询。
+    public function testSubmit(Request $request)
+    {
+        $userId = (int) ($request->userId ?? 0);
+        $id = (new ApiSourceValidate())->id($request->post());
+        return ApiResponse::success(
+            (new ApiSourceService())->submitTest($userId, $id),
+            '接口源测试已提交'
+        );
+    }
+
+    public function testResult(Request $request)
+    {
+        $userId = (int) ($request->userId ?? 0);
+        $taskId = (string) $request->get('task_id', '');
+        if ($taskId === '') {
+            return ApiResponse::error(40001, '缺少 task_id');
+        }
+        return ApiResponse::success((new ApiSourceService())->getTestResult($userId, $taskId));
     }
 }

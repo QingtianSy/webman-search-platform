@@ -9,7 +9,10 @@ use GuzzleHttp\Promise;
 
 class ThirdPartySearchService
 {
-    private const MAX_PER_SOURCE_TIMEOUT = 15;
+    // 全局预算：每个源最长等 5s。Guzzle 内部走 curl_multi 并行，
+    // settle()->wait() 整体阻塞 ≈ max(per-source timeout)，所以把上限压低就等于全局预算。
+    // 之前是 15s，导致任一慢源把主链路卡满 15s；现在主链路最多额外等 5s。
+    private const MAX_PER_SOURCE_TIMEOUT = 5;
 
     public function startQuery(int $userId, string $keyword, string $info = '', string $split = '###'): \Closure
     {
@@ -17,7 +20,20 @@ class ThirdPartySearchService
             return fn() => [];
         }
 
-        $sources = (new UserApiSourceRepository())->findActiveByUserId($userId);
+        // 关键：读启用源必须走 Strict。之前用 findActiveByUserId，DB 故障返 [] → 主搜索照常返回 → 用户/运维以为"用户没启用任何第三方源"。
+        // 现在 DB 故障走 RuntimeException → 下面转成一条 source_name='(配置读取失败)' 的 error 条目，前端看得到"加载源失败"。
+        try {
+            $sources = (new UserApiSourceRepository())->findActiveByUserIdStrict($userId);
+        } catch (\RuntimeException $e) {
+            error_log("[ThirdPartySearchService] load active sources failed: " . $e->getMessage());
+            return fn() => [[
+                'source_id' => 0,
+                'source_name' => '(配置读取失败)',
+                'status' => 'error',
+                'data' => null,
+                'error' => '第三方源配置暂不可用，请稍后重试',
+            ]];
+        }
         if (empty($sources)) {
             return fn() => [];
         }
@@ -39,7 +55,18 @@ class ThirdPartySearchService
             return [];
         }
 
-        $sources = (new UserApiSourceRepository())->findActiveByUserId($userId);
+        try {
+            $sources = (new UserApiSourceRepository())->findActiveByUserIdStrict($userId);
+        } catch (\RuntimeException $e) {
+            error_log("[ThirdPartySearchService] query load active sources failed: " . $e->getMessage());
+            return [[
+                'source_id' => 0,
+                'source_name' => '(配置读取失败)',
+                'status' => 'error',
+                'data' => null,
+                'error' => '第三方源配置暂不可用，请稍后重试',
+            ]];
+        }
         if (empty($sources)) {
             return [];
         }

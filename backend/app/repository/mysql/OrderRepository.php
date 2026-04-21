@@ -87,9 +87,11 @@ class OrderRepository
 
     public function listByUserId(int $userId, int $page = 1, int $pageSize = 20, array $filters = []): array
     {
+        // 订单历史空列表 = 用户"没下过单"视觉相同，但对于充过值的用户会造成严重误解。
+        // 故障暴露为 RuntimeException，由 service 层转成 50001。
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
-            return ['list' => [], 'total' => 0, 'page' => $page, 'page_size' => $pageSize];
+            throw new \RuntimeException('MySQL connection unavailable');
         }
         try {
             $where = 'WHERE user_id = :user_id';
@@ -125,7 +127,7 @@ class OrderRepository
             return ['list' => $list, 'total' => $total, 'page' => $page, 'page_size' => $pageSize];
         } catch (\PDOException $e) {
             error_log("[OrderRepository] listByUserId failed: " . $e->getMessage());
-            return ['list' => [], 'total' => 0, 'page' => $page, 'page_size' => $pageSize];
+            throw new \RuntimeException('order list query failed: ' . $e->getMessage(), 0, $e);
         }
     }
 }

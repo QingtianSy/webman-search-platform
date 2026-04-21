@@ -6,8 +6,10 @@ use app\repository\mysql\RolePermissionRepository;
 use app\repository\mysql\UserRepository;
 use app\repository\mysql\UserRoleRepository;
 use app\repository\redis\TokenCacheRepository;
+use app\repository\redis\UserAuthCacheRepository;
 use app\service\auth\JwtService;
 use support\ApiResponse;
+use support\AppLog;
 use Webman\MiddlewareInterface;
 use Webman\Http\Response;
 use Webman\Http\Request;
@@ -40,14 +42,40 @@ class UserAuthMiddleware implements MiddlewareInterface
         //   2) Redis 宕机期间 AuthController 允许 fail-open 发 token，Redis 恢复后这些 token 又被判失效。
         // 吊销由 DB sessions_invalidated_at 权威控制，key 缺失不再视为吊销信号。
 
-        // DB 校验：即便 Redis 命中旧 token（比如 REVOKED 写失败漏网），
-        // 依然用 users.sessions_invalidated_at(DATETIME(3)) 对照 JWT iat_ms 把已吊销 token 拦下。
-        // 只有显式吊销动作（密码修改/禁用/角色变更/删号）才会写这一列；昵称、头像、邮箱等资料更新不写。
-        $user = (new UserRepository())->findById($userId);
-        if (!$user || (int) ($user['status'] ?? 0) !== 1) {
+        // 鉴权合并缓存：status / invalidated_ms / role_codes 一次 Redis 读即可完成，
+        // 缓存未命中退回 DB 组装并写回；DB 写 sessions_invalidated_at 的路径必须调用 bust()。
+        // DB 故障必须走 50001 出口：非严格版本返 null/[] 会让合法 token 被翻成 40002"用户不存在"。
+        $authCache = new UserAuthCacheRepository();
+        $auth = $authCache->get($userId);
+        if ($auth === null) {
+            try {
+                $user = (new UserRepository())->findByIdStrict($userId);
+                if (!$user) {
+                    return ApiResponse::error(40002, '用户不存在或已被禁用');
+                }
+                $roleIds = (new UserRoleRepository())->roleIdsByUserIdStrict($userId);
+                $roleCodes = !empty($roleIds)
+                    ? (new RolePermissionRepository())->roleCodesByIdsStrict($roleIds)
+                    : [];
+            } catch (\RuntimeException $e) {
+                AppLog::warn("[UserAuthMiddleware] auth load infra failure user={$userId}: " . $e->getMessage());
+                return ApiResponse::error(50001, '鉴权服务暂不可用，请稍后重试');
+            }
+            $auth = [
+                'status' => (int) ($user['status'] ?? 0),
+                'invalidated_ms' => JwtService::datetimeToMs($user['sessions_invalidated_at'] ?? null),
+                'role_codes' => $roleCodes,
+            ];
+            if ($redisConnected) {
+                $authCache->set($userId, $auth);
+            }
+        }
+
+        if ((int) ($auth['status'] ?? 0) !== 1) {
             return ApiResponse::error(40002, '用户不存在或已被禁用');
         }
-        $invalidatedMs = JwtService::datetimeToMs($user['sessions_invalidated_at'] ?? null);
+
+        $invalidatedMs = (int) ($auth['invalidated_ms'] ?? 0);
         if ($invalidatedMs > 0) {
             $iatMs = (int) ($decoded['iat_ms'] ?? 0);
             if ($iatMs <= 0) {
@@ -59,17 +87,12 @@ class UserAuthMiddleware implements MiddlewareInterface
             }
         }
 
-        $rolesFromDb = null;
         if (!$redisConnected) {
-            error_log("[UserAuthMiddleware] Redis unavailable, falling back to DB verification for user {$userId}");
-            $roleIds = (new UserRoleRepository())->roleIdsByUserId($userId);
-            $rolesFromDb = !empty($roleIds)
-                ? (new RolePermissionRepository())->roleCodesByIds($roleIds)
-                : [];
+            AppLog::warn("[UserAuthMiddleware] Redis unavailable, DB fallback for user {$userId}");
         }
 
         $request->userId = $userId;
-        $request->userRoles = $rolesFromDb ?? ($decoded['payload']['roles'] ?? []);
+        $request->userRoles = $auth['role_codes'] ?? [];
         return $handler($request);
     }
 }

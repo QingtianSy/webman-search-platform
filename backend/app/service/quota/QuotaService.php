@@ -2,12 +2,20 @@
 
 namespace app\service\quota;
 
+use app\exception\BusinessException;
 use app\repository\redis\QuotaCacheRepository;
 use PDO;
 use support\adapter\MySqlClient;
+use support\AppLog;
 
 class QuotaService
 {
+    // 额度链路严格化背景：
+    //   旧实现在 MySQL/Redis 抖动时统一返回 0 / false，上层 SearchService 会把它翻译成"额度不足 40006"。
+    //   效果：基础设施故障 → 有余额的用户被挡在门外，既误导用户又让运维看不到 DB 故障告警。
+    //   现在所有 DB/Redis 不可用都抛 BusinessException(50001) 暴露出去；consume 的"额度用完"语义用返回 false 保留。
+    //   Redis getUserQuota 返回 -1（未缓存）仅代表 miss，不抛异常，回退 DB。
+
     public function getUserQuota(int $userId): int
     {
         $cache = new QuotaCacheRepository();
@@ -18,13 +26,15 @@ class QuotaService
 
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
-            return 0;
+            throw new BusinessException('额度服务暂不可用，请稍后重试', 50001);
         }
         try {
             $stmt = $pdo->prepare('SELECT is_unlimited, remain_quota FROM user_subscriptions WHERE user_id = :user_id AND (expire_at IS NULL OR expire_at > NOW()) ORDER BY id DESC LIMIT 1');
             $stmt->execute(['user_id' => $userId]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$row) {
+                // 无有效订阅 → 真实"额度 0"，不是故障。缓存也写 0 避免反复打 DB。
+                $cache->setUserQuota($userId, 0);
                 return 0;
             }
             if ((int) $row['is_unlimited'] === 1) {
@@ -35,8 +45,8 @@ class QuotaService
             $cache->setUserQuota($userId, $quota);
             return $quota;
         } catch (\PDOException $e) {
-            error_log("[QuotaService] getUserQuota failed: " . $e->getMessage());
-            return 0;
+            AppLog::warn("[QuotaService] getUserQuota failed: " . $e->getMessage());
+            throw new BusinessException('额度服务暂不可用，请稍后重试', 50001);
         }
     }
 
@@ -44,7 +54,8 @@ class QuotaService
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
-            return ['remain_quota' => 0, 'is_unlimited' => false];
+            // open/quota/detail 与 user/plan/current 等都会调到这里；DB 挂时显示 0 额度会诱导用户退订/冲值，所以 50001。
+            throw new BusinessException('额度服务暂不可用，请稍后重试', 50001);
         }
         try {
             $stmt = $pdo->prepare('SELECT is_unlimited, remain_quota FROM user_subscriptions WHERE user_id = :user_id AND (expire_at IS NULL OR expire_at > NOW()) ORDER BY id DESC LIMIT 1');
@@ -58,8 +69,8 @@ class QuotaService
                 'is_unlimited' => (int) $row['is_unlimited'] === 1,
             ];
         } catch (\PDOException $e) {
-            error_log("[QuotaService] getUserQuotaDetail failed: " . $e->getMessage());
-            return ['remain_quota' => 0, 'is_unlimited' => false];
+            AppLog::warn("[QuotaService] getUserQuotaDetail failed: " . $e->getMessage());
+            throw new BusinessException('额度服务暂不可用，请稍后重试', 50001);
         }
     }
 
@@ -95,7 +106,9 @@ class QuotaService
             $cache->deleteUserQuota($userId);
             return $ok && $stmt->rowCount() > 0;
         } catch (\PDOException $e) {
-            error_log("[QuotaService] refund failed: " . $e->getMessage());
+            // refund 是补偿路径（搜索零命中退额度），DB 挂时失败不该再把调用者 SearchService 抛崩溃。
+            // 返回 false 让调用方记录 warning 即可，避免把一次成功的搜索因为退款失败翻成 500。
+            AppLog::warn("[QuotaService] refund failed: " . $e->getMessage());
             $cache->deleteUserQuota($userId);
             return false;
         }
@@ -109,7 +122,7 @@ class QuotaService
 
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
-            return false;
+            throw new BusinessException('额度服务暂不可用，请稍后重试', 50001);
         }
 
         $cache = new QuotaCacheRepository();
@@ -132,15 +145,16 @@ class QuotaService
                 'check' => $amount,
             ]);
             if (!$ok || $stmt->rowCount() === 0) {
+                // 0 行被更新：要么 remain_quota 不够（真"额度不足"），要么订阅过期。语义用返回 false 表达。
                 $cache->deleteUserQuota($userId);
                 return false;
             }
             $cache->deleteUserQuota($userId);
             return true;
         } catch (\PDOException $e) {
-            error_log("[QuotaService] consume failed: " . $e->getMessage());
+            AppLog::warn("[QuotaService] consume failed: " . $e->getMessage());
             $cache->deleteUserQuota($userId);
-            return false;
+            throw new BusinessException('额度服务暂不可用，请稍后重试', 50001);
         }
     }
 }

@@ -33,6 +33,32 @@ class BalanceLogRepository
         }
     }
 
+    // 严格版本：DB 故障抛 RuntimeException，避免余额流水接口用"空列表"掩盖故障。
+    public function listByUserIdStrict(int $userId, int $page = 1, int $pageSize = 20): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            throw new \RuntimeException('MySQL connection unavailable');
+        }
+        try {
+            $countStmt = $pdo->prepare('SELECT COUNT(*) FROM balance_logs WHERE user_id = :user_id');
+            $countStmt->execute(['user_id' => $userId]);
+            $total = (int) $countStmt->fetchColumn();
+
+            $offset = ($page - 1) * $pageSize;
+            $stmt = $pdo->prepare('SELECT id, user_id, type, amount, balance_after, remark, created_at FROM balance_logs WHERE user_id = :user_id ORDER BY created_at DESC LIMIT :limit OFFSET :offset');
+            $stmt->bindValue('user_id', $userId, PDO::PARAM_INT);
+            $stmt->bindValue('limit', $pageSize, PDO::PARAM_INT);
+            $stmt->bindValue('offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
+            $list = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            return ['list' => $list, 'total' => $total, 'page' => $page, 'page_size' => $pageSize];
+        } catch (\PDOException $e) {
+            throw new \RuntimeException('balance log list failed: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
     public function create(array $data): bool
     {
         $pdo = MySqlClient::pdo();

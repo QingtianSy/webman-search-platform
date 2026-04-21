@@ -15,6 +15,7 @@ class CollectWorker
     protected QuestionIndexRepository $esRepo;
     protected array $runningTasks = [];
     protected array $collectConfig = [];
+    protected bool $recoveryDone = false;
 
     public function onWorkerStart(): void
     {
@@ -30,7 +31,15 @@ class CollectWorker
 
     public function loadCollectConfig(): void
     {
-        $rows = (new SystemConfigRepository())->getByGroup('collect');
+        // 配置读取走 Strict：之前用非严格 getByGroup，DB 故障 → 返 [] → 所有 getConfig('xxx', default) 回落默认值继续跑，
+        // concurrency/timeout/separator 等全被静默重置，管理员在后台看到的"当前配置"与 worker 实际使用配置可能不一致。
+        // 读失败时保留上一次成功的快照而非清空，避免立刻退化到硬编码默认；只记日志让运维知道刷新失败。
+        try {
+            $rows = (new SystemConfigRepository())->getByGroupStrict('collect');
+        } catch (\RuntimeException $e) {
+            error_log("[CollectWorker] loadCollectConfig failed, keep previous snapshot: " . $e->getMessage());
+            return;
+        }
         $map = [];
         foreach ($rows as $row) {
             $map[$row['config_key']] = $row['config_value'];
@@ -45,7 +54,15 @@ class CollectWorker
 
     protected function recoverRunningTasks(): void
     {
-        $tasks = $this->taskRepo->findByStatus(1);
+        // Strict：worker 启动或刚故障恢复时 MySQL 抖一下，非严格 findByStatus 返 [] 会让 status=1 的旧任务永远卡住。
+        // 认领失败时不标记 recoveryDone，下一次 poll() 继续尝试，直到成功为止。
+        try {
+            $tasks = $this->taskRepo->findByStatusStrict(1);
+        } catch (\RuntimeException $e) {
+            error_log("[CollectWorker] recoverRunningTasks deferred, DB unavailable: " . $e->getMessage());
+            return;
+        }
+        $recoveryOk = true;
         foreach ($tasks as $task) {
             $taskNo = $task['task_no'] ?? '';
             $pid = (int) ($task['runner_script'] ?? 0);
@@ -57,23 +74,39 @@ class CollectWorker
                         $this->runningTasks[$taskNo] = ['pid' => $recoveredPid, 'started_at' => time()];
                         error_log("[CollectWorker] adopted orphan task={$taskNo} pid={$recoveredPid}");
                     } else {
-                        $this->taskRepo->updateStatus($taskNo, 0, '进程丢失，重新排队');
-                        $this->cleanupPidFile($taskNo);
-                        error_log("[CollectWorker] reset orphaned task={$taskNo} to pending");
+                        // Strict：orphan 回退用非严格 updateStatus 时，DB 抖动 → rowCount=0 → 仅日志一行 "reset ... to pending"，
+                        // 然而任务在库里还是 status=1，下一轮 poll 因 recoveryDone=true 不会再扫。改用 strict 变体，
+                        // 失败时保持 recoveryDone=false，等下个周期重试这一笔，同时不推进处理该任务。
+                        try {
+                            $this->taskRepo->updateStatusStrict($taskNo, 0, '进程丢失，重新排队');
+                            $this->cleanupPidFile($taskNo);
+                            error_log("[CollectWorker] reset orphaned task={$taskNo} to pending");
+                        } catch (\RuntimeException $e) {
+                            $recoveryOk = false;
+                            error_log("[CollectWorker] reset orphan failed task={$taskNo}, will retry: " . $e->getMessage());
+                        }
                     }
                 }
                 continue;
             }
-            $this->runningTasks[$taskNo] = [
-                'pid' => $pid,
-                'started_at' => time(),
-            ];
-            error_log("[CollectWorker] recovered task={$taskNo} pid={$pid}");
+            // 重启后可能已存在，避免重复覆盖 started_at
+            if (!isset($this->runningTasks[$taskNo])) {
+                $this->runningTasks[$taskNo] = [
+                    'pid' => $pid,
+                    'started_at' => time(),
+                ];
+                error_log("[CollectWorker] recovered task={$taskNo} pid={$pid}");
+            }
         }
+        $this->recoveryDone = $recoveryOk;
     }
 
     public function poll(): void
     {
+        // 启动认领失败时每个轮询周期重试一次，直到成功。
+        if (!$this->recoveryDone) {
+            $this->recoverRunningTasks();
+        }
         $this->checkRunningTasks();
         $this->claimPendingTasks();
     }
@@ -187,7 +220,14 @@ class CollectWorker
             // 先回库确认任务状态：管理员在 Worker 检测到进程退出之前调用 stop()（CollectAdminService::stop）
             // 会把 status 置为 4（手动停止）。此时不能再走 importResults() 覆盖状态、写入数据，否则管理员的"停止"结果
             // 会被 status=2/3/4 正常收尾覆盖，而且可能把中途的脏数据导入库。
-            $current = $this->taskRepo->findByTaskNo($taskNo);
+            // Strict：之前用 findByTaskNo，DB 故障 → null → 误判"任务不存在，继续 import"，
+            // 可能把已手动停止的任务重新导入并改写状态。改为 Strict 后 DB 故障直接跳过 import，等下一轮 poll 再确认。
+            try {
+                $current = $this->taskRepo->findByTaskNoStrict($taskNo);
+            } catch (\RuntimeException $e) {
+                error_log("[CollectWorker] skip import task={$taskNo}, status check failed: " . $e->getMessage());
+                continue;
+            }
             if ($current && (int) ($current['status'] ?? -1) !== 1) {
                 error_log("[CollectWorker] skip import task={$taskNo} status={$current['status']} error_message={$current['error_message']} (stopped/terminated externally)");
                 continue;
@@ -211,10 +251,19 @@ class CollectWorker
             $imported = (int) ($importResult['imported'] ?? 0);
             $importFailed = (int) ($importResult['failed'] ?? 0);
             $importSkipped = (int) ($importResult['skipped'] ?? 0);
+            $importDuplicated = (int) ($importResult['duplicated'] ?? 0);
             $esIndexed = 0;
             if ($imported > 0) {
-                $questions = $this->questionRepo->findByTaskNo($taskNo);
-                foreach (array_chunk($questions, 2000) as $batch) {
+                // 旧实现先 findByTaskNo 把整批题目（10W+）堆进数组再 array_chunk；这里改为迭代器流式消费。
+                $batch = [];
+                foreach ($this->questionRepo->findByTaskNoIterator($taskNo) as $row) {
+                    $batch[] = $row;
+                    if (count($batch) >= 2000) {
+                        $esIndexed += $this->esRepo->bulkIndex($batch);
+                        $batch = [];
+                    }
+                }
+                if (!empty($batch)) {
                     $esIndexed += $this->esRepo->bulkIndex($batch);
                 }
             }
@@ -226,6 +275,10 @@ class CollectWorker
             }
             if ($importSkipped > 0) {
                 $notes[] = "跳过无效行: {$importSkipped}条";
+            }
+            if ($importDuplicated > 0) {
+                // 唯一索引去重命中 = 预期行为，不算失败但需要让管理员知道实际落库量。
+                $notes[] = "重复已跳过: {$importDuplicated}条";
             }
             if ($esFailed > 0) {
                 $notes[] = "ES索引部分失败: {$esFailed}/{$imported}条未索引";
@@ -239,7 +292,7 @@ class CollectWorker
             if (!empty($importResult['failed_reasons'])) {
                 $reasonsLog = ' import_reasons=' . json_encode(array_slice($importResult['failed_reasons'], 0, 3), JSON_UNESCAPED_UNICODE);
             }
-            error_log("[CollectWorker] imported task={$taskNo} mongo={$imported} mongo_fail={$importFailed} mongo_skip={$importSkipped} es_ok={$esIndexed} es_fail={$esFailed}{$reasonsLog}");
+            error_log("[CollectWorker] imported task={$taskNo} mongo={$imported} mongo_dup={$importDuplicated} mongo_fail={$importFailed} mongo_skip={$importSkipped} es_ok={$esIndexed} es_fail={$esFailed}{$reasonsLog}");
         } catch (\Throwable $e) {
             $this->taskRepo->updateStatus($taskNo, 3, '导入失败: ' . $e->getMessage());
             error_log("[CollectWorker] import failed task={$taskNo}: " . $e->getMessage());

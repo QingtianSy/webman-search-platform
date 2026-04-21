@@ -2,6 +2,7 @@
 
 namespace app\service\user;
 
+use app\exception\BusinessException;
 use app\repository\mysql\AnnouncementRepository;
 use support\adapter\MySqlClient;
 
@@ -12,7 +13,12 @@ class DashboardService
         $billing = new BillingService();
         $wallet = $billing->wallet($userId);
         $subscription = $billing->currentPlan($userId);
-        $announcements = (new AnnouncementRepository())->latest();
+        // 公告走 Strict：之前 DB 故障返 [] → Dashboard 显示"无公告"，掩盖公告表不可达。
+        try {
+            $announcements = (new AnnouncementRepository())->latestStrict();
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('Dashboard 数据源暂不可用，请稍后重试', 50001);
+        }
 
         return [
             'balance' => $wallet['balance'] ?? '0.00',
@@ -31,9 +37,11 @@ class DashboardService
 
     protected function getTodayUsage(int $userId): int
     {
+        // 之前 MySQL 掉线时这里归零，用户会以为"今天没搜过题"，直接影响额度反馈。
+        // 改为把数据源不可用暴露为 50001，由前端统一提示"数据加载失败"。
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
-            return 0;
+            throw new BusinessException('Dashboard 数据源暂不可用，请稍后重试', 50001);
         }
         try {
             $stmt = $pdo->prepare('SELECT COUNT(*) FROM search_logs WHERE user_id = :user_id AND created_at >= CURDATE()');
@@ -41,7 +49,7 @@ class DashboardService
             return (int) $stmt->fetchColumn();
         } catch (\PDOException $e) {
             error_log("[DashboardService] getTodayUsage failed: " . $e->getMessage());
-            return 0;
+            throw new BusinessException('Dashboard 数据源暂不可用，请稍后重试', 50001);
         }
     }
 }

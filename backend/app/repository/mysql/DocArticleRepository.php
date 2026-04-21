@@ -71,6 +71,22 @@ class DocArticleRepository
         }
     }
 
+    // 严格版本：DB 故障抛 RuntimeException，避免文档详情接口把"DB 挂了"伪装成 40004"文档不存在"。
+    public function findBySlugStrict(string $slug): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            throw new \RuntimeException('MySQL connection unavailable');
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT id, category_id, slug, title, summary, content_md, status, created_at, updated_at FROM docs_articles WHERE slug = :slug AND status = 1 LIMIT 1');
+            $stmt->execute(['slug' => $slug]);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            throw new \RuntimeException('doc find failed: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
     public function existsBySlug(string $slug, ?int $excludeId = null): bool
     {
         $pdo = MySqlClient::pdo();
@@ -126,7 +142,7 @@ class DocArticleRepository
     {
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
-            return [];
+            return ['error' => 'db_unavailable'];
         }
         try {
             $check = $pdo->prepare('SELECT id FROM docs_articles WHERE id = :id');
@@ -174,6 +190,54 @@ class DocArticleRepository
         } catch (\PDOException $e) {
             error_log("[DocArticleRepository] delete failed: " . $e->getMessage());
             return false;
+        }
+    }
+
+    public function deleteStrict(int $id): bool
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            throw new \RuntimeException('MySQL connection unavailable');
+        }
+        try {
+            $stmt = $pdo->prepare('DELETE FROM docs_articles WHERE id = :id');
+            $stmt->execute(['id' => $id]);
+            return $stmt->rowCount() > 0;
+        } catch (\PDOException $e) {
+            error_log("[DocArticleRepository] deleteStrict failed: " . $e->getMessage());
+            throw new \RuntimeException('doc delete failed: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    // 严格版本：DB 故障抛 RuntimeException，避免后台文档列表把"DB 挂了"伪装成"没有文档"。
+    public function countAllStrict(): int
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            throw new \RuntimeException('MySQL connection unavailable');
+        }
+        try {
+            return (int) $pdo->query('SELECT COUNT(*) FROM docs_articles')->fetchColumn();
+        } catch (\PDOException $e) {
+            throw new \RuntimeException('doc count failed: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    public function findPageStrict(int $page, int $pageSize): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            throw new \RuntimeException('MySQL connection unavailable');
+        }
+        try {
+            $offset = ($page - 1) * $pageSize;
+            $stmt = $pdo->prepare('SELECT id, category_id, slug, title, summary, content_md, status, created_at, updated_at FROM docs_articles ORDER BY id DESC LIMIT :limit OFFSET :offset');
+            $stmt->bindValue('limit', $pageSize, PDO::PARAM_INT);
+            $stmt->bindValue('offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            throw new \RuntimeException('doc page failed: ' . $e->getMessage(), 0, $e);
         }
     }
 }

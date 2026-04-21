@@ -19,7 +19,11 @@ class DocConfigController
 
     public function list(Request $request)
     {
-        $current = (new DocConfigRepository())->get();
+        try {
+            $current = (new DocConfigRepository())->getStrict();
+        } catch (\RuntimeException $e) {
+            return ApiResponse::error(50001, '文档配置服务暂不可用，请稍后重试');
+        }
         $current['api_key'] = self::maskApiKey((string) ($current['api_key'] ?? ''));
         return ApiResponse::success($current);
     }
@@ -30,7 +34,12 @@ class DocConfigController
         // 合并语义：读当前配置，按白名单字段覆写，再整体写回。
         // api_key 特殊处理：前端展示时是脱敏串，如果 admin 没填新值，input 里要么缺字段、要么还是 "****" 这类掩码，
         // 直接覆写会清掉真实密钥。只在 api_key 看起来是"新明文"时才替换。
-        $merged = (new DocConfigRepository())->get();
+        // 读现值用 Strict：DB 故障时直接报 50001，避免"当前配置读成空 → 旧 api_key 被丢弃，只写入此次提交字段"。
+        try {
+            $merged = (new DocConfigRepository())->getStrict();
+        } catch (\RuntimeException $e) {
+            return ApiResponse::error(50001, '文档配置服务暂不可用，请稍后重试');
+        }
 
         foreach (self::WRITABLE_FIELDS as $field) {
             if (!array_key_exists($field, $input)) {

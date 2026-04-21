@@ -69,6 +69,7 @@ Route::get('/api/v1/auth/profile', [UnifiedAuthController::class, 'profile'])->m
 Route::get('/api/v1/auth/menus', [UnifiedAuthController::class, 'menus'])->middleware([UserAuthMiddleware::class]);
 Route::get('/api/v1/auth/permissions', [UnifiedAuthController::class, 'permissions'])->middleware([UserAuthMiddleware::class]);
 Route::put('/api/v1/auth/update-profile', [UnifiedAuthController::class, 'updateProfile'])->middleware([UserAuthMiddleware::class]);
+Route::post('/api/v1/auth/logout', [UnifiedAuthController::class, 'logout'])->middleware([UserAuthMiddleware::class]);
 
 // 用户端路由（需要用户认证）
 Route::group('/api/v1/user', function () {
@@ -101,6 +102,8 @@ Route::group('/api/v1/user', function () {
     Route::put('/api-source/update', [UserApiSourceController::class, 'update']);
     Route::delete('/api-source/delete', [UserApiSourceController::class, 'delete']);
     Route::post('/api-source/test', [UserApiSourceController::class, 'test']);
+    Route::post('/api-source/test-submit', [UserApiSourceController::class, 'testSubmit']);
+    Route::get('/api-source/test-result', [UserApiSourceController::class, 'testResult']);
     Route::post('/order/create', [PaymentController::class, 'create'])->middleware([new RateLimitMiddleware(5, 60, 'user')]);
     Route::get('/order/list', [PaymentController::class, 'list']);
 })->middleware([UserAuthMiddleware::class]);
@@ -171,6 +174,8 @@ Route::group('/api/v1/admin', function () {
     Route::get('/api-source/list', [ApiSourceManageController::class, 'index']);
     Route::get('/api-source/detail', [ApiSourceManageController::class, 'detail']);
     Route::post('/api-source/test', [ApiSourceManageController::class, 'test']);
+    Route::post('/api-source/test-submit', [ApiSourceManageController::class, 'testSubmit']);
+    Route::get('/api-source/test-result', [ApiSourceManageController::class, 'testResult']);
     Route::get('/system-config/list', [SystemConfigController::class, 'index']);
     Route::post('/system-config/update', [SystemConfigController::class, 'update']);
 

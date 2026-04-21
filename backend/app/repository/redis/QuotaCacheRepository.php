@@ -3,6 +3,7 @@
 namespace app\repository\redis;
 
 use support\adapter\RedisClient;
+use support\AppLog;
 
 class QuotaCacheRepository
 {
@@ -18,7 +19,7 @@ class QuotaCacheRepository
             $val = $redis->get(RedisClient::key(self::PREFIX, $userId));
             return $val === false ? -1 : (int) $val;
         } catch (\Throwable $e) {
-            error_log("[QuotaCacheRepository] getUserQuota failed: " . $e->getMessage());
+            AppLog::warn("[QuotaCacheRepository] getUserQuota failed: " . $e->getMessage());
             return -1;
         }
     }
@@ -32,7 +33,7 @@ class QuotaCacheRepository
         try {
             return $redis->setex(RedisClient::key(self::PREFIX, $userId), $ttl, $quota);
         } catch (\Throwable $e) {
-            error_log("[QuotaCacheRepository] setUserQuota failed: " . $e->getMessage());
+            AppLog::warn("[QuotaCacheRepository] setUserQuota failed: " . $e->getMessage());
             return false;
         }
     }
@@ -48,7 +49,7 @@ class QuotaCacheRepository
             $val = $redis->decr($key);
             return $val !== false ? (int) $val : -1;
         } catch (\Throwable $e) {
-            error_log("[QuotaCacheRepository] decrementQuota failed: " . $e->getMessage());
+            AppLog::warn("[QuotaCacheRepository] decrementQuota failed: " . $e->getMessage());
             return -1;
         }
     }

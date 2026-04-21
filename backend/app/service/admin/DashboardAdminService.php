@@ -2,6 +2,7 @@
 
 namespace app\service\admin;
 
+use app\exception\BusinessException;
 use app\repository\mongo\QuestionRepository;
 use support\adapter\MySqlClient;
 use support\adapter\RedisClient;
@@ -20,7 +21,9 @@ class DashboardAdminService
 
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
-            return $this->emptyStats();
+            // 故障不再伪装成全零仪表盘 —— 以前 MySQL 掉线时管理端会看到"今日 0 用户 / 0 搜索"
+            // 和"刚经历极其冷清的一天"没有区别，排障指引完全错误。
+            throw new BusinessException('Dashboard 数据源暂不可用，请稍后重试', 50001);
         }
 
         try {
@@ -34,7 +37,9 @@ SELECT
   (SELECT COALESCE(SUM(amount),0) FROM `order` WHERE status=1 AND paid_at >= CURDATE()) AS today_order_amount
 SQL;
             $row = $pdo->query($sql)->fetch(\PDO::FETCH_ASSOC);
-            $totalQuestions = (new QuestionRepository())->countByFilters([]);
+            // Mongo 题库计数同样走 strict：Mongo 挂掉时 total_questions=0 会让管理员
+            // 误以为题库被清空，转而做 reindex / 导入等破坏性动作。
+            $totalQuestions = (new QuestionRepository())->countByFiltersStrict([]);
             $stats = [
                 'total_users' => (int) ($row['total_users'] ?? 0),
                 'today_users' => (int) ($row['today_users'] ?? 0),
@@ -46,9 +51,11 @@ SQL;
             ];
             $this->toCache($stats);
             return $stats;
-        } catch (\PDOException $e) {
+        } catch (BusinessException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
             error_log("[DashboardAdminService] overview failed: " . $e->getMessage());
-            return $this->emptyStats();
+            throw new BusinessException('Dashboard 数据源暂不可用，请稍后重试', 50001);
         }
     }
 
@@ -80,18 +87,5 @@ SQL;
             $redis->setex(RedisClient::key(self::CACHE_KEY, 'v1'), self::CACHE_TTL, json_encode($stats));
         } catch (\Throwable) {
         }
-    }
-
-    protected function emptyStats(): array
-    {
-        return [
-            'total_users' => 0,
-            'today_users' => 0,
-            'total_searches' => 0,
-            'today_searches' => 0,
-            'total_order_amount' => '0.00',
-            'today_order_amount' => '0.00',
-            'total_questions' => 0,
-        ];
     }
 }

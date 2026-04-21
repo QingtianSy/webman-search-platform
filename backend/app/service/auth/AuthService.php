@@ -10,17 +10,31 @@ use app\repository\mysql\RoleRepository;
 use app\repository\mysql\UserRepository;
 use app\repository\mysql\UserRoleRepository;
 use app\repository\redis\TokenCacheRepository;
+use app\repository\redis\UserAuthCacheRepository;
 use support\Db;
 use support\ResponseCode;
 
 class AuthService
 {
+    // 鉴权/RBAC 链路严格化背景：
+    //   旧实现 UserRepository/UserRoleRepository/RolePermissionRepository/MenuRepository
+    //   在 DB 故障时都静默返 null/[]，最终经由 AuthController 翻译为:
+    //     login()        → 40002 "账号或密码错误"（误导用户反复改密）
+    //     profile()      → 40002 "未登录或用户不存在"
+    //     menus/permissions → 200 + []（前端以为用户刚好没权限）
+    //   改为 DB/RBAC 故障统一抛 BusinessException(50001)，由前端显示"服务暂不可用"。
+    //   真实业务状态（用户名不存在 / 密码错 / 无权限 / 无菜单）仍返回 []/null 让上层正常翻译为 40002/40003/空菜单。
+
     public function login(string $username, string $password): array
     {
         if ($username === '' || $password === '') {
             return [];
         }
-        $user = (new UserRepository())->findByUsername($username);
+        try {
+            $user = (new UserRepository())->findByUsernameStrict($username);
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('登录服务暂不可用，请稍后重试', 50001);
+        }
         if (!$user) {
             return [];
         }
@@ -35,7 +49,11 @@ class AuthService
 
     public function profile(int $userId): array
     {
-        $user = (new UserRepository())->findById($userId);
+        try {
+            $user = (new UserRepository())->findByIdStrict($userId);
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('用户信息服务暂不可用，请稍后重试', 50001);
+        }
         if (!$user) {
             return [];
         }
@@ -45,10 +63,15 @@ class AuthService
     protected function buildAuthPayload(array $user): array
     {
         $userId = (int) ($user['id'] ?? 0);
-        $roleIds = (new UserRoleRepository())->roleIdsByUserId($userId);
-        $roles = (new RoleRepository())->findByIds($roleIds);
-        $permissions = (new RolePermissionRepository())->permissionCodesByRoleIds($roleIds);
-        $menus = (new MenuRepository())->findByPermissionCodes($permissions);
+        try {
+            $roleIds = (new UserRoleRepository())->roleIdsByUserIdStrict($userId);
+            $roles = (new RoleRepository())->findByIdsStrict($roleIds);
+            $permissions = (new RolePermissionRepository())->permissionCodesByRoleIdsStrict($roleIds);
+            $menus = (new MenuRepository())->findByPermissionCodesStrict($permissions);
+        } catch (\RuntimeException $e) {
+            // 任何 RBAC 仓库故障都抛 50001，避免"DB 挂了 → 这个用户看起来没权限/没菜单"。
+            throw new BusinessException('权限服务暂不可用，请稍后重试', 50001);
+        }
 
         unset($user['password'], $user['password_hash'], $user['type']);
 
@@ -80,11 +103,20 @@ class AuthService
 
     public function updateProfile(int $userId, array $data): array
     {
-        $updated = (new UserRepository())->updateProfile($userId, $data);
+        try {
+            $updated = (new UserRepository())->updateProfileStrict($userId, $data);
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('用户信息服务暂不可用，请稍后重试', 50001);
+        }
         if (!$updated) {
+            // 非 DB 故障：记录不存在或本次没有可更新字段。
             return [];
         }
-        $user = (new UserRepository())->findById($userId);
+        try {
+            $user = (new UserRepository())->findByIdStrict($userId);
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('用户信息服务暂不可用，请稍后重试', 50001);
+        }
         if (!$user) {
             return [];
         }
@@ -95,7 +127,11 @@ class AuthService
     public function register(array $data): array
     {
         $username = $data['username'];
-        $existing = (new UserRepository())->findByUsername($username);
+        try {
+            $existing = (new UserRepository())->findByUsernameStrict($username);
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('注册服务暂不可用，请稍后重试', 50001);
+        }
         if ($existing) {
             throw new BusinessException('用户名已存在', ResponseCode::PARAM_ERROR);
         }
@@ -199,6 +235,46 @@ class AuthService
             throw new BusinessException('会话签发失败，请稍后重试', 50001);
         }
 
+        // 新 token 签发 = sessions_invalidated_at 已推进；必须把合并鉴权缓存打掉，
+        // 否则缓存中旧 invalidated_ms 让旧 token 继续被中间件放行直到 TTL 过期。
+        // bust 失败（Redis 连着但 del 抛异常）→ 回滚 Redis token 并 50001 让客户端重试，
+        // 重试会生成更晚的 iat_ms，DB GREATEST 幂等，不留双写中间态。
+        try {
+            (new UserAuthCacheRepository())->bustStrict($userId);
+        } catch (\Throwable $e) {
+            if ($stored) {
+                $cache->deleteToken($userId);
+            }
+            error_log("[AuthService] issueSessionToken auth cache bust failed for user {$userId}: " . $e->getMessage());
+            throw new BusinessException('会话签发失败，请稍后重试', 50001);
+        }
+
         return $token;
+    }
+
+    // 登出：权威失效源是 users.sessions_invalidated_at。把它 bump 到当前毫秒，
+    // 任何 iat_ms < now 的 token（包括本次请求自己携带的）都会在下一次中间件校验时被拒。
+    // bumpSessionInvalidatedAt 用 GREATEST + 存在性回退，同毫秒重试 / 网关重发都是幂等成功。
+    // bust 失败（Redis 连着但 del 抛异常）→ 50001：DB 已生效，但 auth cache 仍有旧 invalidated_ms，
+    // 不抛错就会让已登出 token 继续放行 ≤60s。重试是幂等的（DB GREATEST + bust 再清一次）。
+    public function logout(int $userId): void
+    {
+        $nowMs = (int) round(microtime(true) * 1000);
+        try {
+            (new UserRepository())->bumpSessionInvalidatedAt($userId, JwtService::msToDatetime3($nowMs));
+        } catch (\Throwable $e) {
+            error_log("[AuthService] logout bump failed for user {$userId}: " . $e->getMessage());
+            throw new BusinessException('登出失败，请稍后重试', 50001);
+        }
+
+        // token 缓存清理失败影响小：中间件不再以 token key 缺失=吊销，best-effort 即可。
+        (new TokenCacheRepository())->deleteToken($userId);
+
+        try {
+            (new UserAuthCacheRepository())->bustStrict($userId);
+        } catch (\Throwable $e) {
+            error_log("[AuthService] logout auth cache bust failed for user {$userId}: " . $e->getMessage());
+            throw new BusinessException('登出失败，请稍后重试', 50001);
+        }
     }
 }

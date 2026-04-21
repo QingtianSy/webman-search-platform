@@ -9,9 +9,10 @@ class PaymentLogRepository
 {
     public function listByUserId(int $userId, int $page = 1, int $pageSize = 20): array
     {
+        // 支付流水空列表 = "从没充过值"，与故障相同。故障改为抛出由 service 转 50001。
         $pdo = MySqlClient::pdo();
         if (!$pdo) {
-            return ['list' => [], 'total' => 0, 'page' => $page, 'page_size' => $pageSize];
+            throw new \RuntimeException('MySQL connection unavailable');
         }
         try {
             $countStmt = $pdo->prepare('SELECT COUNT(*) FROM payment_logs WHERE user_id = :user_id');
@@ -29,7 +30,7 @@ class PaymentLogRepository
             return ['list' => $list, 'total' => $total, 'page' => $page, 'page_size' => $pageSize];
         } catch (\PDOException $e) {
             error_log("[PaymentLogRepository] listByUserId failed: " . $e->getMessage());
-            return ['list' => [], 'total' => 0, 'page' => $page, 'page_size' => $pageSize];
+            throw new \RuntimeException('payment log query failed: ' . $e->getMessage(), 0, $e);
         }
     }
 

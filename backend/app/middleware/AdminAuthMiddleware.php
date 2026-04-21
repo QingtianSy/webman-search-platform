@@ -4,10 +4,13 @@ namespace app\middleware;
 
 use app\repository\mysql\RolePermissionRepository;
 use app\repository\mysql\UserRepository;
+use app\repository\mysql\UserRoleRepository;
 use app\repository\redis\PermissionCacheRepository;
 use app\repository\redis\TokenCacheRepository;
+use app\repository\redis\UserAuthCacheRepository;
 use app\service\auth\JwtService;
 use support\ApiResponse;
+use support\AppLog;
 use Webman\MiddlewareInterface;
 use Webman\Http\Response;
 use Webman\Http\Request;
@@ -63,13 +66,40 @@ class AdminAuthMiddleware implements MiddlewareInterface
         // 注意：key 缺失不再视为吊销信号，吊销由 DB sessions_invalidated_at 权威控制，
         // 避免 Redis 重启/LRU 淘汰或 Redis 宕机期间 fail-open 发出的 token 在恢复后被误判失效。
 
-        // DB 校验：即便 Redis 命中旧 token，也用 users.sessions_invalidated_at(DATETIME(3))
-        // 对照 JWT iat_ms 拦截已吊销 token。仅密码/禁用/角色变更/删号写该列。
-        $user = (new UserRepository())->findById($userId);
-        if (!$user || (int) ($user['status'] ?? 0) !== 1) {
+        // 鉴权合并缓存：一次 Redis 读拿到 status / invalidated_ms / role_codes，
+        // 缓存未命中退回 DB 组装并写回；写 sessions_invalidated_at 的路径必须 bust。
+        // DB 故障必须走 50001 出口：非严格版本返 null/[] 会让合法 admin token 被翻成 40002/40003。
+        $authCache = new UserAuthCacheRepository();
+        $auth = $authCache->get($userId);
+        if ($auth === null) {
+            try {
+                $user = (new UserRepository())->findByIdStrict($userId);
+                if (!$user) {
+                    return ApiResponse::error(40002, '用户不存在或已被禁用');
+                }
+                $roleIds = (new UserRoleRepository())->roleIdsByUserIdStrict($userId);
+                $roleCodes = !empty($roleIds)
+                    ? (new RolePermissionRepository())->roleCodesByIdsStrict($roleIds)
+                    : [];
+            } catch (\RuntimeException $e) {
+                AppLog::warn("[AdminAuthMiddleware] auth load infra failure user={$userId}: " . $e->getMessage());
+                return ApiResponse::error(50001, '鉴权服务暂不可用，请稍后重试');
+            }
+            $auth = [
+                'status' => (int) ($user['status'] ?? 0),
+                'invalidated_ms' => JwtService::datetimeToMs($user['sessions_invalidated_at'] ?? null),
+                'role_codes' => $roleCodes,
+            ];
+            if ($redisConnected) {
+                $authCache->set($userId, $auth);
+            }
+        }
+
+        if ((int) ($auth['status'] ?? 0) !== 1) {
             return ApiResponse::error(40002, '用户不存在或已被禁用');
         }
-        $invalidatedMs = JwtService::datetimeToMs($user['sessions_invalidated_at'] ?? null);
+
+        $invalidatedMs = (int) ($auth['invalidated_ms'] ?? 0);
         if ($invalidatedMs > 0) {
             $iatMs = (int) ($decoded['iat_ms'] ?? 0);
             if ($iatMs <= 0) {
@@ -81,14 +111,10 @@ class AdminAuthMiddleware implements MiddlewareInterface
         }
 
         if (!$redisConnected) {
-            error_log("[AdminAuthMiddleware] Redis unavailable, falling back to DB verification for user {$userId}");
+            AppLog::warn("[AdminAuthMiddleware] Redis unavailable, DB fallback for user {$userId}");
         }
 
-        $roleIds = (new \app\repository\mysql\UserRoleRepository())->roleIdsByUserId($userId);
-        $roles = !empty($roleIds)
-            ? (new RolePermissionRepository())->roleCodesByIds($roleIds)
-            : [];
-
+        $roles = $auth['role_codes'] ?? [];
         $request->userId = $userId;
         $request->userRoles = $roles;
 
@@ -99,7 +125,13 @@ class AdminAuthMiddleware implements MiddlewareInterface
             return $handler($request);
         }
 
-        $userPermissions = $this->loadPermissions($roles);
+        $userPermissions = [];
+        try {
+            $userPermissions = $this->loadPermissions($roles);
+        } catch (\RuntimeException $e) {
+            AppLog::warn("[AdminAuthMiddleware] permission load infra failure user={$userId}: " . $e->getMessage());
+            return ApiResponse::error(50001, '鉴权服务暂不可用，请稍后重试');
+        }
         if (!in_array('admin.access', $userPermissions, true)) {
             return ApiResponse::error(40003, '无权限');
         }
@@ -132,7 +164,9 @@ class AdminAuthMiddleware implements MiddlewareInterface
         if ($cached !== null) {
             return $cached;
         }
-        $permissions = (new RolePermissionRepository())->permissionCodesByRoleCodes($roleCodes);
+        // DB 故障直接向上抛，让主流程返回 50001；
+        // 非严格版本会返 [] 导致合法 admin 被误判 40003"无权限"。
+        $permissions = (new RolePermissionRepository())->permissionCodesByRoleCodesStrict($roleCodes);
         $cache->setPermissions($roleCodes, $permissions);
         return $permissions;
     }

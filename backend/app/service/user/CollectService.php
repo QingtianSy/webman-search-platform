@@ -26,7 +26,12 @@ class CollectService
 
     public function detail(int $userId, string $taskNo): array
     {
-        return (new CollectTaskDetailRepository())->findByTaskNo($taskNo, $userId);
+        try {
+            return (new CollectTaskDetailRepository())->findByTaskNoStrict($taskNo, $userId);
+        } catch (\Throwable $e) {
+            error_log("[CollectService] detail failed: " . $e->getMessage());
+            throw new BusinessException('采集任务详情暂不可用，请稍后重试', 50001);
+        }
     }
 
     public function queryCourses(string $account, string $password): array
@@ -54,8 +59,14 @@ class CollectService
         $city = '';
         $proxyUrl = '';
 
+        // 代理策略配置走 Strict：之前 DB 故障返 [] → proxy_enabled=0 默认不走代理，
+        // 管理员为某地域开启的代理策略在 DB 抖动时被静默旁路，任务直连第三方 IP 可能踩风控。
         $configRepo = new SystemConfigRepository();
-        $configs = $configRepo->getByGroup('collect');
+        try {
+            $configs = $configRepo->getByGroupStrict('collect');
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('采集配置暂不可用，请稍后重试', 50001);
+        }
         $configMap = [];
         foreach ($configs as $c) {
             $configMap[$c['config_key']] = $c['config_value'];

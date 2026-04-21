@@ -4,13 +4,13 @@ namespace app\service\search;
 
 use app\exception\BusinessException;
 use app\repository\es\QuestionIndexRepository;
-use app\repository\mongo\QuestionRepository;
 use app\repository\mongo\SearchLogDetailRepository;
 use app\repository\mysql\SearchLogRepository;
 use app\service\log\LogService;
 use app\service\question\QuestionService;
 use app\service\quota\QuotaService;
 use app\service\search\ThirdPartySearchService;
+use support\AppLog;
 use Workerman\Timer;
 
 class SearchService
@@ -48,17 +48,27 @@ class SearchService
             $apiResultsFn = (new ThirdPartySearchService())->startQuery($userId, $keyword, $info, $split);
         }
 
-        $esHits = (new QuestionIndexRepository())->search($keyword);
+        // ES/Mongo 检索走严格路径：连接失败/查询异常直接抛出，由下面统一退预扣 + 50001。
+        // 避免"ES 挂掉 → 空列表 200"式的故障伪装。ES 未配置（空数组，非异常）仍视为未启用，走 Mongo 正则兜底。
         $searchSource = 'es';
-        if (empty($esHits) && trim($keyword) !== '') {
-            $mongoResults = (new QuestionRepository())->search($keyword);
-            $esHits = array_map(fn($r) => [
-                'question_id' => $r['question_id'] ?? '',
-                'score' => $r['score'] ?? 100,
-            ], array_slice($mongoResults, 0, 20));
-            if (!empty($esHits)) {
-                $searchSource = 'mongo';
+        try {
+            $esHits = (new QuestionIndexRepository())->searchStrict($keyword);
+            if (empty($esHits) && trim($keyword) !== '') {
+                $mongoResults = (new QuestionService())->searchMongoStrict($keyword);
+                $esHits = array_map(fn($r) => [
+                    'question_id' => $r['question_id'] ?? '',
+                    'score' => $r['score'] ?? 100,
+                ], array_slice($mongoResults, 0, 20));
+                if (!empty($esHits)) {
+                    $searchSource = 'mongo';
+                }
             }
+        } catch (\Throwable $e) {
+            if ($reservedQuota > 0 && $quotaService !== null) {
+                $quotaService->refund($userId, $reservedQuota);
+            }
+            AppLog::warn("[SearchService] index search failed: " . $e->getMessage());
+            throw new BusinessException('搜索服务暂不可用，请稍后重试', 50001);
         }
         $questionIds = array_map(fn ($row) => (string) ($row['question_id'] ?? ''), $esHits);
         $questionIds = array_values(array_filter($questionIds));
@@ -66,7 +76,30 @@ class SearchService
         foreach ($esHits as $hit) {
             $scoreMap[(string) ($hit['question_id'] ?? '')] = $hit['score'] ?? null;
         }
-        $list = (new QuestionService())->findManyByIds($questionIds);
+        // 关键一致性：ES 已返回 question_id 就必须能拿到详情，否则把"详情取不到"暴露为 50001，
+        // 不要伪装成"没搜到"。空 ids → 直接空结果，不查 Mongo。
+        try {
+            $list = (new QuestionService())->findManyByIdsStrict($questionIds);
+        } catch (\Throwable $e) {
+            if ($reservedQuota > 0 && $quotaService !== null) {
+                $quotaService->refund($userId, $reservedQuota);
+            }
+            AppLog::warn("[SearchService] fetch question details failed: " . $e->getMessage());
+            throw new BusinessException('题库数据源暂不可用，请稍后重试', 50001);
+        }
+        // 脏索引校验：ES 命中的 question_id 必须在 Mongo 里有对应详情。
+        // 有命中但详情缺失 = 索引漂移（删除未同步、reindex 中途），此时返回部分结果等于把脏数据当作正确命中。
+        // 明确作为 50001 暴露出去，让运维知道要跑 reindex，而不是静默给用户少几条结果。
+        if (!empty($questionIds) && count($list) < count($questionIds)) {
+            if ($reservedQuota > 0 && $quotaService !== null) {
+                $quotaService->refund($userId, $reservedQuota);
+            }
+            $got = array_map(fn($r) => (string)($r['question_id'] ?? ''), $list);
+            $missing = array_values(array_diff($questionIds, $got));
+            AppLog::warn('[SearchService] dirty index: ' . count($missing) . '/' . count($questionIds)
+                . ' missing detail, sample=' . implode(',', array_slice($missing, 0, 3)));
+            throw new BusinessException('搜索索引与题库不一致，请稍后重试', 50001);
+        }
         foreach ($list as &$item) {
             $qid = (string) ($item['question_id'] ?? '');
             $item['score'] = $scoreMap[$qid] ?? null;
@@ -80,7 +113,7 @@ class SearchService
             try {
                 $apiResults = $apiResultsFn();
             } catch (\Throwable $e) {
-                error_log("[SearchService] third-party search failed: " . $e->getMessage());
+                AppLog::warn("[SearchService] third-party search failed: " . $e->getMessage());
             }
         }
 
@@ -99,7 +132,7 @@ class SearchService
             if ($quotaService->refund($userId, 1)) {
                 $consumeQuota = 0;
             } else {
-                error_log("[SearchService] refund failed after no-hit search: user={$userId} log_no={$logNo}");
+                AppLog::warn("[SearchService] refund failed after no-hit search: user={$userId} log_no={$logNo}");
             }
         }
 
@@ -154,14 +187,14 @@ class SearchService
             $logData['log_no'] = $retryNo;
             $result = $repo->create($logData);
             if ($result === 'ok') {
-                error_log("[SearchService] log_no collision resolved by retry: original={$logNo} retry={$retryNo}");
+                AppLog::warn("[SearchService] log_no collision resolved by retry: original={$logNo} retry={$retryNo}");
                 $logNo = $retryNo;
             } else {
-                error_log("[SearchService] log_no collision unresolved after retry: original={$logNo} retry={$retryNo} result={$result}");
+                AppLog::warn("[SearchService] log_no collision unresolved after retry: original={$logNo} retry={$retryNo} result={$result}");
                 return '';
             }
         } elseif ($result !== 'ok') {
-            error_log("[SearchService] main search log write failed ({$result}) log_no={$logNo}");
+            AppLog::warn("[SearchService] main search log write failed ({$result}) log_no={$logNo}");
             return '';
         }
 
@@ -178,7 +211,7 @@ class SearchService
             try {
                 (new SearchLogDetailRepository())->create($detailData);
             } catch (\Throwable $e) {
-                error_log("[SearchService] deferred detail write failed: " . $e->getMessage());
+                AppLog::warn("[SearchService] deferred detail write failed: " . $e->getMessage());
             }
         }, [], false);
 

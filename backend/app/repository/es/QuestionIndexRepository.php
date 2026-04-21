@@ -54,6 +54,51 @@ class QuestionIndexRepository
         }
     }
 
+    // 搜索主链路用：ES 未配置视作"未启用"（返回 []，让上层退化到 Mongo 正则兜底）；
+    // 但连接失败/HTTP 异常/JSON 解析异常必须抛出，让 SearchService 暴露为 50001，
+    // 而不是让用户看到"空结果 + 200"这种故障伪装。
+    public function searchStrict(string $keyword): array
+    {
+        if (!ElasticsearchClient::isConfigured() || trim($keyword) === '') {
+            return [];
+        }
+
+        $client = $this->client();
+        $response = $client->post('/' . ElasticsearchClient::questionIndex() . '/_search', [
+            'json' => [
+                'query' => [
+                    'bool' => [
+                        'must' => [
+                            'multi_match' => [
+                                'query' => $keyword,
+                                'fields' => ['stem^3', 'options_text^2', 'answer_text', 'analysis'],
+                            ],
+                        ],
+                        'filter' => [
+                            'term' => ['status' => 1],
+                        ],
+                    ],
+                ],
+                '_source' => ['question_id'],
+                'size' => 20,
+            ],
+        ]);
+
+        $data = json_decode((string) $response->getBody(), true);
+        if (!is_array($data)) {
+            throw new \RuntimeException('Elasticsearch returned invalid JSON');
+        }
+        $hits = $data['hits']['hits'] ?? [];
+
+        return array_map(function ($row) {
+            $source = $row['_source'] ?? [];
+            return [
+                'question_id' => $source['question_id'] ?? null,
+                'score' => $row['_score'] ?? null,
+            ];
+        }, $hits);
+    }
+
     public function indexQuestion(array $question): bool
     {
         if (!ElasticsearchClient::isConfigured()) {

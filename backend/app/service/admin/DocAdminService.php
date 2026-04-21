@@ -12,8 +12,13 @@ class DocAdminService
     {
         $query += ['page' => 1, 'page_size' => 20];
         $repo = new DocArticleRepository();
-        $total = $repo->countAll();
-        $list = $repo->findPage((int) $query['page'], (int) $query['page_size']);
+        try {
+            $total = $repo->countAllStrict();
+            $list = $repo->findPageStrict((int) $query['page'], (int) $query['page_size']);
+        } catch (\RuntimeException $e) {
+            // 之前返 0/[] → 后台列表看起来"没有文档"，运维误以为数据被清空。
+            throw new BusinessException('文档服务暂不可用，请稍后重试', 50001);
+        }
         return Pagination::format($list, $total, (int) $query['page'], (int) $query['page_size']);
     }
 
@@ -44,7 +49,10 @@ class DocAdminService
             if ($row['error'] === 'duplicate_slug') {
                 throw new BusinessException('slug 已存在', 40001);
             }
-            throw new BusinessException('文档更新失败', 40001);
+            if ($row['error'] === 'db_unavailable') {
+                throw new BusinessException('文档服务暂不可用，请稍后重试', 50001);
+            }
+            throw new BusinessException('文档更新失败，请稍后重试', 50001);
         }
         if (empty($row)) {
             throw new BusinessException('文档不存在', 40001);
@@ -59,7 +67,12 @@ class DocAdminService
 
     public function delete(int $id): array
     {
-        $ok = (new DocArticleRepository())->delete($id);
+        try {
+            $ok = (new DocArticleRepository())->deleteStrict($id);
+        } catch (\Throwable $e) {
+            error_log("[DocAdminService] delete failed: " . $e->getMessage());
+            throw new BusinessException('文档服务暂不可用，请稍后重试', 50001);
+        }
         if (!$ok) {
             throw new BusinessException('文档不存在', 40001);
         }

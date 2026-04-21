@@ -3,6 +3,7 @@
 namespace app\repository\redis;
 
 use support\adapter\RedisClient;
+use support\AppLog;
 
 class RateLimitRepository
 {
@@ -12,7 +13,7 @@ class RateLimitRepository
     {
         $redis = RedisClient::connection();
         if (!$redis) {
-            error_log("[RateLimitRepository] Redis unavailable, rejecting request (fail-closed)");
+            AppLog::warn("[RateLimitRepository] Redis unavailable, rejecting request (fail-closed)");
             return ['available' => false, 'count' => 0];
         }
         try {
@@ -21,7 +22,7 @@ class RateLimitRepository
             $count = $redis->eval($lua, [$fullKey, $ttl], 1);
             return ['available' => true, 'count' => (int) $count];
         } catch (\Throwable $e) {
-            error_log("[RateLimitRepository] hit failed: " . $e->getMessage());
+            AppLog::warn("[RateLimitRepository] hit failed: " . $e->getMessage());
             return ['available' => false, 'count' => 0];
         }
     }

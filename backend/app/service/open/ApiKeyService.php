@@ -9,12 +9,18 @@ use support\adapter\MySqlClient;
 
 class ApiKeyService
 {
+    // verify() 语义：
+    //   null        = 凭证无效（API Key 不存在 / 已失效 / secret 不匹配 / 关联用户禁用）
+    //   抛 RuntimeException = 基础设施故障（MySQL 不可用）
+    // 之前 findByApiKey / UserRepository::findById 都是非严格，DB 故障会被 verify 误判成"凭证无效"，
+    // 中间件给客户端 40008 "API Key 无效"；合法调用方看到莫名其妙的鉴权失败，既查不出问题也无法触发告警。
+    // 改为 Strict：DB 故障抛 RuntimeException，由中间件翻译为 50001 "鉴权服务暂不可用"。
     public function verify(?string $apiKey, ?string $apiSecret): ?array
     {
         if (empty($apiKey) || empty($apiSecret)) {
             return null;
         }
-        $record = (new ApiKeyRepository())->findByApiKey($apiKey);
+        $record = (new ApiKeyRepository())->findByApiKeyStrict($apiKey);
         if (!$record) {
             return null;
         }
@@ -26,7 +32,7 @@ class ApiKeyService
         }
         $userId = (int) ($record['user_id'] ?? 0);
         if ($userId > 0) {
-            $user = (new UserRepository())->findById($userId);
+            $user = (new UserRepository())->findByIdStrict($userId);
             if (!$user || (int) ($user['status'] ?? 0) !== 1) {
                 return null;
             }

@@ -14,20 +14,34 @@ class CollectAdminService
         $query += ['page' => 1, 'page_size' => 20];
         $repo = new CollectTaskRepository();
         $userId = isset($query['user_id']) && $query['user_id'] > 0 ? (int) $query['user_id'] : null;
-        $total = $repo->countAll($userId);
-        $list = $repo->findPage((int) $query['page'], (int) $query['page_size'], $userId);
+        try {
+            $total = $repo->countAllStrict($userId);
+            $list = $repo->findPageStrict((int) $query['page'], (int) $query['page_size'], $userId);
+        } catch (\RuntimeException $e) {
+            // 之前返回 0/[]，后台以为"没任务"，掩盖 DB 故障。
+            throw new BusinessException('采集任务列表暂不可用，请稍后重试', 50001);
+        }
         return Pagination::format($list, $total, (int) $query['page'], (int) $query['page_size']);
     }
 
     public function detail(string $taskNo): array
     {
-        return (new CollectTaskDetailRepository())->findByTaskNo($taskNo);
+        try {
+            return (new CollectTaskDetailRepository())->findByTaskNoStrict($taskNo);
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('采集任务详情暂不可用，请稍后重试', 50001);
+        }
     }
 
     public function stop(string $taskNo): array
     {
         $repo = new CollectTaskRepository();
-        $task = $repo->findByTaskNo($taskNo);
+        try {
+            $task = $repo->findByTaskNoStrict($taskNo);
+        } catch (\RuntimeException $e) {
+            // 之前用 findByTaskNo，DB 故障 → null → 误报 40001"任务不存在"。
+            throw new BusinessException('采集任务服务暂不可用，请稍后重试', 50001);
+        }
         if (!$task) {
             throw new BusinessException('采集任务不存在', 40001);
         }
@@ -62,7 +76,11 @@ class CollectAdminService
     public function retry(string $taskNo): array
     {
         $repo = new CollectTaskRepository();
-        $task = $repo->findByTaskNo($taskNo);
+        try {
+            $task = $repo->findByTaskNoStrict($taskNo);
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('采集任务服务暂不可用，请稍后重试', 50001);
+        }
         if (!$task) {
             throw new BusinessException('采集任务不存在', 40001);
         }

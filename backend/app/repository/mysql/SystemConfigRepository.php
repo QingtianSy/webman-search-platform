@@ -87,6 +87,22 @@ class SystemConfigRepository
         }
     }
 
+    public function findByKeyStrict(string $key): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            throw new \RuntimeException('MySQL connection unavailable');
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT id, group_code, config_key, config_value, value_type, status, created_at, updated_at FROM system_configs WHERE config_key = :config_key LIMIT 1');
+            $stmt->execute(['config_key' => $key]);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            error_log("[SystemConfigRepository] findByKeyStrict failed: " . $e->getMessage());
+            throw new \RuntimeException('system config query failed: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
     public function updateByKey(string $key, string $value): array
     {
         $pdo = MySqlClient::pdo();
@@ -105,6 +121,75 @@ class SystemConfigRepository
         } catch (\PDOException $e) {
             error_log("[SystemConfigRepository] updateByKey failed: " . $e->getMessage());
             return [];
+        }
+    }
+
+    public function updateByKeyStrict(string $key, string $value): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            throw new \RuntimeException('MySQL connection unavailable');
+        }
+        try {
+            $stmt = $pdo->prepare('UPDATE system_configs SET config_value = :config_value, updated_at = NOW() WHERE config_key = :config_key');
+            $stmt->execute([
+                'config_key' => $key,
+                'config_value' => $value,
+            ]);
+            $stmt = $pdo->prepare('SELECT id, group_code, config_key, config_value, value_type, status, created_at, updated_at FROM system_configs WHERE config_key = :config_key LIMIT 1');
+            $stmt->execute(['config_key' => $key]);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            error_log("[SystemConfigRepository] updateByKeyStrict failed: " . $e->getMessage());
+            throw new \RuntimeException('system config update failed: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    public function getByGroupStrict(string $groupCode): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            throw new \RuntimeException('MySQL connection unavailable');
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT id, group_code, config_key, config_value, value_type, status, created_at, updated_at FROM system_configs WHERE group_code = :group_code ORDER BY id ASC');
+            $stmt->execute(['group_code' => $groupCode]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            error_log("[SystemConfigRepository] getByGroupStrict failed: " . $e->getMessage());
+            throw new \RuntimeException('system config group query failed: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    // 严格版本：DB 故障抛 RuntimeException，避免"配置列表因 DB 挂了返空 → 后台以为无配置"。
+    public function countAllStrict(): int
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            throw new \RuntimeException('MySQL connection unavailable');
+        }
+        try {
+            return (int) $pdo->query('SELECT COUNT(*) FROM system_configs')->fetchColumn();
+        } catch (\PDOException $e) {
+            throw new \RuntimeException('system config count failed: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    public function findPageStrict(int $page, int $pageSize): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            throw new \RuntimeException('MySQL connection unavailable');
+        }
+        try {
+            $offset = ($page - 1) * $pageSize;
+            $stmt = $pdo->prepare('SELECT id, group_code, config_key, config_value, value_type, status, created_at, updated_at FROM system_configs ORDER BY id DESC LIMIT :limit OFFSET :offset');
+            $stmt->bindValue('limit', $pageSize, PDO::PARAM_INT);
+            $stmt->bindValue('offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            throw new \RuntimeException('system config page failed: ' . $e->getMessage(), 0, $e);
         }
     }
 }
