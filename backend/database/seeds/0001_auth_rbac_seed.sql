@@ -29,10 +29,13 @@ INSERT INTO `permissions` (`id`, `name`, `code`, `type`, `created_at`, `updated_
 (14, '日志查看', 'log.view', 1, NOW(), NOW());
 
 -- Menus (matching mock menus.json + admin routes)
+-- 用户端菜单 path 前缀 /user（前端会把 /dashboard 归一成 /user/dashboard）；管理端 path 前缀 /admin
+-- /admin/dashboard 独立一条，permission admin.access，区分于共享 /dashboard（portal.access）
 INSERT INTO `menus` (`id`, `parent_id`, `name`, `path`, `permission_code`, `sort`, `status`, `created_at`, `updated_at`) VALUES
 (1,  0, '首页',       '/dashboard',             'portal.access',       1,  1, NOW(), NOW()),
 (2,  0, '搜题',       '/search',                'search.query',        2,  1, NOW(), NOW()),
 (3,  0, '搜题日志',   '/log/search',            'search.query',        3,  1, NOW(), NOW()),
+(16, 0, '管理首页',   '/admin/dashboard',        'admin.access',        9,  1, NOW(), NOW()),
 (4,  0, '题目管理',   '/admin/question',         'question.manage',     10, 1, NOW(), NOW()),
 (5,  0, '用户管理',   '/admin/user',             'user.manage',         11, 1, NOW(), NOW()),
 (6,  0, '角色管理',   '/admin/role',             'role.manage',         12, 1, NOW(), NOW()),
