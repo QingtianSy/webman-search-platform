@@ -35,6 +35,8 @@ INSERT INTO `menus` (`id`, `parent_id`, `name`, `path`, `permission_code`, `sort
 (1,  0, '首页',       '/dashboard',             'portal.access',       1,  1, NOW(), NOW()),
 (2,  0, '搜题',       '/search',                'search.query',        2,  1, NOW(), NOW()),
 (3,  0, '搜题日志',   '/log/search',            'search.query',        3,  1, NOW(), NOW()),
+(17, 0, '钱包',       '/wallet',                'portal.access',       4,  1, NOW(), NOW()),
+(18, 0, 'API Key',    '/api-key',               'portal.access',       5,  1, NOW(), NOW()),
 (16, 0, '管理首页',   '/admin/dashboard',        'admin.access',        9,  1, NOW(), NOW()),
 (4,  0, '题目管理',   '/admin/question',         'question.manage',     10, 1, NOW(), NOW()),
 (5,  0, '用户管理',   '/admin/user',             'user.manage',         11, 1, NOW(), NOW()),
