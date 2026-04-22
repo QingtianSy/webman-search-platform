@@ -48,6 +48,7 @@ CREATE TABLE `permissions` (
   `name` varchar(100) NOT NULL,
   `code` varchar(100) NOT NULL,
   `type` tinyint NOT NULL DEFAULT 1,
+  `status` tinyint NOT NULL DEFAULT 1,
   `created_at` datetime NOT NULL,
   `updated_at` datetime NOT NULL,
   PRIMARY KEY (`id`),
