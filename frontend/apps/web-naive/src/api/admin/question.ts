@@ -1,58 +1,108 @@
 import { requestClient } from '#/api/request';
 
 /**
- * 管理端题库管理。对应后端 admin/QuestionController。
+ * 管理端题库管理。对齐后端 [backend/app/controller/admin/QuestionController.php](../../../../../../backend/app/controller/admin/QuestionController.php)。
+ *   - GET    /admin/question/list?keyword=&page=&page_size=&status=&start_time=&end_time=
+ *   - GET    /admin/question/detail?id=
+ *   - POST   /admin/question/create  body: {stem*, answer_text, options_text, type_code, type_name, source_name, course_name, status}
+ *   - PUT    /admin/question/update  body: {id*, ...partial}
+ *   - DELETE /admin/question/delete?id=
+ *   - GET    /admin/question/export?...同 list filter    → CSV 下载
+ *   - POST   /admin/question/reindex                     → 全量 ES 重建（耗时操作）
+ *
+ * 题目存 Mongo，question_id 是字符串形如 "QYYYYmmddHHiiss<hex>"。
+ * options_text 是后端约定的"选项序列化文本"（如 "A|aaa###B|bbb"），页面表单按此串形态处理。
  */
 export namespace AdminQuestionApi {
-  export interface QuestionOption {
-    key: string;
-    content: string;
-  }
-
-  export interface QuestionItem {
-    question_id: number | string;
+  export interface Question {
+    id?: string;
+    question_id: string;
     stem: string;
-    type: number;
-    options?: QuestionOption[];
     answer_text?: string;
-    analysis?: string;
+    options_text?: string;
+    type_code?: string;
+    type_name?: string;
+    source_name?: string;
+    course_name?: string;
     status: number;
+    /** ES 最终一致标志；false 时提示"索引同步中" */
     es_synced?: boolean;
     created_at?: string;
     updated_at?: string;
   }
 
-  export interface QuestionListParams {
+  export interface ListParams {
     keyword?: string;
-    status?: number;
-    type?: number;
+    status?: number | string;
     page?: number;
     page_size?: number;
+    sort?: string;
+    order?: 'asc' | 'desc';
+    start_time?: string;
+    end_time?: string;
+  }
+
+  export interface Page {
+    list: Question[];
+    total: number;
+    page: number;
+    page_size: number;
+  }
+
+  export interface CreatePayload {
+    stem: string;
+    answer_text?: string;
+    options_text?: string;
+    type_code?: string;
+    type_name?: string;
+    source_name?: string;
+    course_name?: string;
+    status?: number;
+  }
+
+  export type UpdatePayload = Partial<CreatePayload> & { id: string };
+
+  export interface ReindexResult {
+    rebuilt?: boolean;
+    count?: number;
+    es_warning?: string;
+    [k: string]: any;
   }
 }
 
-type PageResult<T> = { items: T[]; total: number };
-
-export async function listQuestionsApi(params?: AdminQuestionApi.QuestionListParams) {
-  return requestClient.get<PageResult<AdminQuestionApi.QuestionItem>>('/admin/questions', { params });
+export async function listQuestionsApi(params?: AdminQuestionApi.ListParams) {
+  return requestClient.get<AdminQuestionApi.Page>('/admin/question/list', {
+    params,
+  });
 }
 
-export async function getQuestionApi(id: string | number) {
-  return requestClient.get<AdminQuestionApi.QuestionItem>(`/admin/questions/${id}`);
+export async function getQuestionApi(id: string) {
+  return requestClient.get<AdminQuestionApi.Question>(
+    '/admin/question/detail',
+    { params: { id } },
+  );
 }
 
-export async function createQuestionApi(data: Partial<AdminQuestionApi.QuestionItem>) {
-  return requestClient.post<AdminQuestionApi.QuestionItem>('/admin/questions', data);
+export async function createQuestionApi(data: AdminQuestionApi.CreatePayload) {
+  return requestClient.post<AdminQuestionApi.Question>(
+    '/admin/question/create',
+    data,
+  );
 }
 
-export async function updateQuestionApi(id: string | number, data: Partial<AdminQuestionApi.QuestionItem>) {
-  return requestClient.put<AdminQuestionApi.QuestionItem>(`/admin/questions/${id}`, data);
+export async function updateQuestionApi(data: AdminQuestionApi.UpdatePayload) {
+  return requestClient.put<AdminQuestionApi.Question>(
+    '/admin/question/update',
+    data,
+  );
 }
 
-export async function deleteQuestionApi(id: string | number) {
-  return requestClient.delete(`/admin/questions/${id}`);
+export async function deleteQuestionApi(id: string) {
+  return requestClient.delete('/admin/question/delete', { params: { id } });
 }
 
-export async function reindexQuestionApi(id: string | number) {
-  return requestClient.post(`/admin/questions/${id}/reindex`);
+export async function reindexQuestionsApi() {
+  return requestClient.post<AdminQuestionApi.ReindexResult>(
+    '/admin/question/reindex',
+  );
 }

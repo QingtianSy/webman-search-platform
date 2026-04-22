@@ -1,22 +1,108 @@
 <script lang="ts" setup>
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
-import { useAccessStore, useUserStore } from '@vben/stores';
+import { useUserStore } from '@vben/stores';
+
+import {
+  NAlert,
+  NButton,
+  NCard,
+  NGrid,
+  NGridItem,
+  NSpin,
+  NStatistic,
+} from 'naive-ui';
+
+import { type AdminDashboardApi, getAdminOverviewApi } from '#/api/admin';
 
 const userStore = useUserStore();
-const accessStore = useAccessStore();
+
+const loading = ref(false);
+const overview = ref<AdminDashboardApi.Overview | null>(null);
+const errorMsg = ref('');
+
 const realName = computed(() => userStore.userInfo?.realName ?? '管理员');
-const permissionCount = computed(() => accessStore.accessCodes?.length ?? 0);
+
+async function load() {
+  loading.value = true;
+  errorMsg.value = '';
+  try {
+    overview.value = await getAdminOverviewApi();
+  } catch (e: any) {
+    // 50001 级错误请求拦截器已经弹过 banner，这里只留一个轻提示按钮，避免双重打扰
+    errorMsg.value = e?.message ?? '数据暂不可用';
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(load);
 </script>
 
 <template>
   <div class="p-6">
-    <h1 class="text-2xl font-semibold mb-2">管理端控制台 · {{ realName }}</h1>
-    <p class="text-muted-foreground mb-4">
-      这是管理端首页占位。后续 P3 将替换为：平台运行状态、配额监控、最近告警等。
-    </p>
-    <div class="text-sm text-muted-foreground">
-      当前持有权限码：{{ permissionCount }} 项
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h1 class="text-2xl font-semibold">控制台 · {{ realName }}</h1>
+        <p class="text-sm text-muted-foreground mt-1">
+          平台运行概览（缓存 60s）。金额单位：元。
+        </p>
+      </div>
+      <NButton :loading="loading" @click="load">刷新</NButton>
     </div>
+
+    <NAlert
+      v-if="errorMsg"
+      type="warning"
+      :title="errorMsg"
+      closable
+      class="mb-4"
+    />
+
+    <NSpin :show="loading">
+      <NGrid :cols="4" :x-gap="16" :y-gap="16" responsive="screen">
+        <NGridItem>
+          <NCard>
+            <NStatistic label="总用户数" :value="overview?.total_users ?? 0" />
+            <div class="text-xs text-muted-foreground mt-2">
+              今日新增：{{ overview?.today_users ?? 0 }}
+            </div>
+          </NCard>
+        </NGridItem>
+        <NGridItem>
+          <NCard>
+            <NStatistic
+              label="总搜索次数"
+              :value="overview?.total_searches ?? 0"
+            />
+            <div class="text-xs text-muted-foreground mt-2">
+              今日：{{ overview?.today_searches ?? 0 }}
+            </div>
+          </NCard>
+        </NGridItem>
+        <NGridItem>
+          <NCard>
+            <NStatistic label="累计交易金额">
+              <template #prefix>¥</template>
+              {{ overview?.total_order_amount ?? '0.00' }}
+            </NStatistic>
+            <div class="text-xs text-muted-foreground mt-2">
+              今日：¥{{ overview?.today_order_amount ?? '0.00' }}
+            </div>
+          </NCard>
+        </NGridItem>
+        <NGridItem>
+          <NCard>
+            <NStatistic
+              label="题库总量"
+              :value="overview?.total_questions ?? 0"
+            />
+            <div class="text-xs text-muted-foreground mt-2">
+              来源：Mongo questions 集合
+            </div>
+          </NCard>
+        </NGridItem>
+      </NGrid>
+    </NSpin>
   </div>
 </template>

@@ -2,6 +2,7 @@ export * from './announcement';
 export * from './api-source';
 export * from './collect';
 export * from './config';
+export * from './dashboard';
 export * from './doc';
 export * from './log';
 export * from './menu';

@@ -1,56 +1,94 @@
 import { requestClient } from '#/api/request';
 
 /**
- * 管理端用户管理。包含 CRUD + 封禁/解封 + 调整余额 + 设置套餐。
+ * 管理端用户管理。对齐后端 [backend/app/controller/admin/UserController.php](../../../../../../backend/app/controller/admin/UserController.php)。
+ *   - GET    /admin/user/list?keyword=&status=&page=&page_size=&sort=&order=
+ *   - POST   /admin/user/create          body: {username*, password*(>=6), nickname, mobile, email, status, role_ids[]}
+ *   - PUT    /admin/user/update          body: {id*, username, nickname, mobile, email, status, password(>=6 if present), role_ids[]}
+ *   - DELETE /admin/user/delete?id=
+ *   - PUT    /admin/user/toggle-status   body: {id}
+ *   - PUT    /admin/user/assign-roles    body: {user_id, role_ids[]}
+ *
+ * 列表每行返回 roles: [{id,name,code}]，password_hash/password 已在后端 makeHidden 里过滤。
+ * 危险行为（改密码 / 禁用 / 改角色）会触发后端 revokeToken：bump sessions_invalidated_at + Redis 标记，原 token 立即失效。
  */
 export namespace AdminUserApi {
-  export interface UserItem {
+  export interface RoleRef {
+    id: number;
+    name: string;
+    code: string;
+  }
+
+  export interface User {
     id: number;
     username: string;
     nickname?: string;
+    mobile?: string;
+    email?: string;
     status: number;
-    default_portal?: string;
-    roles?: string[];
-    balance?: number;
-    current_plan_id?: number | null;
+    roles?: RoleRef[];
     created_at?: string;
+    updated_at?: string;
   }
 
   export interface ListParams {
     keyword?: string;
-    status?: number;
-    role?: string;
+    status?: number | string;
     page?: number;
     page_size?: number;
+    sort?: string;
+    order?: 'asc' | 'desc';
+  }
+
+  export interface Page {
+    list: User[];
+    total: number;
+    page: number;
+    page_size: number;
+  }
+
+  export interface CreatePayload {
+    username: string;
+    password: string;
+    nickname?: string;
+    mobile?: string;
+    email?: string;
+    status?: number;
+    role_ids?: number[];
+  }
+
+  export interface UpdatePayload {
+    id: number;
+    username?: string;
+    password?: string;
+    nickname?: string;
+    mobile?: string;
+    email?: string;
+    status?: number;
+    role_ids?: number[];
   }
 }
 
-type PageResult<T> = { items: T[]; total: number };
-
 export async function listUsersApi(params?: AdminUserApi.ListParams) {
-  return requestClient.get<PageResult<AdminUserApi.UserItem>>('/admin/users', { params });
+  return requestClient.get<AdminUserApi.Page>('/admin/user/list', { params });
 }
 
-export async function getUserApi(id: number) {
-  return requestClient.get<AdminUserApi.UserItem>(`/admin/users/${id}`);
+export async function createUserApi(data: AdminUserApi.CreatePayload) {
+  return requestClient.post('/admin/user/create', data);
 }
 
-export async function createUserApi(data: Partial<AdminUserApi.UserItem> & { password?: string }) {
-  return requestClient.post<AdminUserApi.UserItem>('/admin/users', data);
+export async function updateUserApi(data: AdminUserApi.UpdatePayload) {
+  return requestClient.put('/admin/user/update', data);
 }
 
-export async function updateUserApi(id: number, data: Partial<AdminUserApi.UserItem>) {
-  return requestClient.put<AdminUserApi.UserItem>(`/admin/users/${id}`, data);
+export async function deleteUserApi(id: number) {
+  return requestClient.delete('/admin/user/delete', { params: { id } });
 }
 
-export async function setUserStatusApi(id: number, status: number) {
-  return requestClient.post(`/admin/users/${id}/status`, { status });
+export async function toggleUserStatusApi(id: number) {
+  return requestClient.put('/admin/user/toggle-status', { id });
 }
 
-export async function adjustUserBalanceApi(id: number, change: number, reason?: string) {
-  return requestClient.post(`/admin/users/${id}/balance`, { change, reason });
-}
-
-export async function setUserRolesApi(id: number, role_ids: number[]) {
-  return requestClient.post(`/admin/users/${id}/roles`, { role_ids });
+export async function assignUserRolesApi(user_id: number, role_ids: number[]) {
+  return requestClient.put('/admin/user/assign-roles', { user_id, role_ids });
 }
