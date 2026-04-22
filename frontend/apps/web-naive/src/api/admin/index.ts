@@ -6,6 +6,7 @@ export * from './dashboard';
 export * from './doc';
 export * from './log';
 export * from './menu';
+export * from './permission';
 export * from './plan';
 export * from './question';
 export * from './role';
