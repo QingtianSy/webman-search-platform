@@ -21,6 +21,12 @@ export namespace AuthApi {
     username?: string;
   }
 
+  export interface RegisterParams {
+    nickname?: string;
+    password: string;
+    username: string;
+  }
+
   export interface BackendUser {
     avatar?: null | string;
     id: number;
@@ -73,6 +79,25 @@ export async function loginApi(
 ): Promise<AuthApi.LoginResult> {
   const raw = await requestClient.post<AuthApi.BackendAuthPayload>(
     '/auth/login',
+    data,
+  );
+  return {
+    accessToken: raw.token ?? '',
+    userInfo: toUserInfo(raw),
+    permissions: raw.permissions ?? [],
+  };
+}
+
+/**
+ * 注册：后端 /auth/register 返回与 /auth/login 同构的 payload（含 token），
+ * 所以这里直接复用 LoginResult 形状，让 authStore 能用同一套装配逻辑。
+ * 后端限流 5/60s/IP；字段校验见 RegisterValidate（用户名 3-50，密码 >=6）。
+ */
+export async function registerApi(
+  data: AuthApi.RegisterParams,
+): Promise<AuthApi.LoginResult> {
+  const raw = await requestClient.post<AuthApi.BackendAuthPayload>(
+    '/auth/register',
     data,
   );
   return {

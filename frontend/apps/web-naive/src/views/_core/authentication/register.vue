@@ -3,13 +3,22 @@ import type { VbenFormSchema } from '@vben/common-ui';
 import type { Recordable } from '@vben/types';
 
 import { computed, h, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 import { AuthenticationRegister, z } from '@vben/common-ui';
 import { $t } from '@vben/locales';
+import { preferences } from '@vben/preferences';
+import { useAccessStore, useUserStore } from '@vben/stores';
+
+import { notification } from '#/adapter/naive';
+import { registerApi } from '#/api';
 
 defineOptions({ name: 'Register' });
 
 const loading = ref(false);
+const router = useRouter();
+const accessStore = useAccessStore();
+const userStore = useUserStore();
 
 const formSchema = computed((): VbenFormSchema[] => {
   return [
@@ -81,8 +90,30 @@ const formSchema = computed((): VbenFormSchema[] => {
   ];
 });
 
-function handleSubmit(value: Recordable<any>) {
-  void value;
+async function handleSubmit(value: Recordable<any>) {
+  // Vben 原模板此处是空函数，这里补接 /auth/register。
+  // 成功后直接把后端返回的 token + userInfo + permissions 灌进 store，免去"注册完再要求登录一次"。
+  loading.value = true;
+  try {
+    const { accessToken, userInfo, permissions } = await registerApi({
+      username: String(value.username ?? '').trim(),
+      password: String(value.password ?? ''),
+    });
+    if (!accessToken) {
+      return;
+    }
+    accessStore.setAccessToken(accessToken);
+    userStore.setUserInfo(userInfo);
+    accessStore.setAccessCodes(permissions);
+    notification.success({
+      content: $t('authentication.loginSuccess'),
+      description: userInfo.realName,
+      duration: 3000,
+    });
+    await router.push(userInfo.homePath || preferences.app.defaultHomePath);
+  } finally {
+    loading.value = false;
+  }
 }
 </script>
 
