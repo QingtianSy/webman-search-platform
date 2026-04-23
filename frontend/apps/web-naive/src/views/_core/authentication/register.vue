@@ -6,12 +6,13 @@ import { computed, h, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { AuthenticationRegister, z } from '@vben/common-ui';
-import { $t } from '@vben/locales';
+import { $t as $tCore } from '@vben/locales';
 import { preferences } from '@vben/preferences';
 import { useAccessStore, useUserStore } from '@vben/stores';
 
 import { notification } from '#/adapter/naive';
 import { registerApi } from '#/api';
+import { $t } from '#/locales';
 
 defineOptions({ name: 'Register' });
 
@@ -25,46 +26,60 @@ const formSchema = computed((): VbenFormSchema[] => {
     {
       component: 'VbenInput',
       componentProps: {
-        placeholder: $t('authentication.usernameTip'),
+        placeholder: $tCore('authentication.usernameTip'),
       },
       fieldName: 'username',
-      label: $t('authentication.username'),
-      rules: z.string().min(1, { message: $t('authentication.usernameTip') }),
+      label: $tCore('authentication.username'),
+      rules: z
+        .string()
+        .min(3, { message: $tCore('authentication.usernameTip') })
+        .max(50, { message: $tCore('authentication.usernameTip') }),
+    },
+    {
+      component: 'VbenInput',
+      componentProps: {
+        placeholder: '昵称（可选）',
+      },
+      fieldName: 'nickname',
+      label: '昵称',
+      rules: z.string().max(50).optional(),
     },
     {
       component: 'VbenInputPassword',
       componentProps: {
         passwordStrength: true,
-        placeholder: $t('authentication.password'),
+        placeholder: $tCore('authentication.password'),
       },
       fieldName: 'password',
-      label: $t('authentication.password'),
+      label: $tCore('authentication.password'),
       renderComponentContent() {
         return {
-          strengthText: () => $t('authentication.passwordStrength'),
+          strengthText: () => $tCore('authentication.passwordStrength'),
         };
       },
-      rules: z.string().min(1, { message: $t('authentication.passwordTip') }),
+      rules: z
+        .string()
+        .min(6, { message: $tCore('authentication.passwordTip') }),
     },
     {
       component: 'VbenInputPassword',
       componentProps: {
-        placeholder: $t('authentication.confirmPassword'),
+        placeholder: $tCore('authentication.confirmPassword'),
       },
       dependencies: {
         rules(values) {
           const { password } = values;
           return z
-            .string({ required_error: $t('authentication.passwordTip') })
-            .min(1, { message: $t('authentication.passwordTip') })
+            .string({ required_error: $tCore('authentication.passwordTip') })
+            .min(1, { message: $tCore('authentication.passwordTip') })
             .refine((value) => value === password, {
-              message: $t('authentication.confirmPasswordTip'),
+              message: $tCore('authentication.confirmPasswordTip'),
             });
         },
         triggerFields: ['password'],
       },
       fieldName: 'confirmPassword',
-      label: $t('authentication.confirmPassword'),
+      label: $tCore('authentication.confirmPassword'),
     },
     {
       component: 'VbenCheckbox',
@@ -72,19 +87,19 @@ const formSchema = computed((): VbenFormSchema[] => {
       renderComponentContent: () => ({
         default: () =>
           h('span', [
-            $t('authentication.agree'),
+            $tCore('authentication.agree'),
             h(
               'a',
               {
                 class: 'vben-link ml-1',
                 href: '',
               },
-              `${$t('authentication.privacyPolicy')} & ${$t('authentication.terms')}`,
+              `${$tCore('authentication.privacyPolicy')} & ${$tCore('authentication.terms')}`,
             ),
           ]),
       }),
       rules: z.boolean().refine((value) => !!value, {
-        message: $t('authentication.agreeTip'),
+        message: $tCore('authentication.agreeTip'),
       }),
     },
   ];
@@ -95,9 +110,11 @@ async function handleSubmit(value: Recordable<any>) {
   // 成功后直接把后端返回的 token + userInfo + permissions 灌进 store，免去"注册完再要求登录一次"。
   loading.value = true;
   try {
+    const nickname = String(value.nickname ?? '').trim();
     const { accessToken, userInfo, permissions } = await registerApi({
       username: String(value.username ?? '').trim(),
       password: String(value.password ?? ''),
+      ...(nickname ? { nickname } : {}),
     });
     if (!accessToken) {
       return;
@@ -106,8 +123,8 @@ async function handleSubmit(value: Recordable<any>) {
     userStore.setUserInfo(userInfo);
     accessStore.setAccessCodes(permissions);
     notification.success({
-      content: $t('authentication.loginSuccess'),
-      description: userInfo.realName,
+      content: $t('page.auth.registerSuccess'),
+      description: `${$t('page.auth.registerSuccessDesc')}: ${userInfo.realName}`,
       duration: 3000,
     });
     await router.push(userInfo.homePath || preferences.app.defaultHomePath);

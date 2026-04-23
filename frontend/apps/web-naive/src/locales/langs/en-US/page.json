@@ -2,10 +2,9 @@
   "auth": {
     "login": "Login",
     "register": "Register",
-    "codeLogin": "Code Login",
-    "qrcodeLogin": "Qr Code Login",
-    "forgetPassword": "Forget Password",
-    "profile": "Profile"
+    "profile": "Profile",
+    "registerSuccess": "Registered",
+    "registerSuccessDesc": "Welcome aboard"
   },
   "dashboard": {
     "title": "Dashboard",
