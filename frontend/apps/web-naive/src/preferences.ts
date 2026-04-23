@@ -17,4 +17,9 @@ export const overridesPreferences = defineOverridesPreferences({
     defaultHomePath: '/user/dashboard',
     enableRefreshToken: false,
   },
+  theme: {
+    // 品牌主色：teal，与 Vben 默认蓝做区分，保留暗色/亮色可切换
+    colorPrimary: 'hsl(174 72% 38%)',
+    radius: '0.5',
+  },
 });

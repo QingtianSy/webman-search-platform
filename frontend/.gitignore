@@ -23,6 +23,10 @@ package-lock.json
 .VSCodeCounter
 **/backend-mock/data
 .omx
+# playwright
+**/playwright-report
+**/test-results
+**/playwright/.cache
 # local env files
 .env.local
 .env.*.local

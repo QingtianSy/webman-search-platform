@@ -11,5 +11,40 @@
     "title": "概览",
     "analytics": "分析页",
     "workspace": "工作台"
+  },
+  "portal": {
+    "user": "用户端",
+    "admin": "管理端",
+    "switchTo": "切换到{0}"
+  },
+  "common": {
+    "createdAt": "创建时间",
+    "updatedAt": "更新时间",
+    "status": "状态",
+    "actions": "操作",
+    "keyword": "关键词",
+    "detail": "详情",
+    "export": "导出",
+    "retry": "重试",
+    "stop": "停止"
+  },
+  "messages": {
+    "loadFailed": "加载失败",
+    "saveSuccess": "保存成功",
+    "deleteSuccess": "删除成功",
+    "createSuccess": "创建成功",
+    "updateSuccess": "更新成功",
+    "operationSuccess": "操作成功",
+    "operationFailed": "操作失败",
+    "copySuccess": "已复制",
+    "copyFailed": "复制失败，请手动选择文本"
+  },
+  "fallback": {
+    "forbiddenTitle": "无权访问（40003）",
+    "forbiddenDesc": "你没有访问该页面的权限。如果确认角色配置有误，请联系管理员在 /admin/role 处重新分配。",
+    "notFoundTitle": "页面不存在",
+    "notFoundDesc": "该路径没有匹配到任何已注册的菜单。可能是链接过期，或你未被分配到对应菜单。",
+    "internalErrorTitle": "服务暂不可用（50001）",
+    "internalErrorDesc": "下游依赖（数据库/缓存/ES/第三方接口）临时故障，页面已主动停止静默吞错。请稍后重试，仍异常请联系管理员。"
   }
 }

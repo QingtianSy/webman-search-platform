@@ -11,5 +11,40 @@
     "title": "Dashboard",
     "analytics": "Analytics",
     "workspace": "Workspace"
+  },
+  "portal": {
+    "user": "User Portal",
+    "admin": "Admin Portal",
+    "switchTo": "Switch to {0}"
+  },
+  "common": {
+    "createdAt": "Created At",
+    "updatedAt": "Updated At",
+    "status": "Status",
+    "actions": "Actions",
+    "keyword": "Keyword",
+    "detail": "Detail",
+    "export": "Export",
+    "retry": "Retry",
+    "stop": "Stop"
+  },
+  "messages": {
+    "loadFailed": "Load failed",
+    "saveSuccess": "Saved",
+    "deleteSuccess": "Deleted",
+    "createSuccess": "Created",
+    "updateSuccess": "Updated",
+    "operationSuccess": "Operation succeeded",
+    "operationFailed": "Operation failed",
+    "copySuccess": "Copied",
+    "copyFailed": "Copy failed, please select the text manually"
+  },
+  "fallback": {
+    "forbiddenTitle": "Forbidden (40003)",
+    "forbiddenDesc": "You do not have permission to view this page. Ask an administrator to re-assign your roles at /admin/role.",
+    "notFoundTitle": "Page not found",
+    "notFoundDesc": "No registered menu matches this path. The link may have expired, or you have not been granted access to it.",
+    "internalErrorTitle": "Service unavailable (50001)",
+    "internalErrorDesc": "A downstream dependency (DB/cache/ES/third-party) is temporarily unreachable. Please retry; contact an administrator if the issue persists."
   }
 }
