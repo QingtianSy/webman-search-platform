@@ -227,7 +227,8 @@ async function openDetail(row: UserCollectApi.TaskItem) {
   try {
     await fetchDetail(row.task_no);
     // 未完成态才起轮询
-    const cur: null | UserCollectApi.TaskDetail = detail.value;
+    // 注：函数顶部有 `detail.value = null` 把 ref 值收窄成 null，await 后 vue-tsc 不加宽，这里用断言强制还原为完整类型
+    const cur = detail.value as null | UserCollectApi.TaskDetail;
     if (cur && (cur.status === 0 || cur.status === 1)) {
       startPoll(row.task_no);
     }
