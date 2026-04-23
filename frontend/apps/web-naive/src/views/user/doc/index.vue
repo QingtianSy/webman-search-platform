@@ -121,7 +121,7 @@ onMounted(() => {
     </NCard>
 
     <div class="grid gap-4 md:grid-cols-[280px_1fr]">
-      <NCard title="分类" :segmented="{ content: 'hard' }">
+      <NCard title="分类" :segmented="{ content: true }">
         <NSpin :show="categoriesLoading">
           <NEmpty
             v-if="!categoriesLoading && categories.length === 0"

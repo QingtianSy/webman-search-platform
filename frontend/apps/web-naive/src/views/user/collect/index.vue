@@ -227,7 +227,8 @@ async function openDetail(row: UserCollectApi.TaskItem) {
   try {
     await fetchDetail(row.task_no);
     // 未完成态才起轮询
-    if (detail.value && [0, 1].includes(detail.value.status)) {
+    const s = detail.value?.status;
+    if (s === 0 || s === 1) {
       startPoll(row.task_no);
     }
   } finally {
