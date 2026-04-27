@@ -14,7 +14,7 @@ class CollectTaskRepository
             return [];
         }
         try {
-            $stmt = $pdo->query('SELECT id, task_no, user_id, account_id, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks ORDER BY id DESC LIMIT 10000');
+            $stmt = $pdo->query('SELECT id, task_no, user_id, account_id, account_phone, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks ORDER BY id DESC LIMIT 10000');
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {
             error_log("[CollectTaskRepository] all failed: " . $e->getMessage());
@@ -51,10 +51,10 @@ class CollectTaskRepository
         try {
             $offset = ($page - 1) * $pageSize;
             if ($userId !== null && $userId > 0) {
-                $stmt = $pdo->prepare('SELECT id, task_no, user_id, account_id, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks WHERE user_id = :user_id ORDER BY id DESC LIMIT :limit OFFSET :offset');
+                $stmt = $pdo->prepare('SELECT id, task_no, user_id, account_id, account_phone, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks WHERE user_id = :user_id ORDER BY id DESC LIMIT :limit OFFSET :offset');
                 $stmt->bindValue('user_id', $userId, PDO::PARAM_INT);
             } else {
-                $stmt = $pdo->prepare('SELECT id, task_no, user_id, account_id, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks ORDER BY id DESC LIMIT :limit OFFSET :offset');
+                $stmt = $pdo->prepare('SELECT id, task_no, user_id, account_id, account_phone, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks ORDER BY id DESC LIMIT :limit OFFSET :offset');
             }
             $stmt->bindValue('limit', $pageSize, PDO::PARAM_INT);
             $stmt->bindValue('offset', $offset, PDO::PARAM_INT);
@@ -95,10 +95,10 @@ class CollectTaskRepository
         try {
             $offset = ($page - 1) * $pageSize;
             if ($userId !== null && $userId > 0) {
-                $stmt = $pdo->prepare('SELECT id, task_no, user_id, account_id, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks WHERE user_id = :user_id ORDER BY id DESC LIMIT :limit OFFSET :offset');
+                $stmt = $pdo->prepare('SELECT id, task_no, user_id, account_id, account_phone, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks WHERE user_id = :user_id ORDER BY id DESC LIMIT :limit OFFSET :offset');
                 $stmt->bindValue('user_id', $userId, PDO::PARAM_INT);
             } else {
-                $stmt = $pdo->prepare('SELECT id, task_no, user_id, account_id, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks ORDER BY id DESC LIMIT :limit OFFSET :offset');
+                $stmt = $pdo->prepare('SELECT id, task_no, user_id, account_id, account_phone, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks ORDER BY id DESC LIMIT :limit OFFSET :offset');
             }
             $stmt->bindValue('limit', $pageSize, PDO::PARAM_INT);
             $stmt->bindValue('offset', $offset, PDO::PARAM_INT);
@@ -116,7 +116,7 @@ class CollectTaskRepository
             return [];
         }
         try {
-            $stmt = $pdo->prepare('SELECT id, task_no, user_id, account_id, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks WHERE user_id = :user_id ORDER BY id DESC LIMIT 10000');
+            $stmt = $pdo->prepare('SELECT id, task_no, user_id, account_id, account_phone, collect_type, course_count, question_count, success_count, fail_count, status, error_message, runner_script, next_script, created_at FROM collect_tasks WHERE user_id = :user_id ORDER BY id DESC LIMIT 10000');
             $stmt->execute(['user_id' => $userId]);
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {
@@ -189,8 +189,8 @@ class CollectTaskRepository
         }
         try {
             $stmt = $pdo->prepare(
-                'INSERT INTO collect_tasks (task_no, user_id, account_id, account_phone, account_password, school_name, province, city, proxy_url, collect_type, course_ids, course_count, status, created_at, updated_at) '
-                . 'VALUES (:task_no, :user_id, :account_id, :account_phone, :account_password, :school_name, :province, :city, :proxy_url, :collect_type, :course_ids, :course_count, 0, NOW(), NOW())'
+                'INSERT INTO collect_tasks (task_no, user_id, account_id, account_phone, account_password, school_name, province, city, proxy_url, collect_type, course_ids, course_count, courses_snapshot, status, created_at, updated_at) '
+                . 'VALUES (:task_no, :user_id, :account_id, :account_phone, :account_password, :school_name, :province, :city, :proxy_url, :collect_type, :course_ids, :course_count, :courses_snapshot, 0, NOW(), NOW())'
             );
             $stmt->execute([
                 'task_no' => $data['task_no'],
@@ -205,6 +205,7 @@ class CollectTaskRepository
                 'collect_type' => $data['collect_type'] ?? 'courses',
                 'course_ids' => $data['course_ids'] ?? '',
                 'course_count' => $data['course_count'] ?? 0,
+                'courses_snapshot' => $data['courses_snapshot'] ?? '',
             ]);
             return $data;
         } catch (\PDOException $e) {

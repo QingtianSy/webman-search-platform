@@ -22,6 +22,7 @@ export namespace UserCollectApi {
     task_no: string;
     user_id: number;
     account_id: number;
+    account_phone: string;
     collect_type: string;
     course_count: number;
     question_count: number;
@@ -44,6 +45,8 @@ export namespace UserCollectApi {
   export interface TaskDetail extends TaskItem {
     account_phone: string;
     course_ids: string;
+    /** 提交时课程快照 JSON 字符串：[{courseId, courseName}]。无快照时为空串。 */
+    courses_snapshot?: null | string;
     updated_at: string;
   }
 
@@ -69,6 +72,8 @@ export namespace UserCollectApi {
     course_ids?: string;
     course_count?: number;
     school_name?: string;
+    /** 课程快照 JSON 字符串 [{courseId, courseName}]，详情页"查看课程"用 */
+    courses_snapshot?: string;
   }
 
   export interface SubmitResult {

@@ -15,7 +15,7 @@ class CollectTaskDetailRepository
         }
         try {
             $sql = 'SELECT id, task_no, user_id, account_id, account_phone, collect_type, course_ids, '
-                . 'course_count, question_count, success_count, fail_count, status, error_message, '
+                . 'course_count, question_count, success_count, fail_count, status, error_message, courses_snapshot,'
                 . 'runner_script, next_script, created_at, updated_at '
                 . 'FROM collect_tasks WHERE task_no = :task_no';
             $params = ['task_no' => $taskNo];
@@ -42,7 +42,7 @@ class CollectTaskDetailRepository
         }
         try {
             $sql = 'SELECT id, task_no, user_id, account_id, account_phone, collect_type, course_ids, '
-                . 'course_count, question_count, success_count, fail_count, status, error_message, '
+                . 'course_count, question_count, success_count, fail_count, status, error_message, courses_snapshot,'
                 . 'runner_script, next_script, created_at, updated_at '
                 . 'FROM collect_tasks WHERE task_no = :task_no';
             $params = ['task_no' => $taskNo];

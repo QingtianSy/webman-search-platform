@@ -111,6 +111,7 @@ class CollectService
             'province' => $province,
             'city' => $city,
             'proxy_url' => $proxyUrl,
+            'courses_snapshot' => $data['courses_snapshot'] ?? '',
         ]);
         if (empty($result)) {
             throw new BusinessException('任务创建失败，请稍后重试', 500);

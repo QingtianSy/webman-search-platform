@@ -42,6 +42,19 @@ class CollectValidate
 
         $courseIds = trim((string) ($data['course_ids'] ?? ''));
 
+        // courses_snapshot：前端提交时序列化所选课程 [{courseId, courseName}]，详情页"查看课程"用。
+        // 容错：非 JSON / 字段缺失 → 存空串，详情页降级到 course_ids。
+        $coursesSnapshot = '';
+        $rawSnapshot = $data['courses_snapshot'] ?? '';
+        if (is_string($rawSnapshot) && $rawSnapshot !== '') {
+            $decoded = json_decode($rawSnapshot, true);
+            if (is_array($decoded)) {
+                $coursesSnapshot = $rawSnapshot;
+            }
+        } elseif (is_array($rawSnapshot)) {
+            $coursesSnapshot = json_encode($rawSnapshot, JSON_UNESCAPED_UNICODE);
+        }
+
         return [
             'account' => $account,
             'password' => $password,
@@ -49,6 +62,7 @@ class CollectValidate
             'course_ids' => $courseIds,
             'course_count' => $data['course_count'] ?? 0,
             'school_name' => trim((string) ($data['school_name'] ?? '')),
+            'courses_snapshot' => $coursesSnapshot,
         ];
     }
 }

@@ -9,8 +9,6 @@ import {
   NCard,
   NCheckbox,
   NDataTable,
-  NDescriptions,
-  NDescriptionsItem,
   NForm,
   NFormItem,
   NInput,
@@ -90,7 +88,7 @@ function onPageSizeChange(ps: number) {
   loadList();
 }
 
-// ---- 提交弹窗（单页布局，按截图设计） ----
+// ---- 提交弹窗（单页布局） ----
 const submitOpen = ref(false);
 const queryingCourses = ref(false);
 const submitting = ref(false);
@@ -106,7 +104,6 @@ const form = ref<UserCollectApi.SubmitParams>({
   school_name: '',
 });
 
-// 采集类型按截图：整号 / 单课程 / 章节测试 / 作业 / 考试
 const TYPE_OPTIONS = [
   { label: '整号采集', value: 'courses' as const },
   { label: '单课程采集', value: 'course' as const },
@@ -114,6 +111,14 @@ const TYPE_OPTIONS = [
   { label: '作业', value: 'homework' as const },
   { label: '考试', value: 'exam' as const },
 ];
+
+const TYPE_LABEL: Record<string, string> = {
+  chapter: '章节测试',
+  course: '单课程采集',
+  courses: '整号采集',
+  exam: '考试',
+  homework: '作业',
+};
 
 const isWholeAccount = computed(() => form.value.collect_type === 'courses');
 
@@ -134,7 +139,7 @@ function courseKey(c: UserCollectApi.QueryCoursesResult['courses'][number]) {
 }
 
 function toggleCourse(id: string, checked: boolean) {
-  if (isWholeAccount.value) return; // 整号锁定
+  if (isWholeAccount.value) return;
   if (checked) {
     if (!selectedCourseIds.value.includes(id))
       selectedCourseIds.value.push(id);
@@ -150,7 +155,6 @@ function toggleAll(checked: boolean) {
     : [];
 }
 
-// 切到整号 → 清掉手选；切回其它 → 也清空，让用户重新挑
 watch(
   () => form.value.collect_type,
   () => {
@@ -158,7 +162,6 @@ watch(
   },
 );
 
-// 账号/密码改了，已查询的结果失效
 watch([() => form.value.account, () => form.value.password], () => {
   if (coursesResult.value) {
     coursesResult.value = null;
@@ -228,10 +231,18 @@ async function onSubmit() {
     const ids = isWholeAccount.value
       ? courses.value.map((c) => courseKey(c)).filter(Boolean)
       : selectedCourseIds.value;
+    // 课程快照：保留所选课程的 id+name，详情页"查看课程"渲染列表用
+    const snapshot = courses.value
+      .filter((c) => ids.includes(courseKey(c)))
+      .map((c) => ({
+        courseId: courseKey(c),
+        courseName: c.courseName ?? '',
+      }));
     const payload: UserCollectApi.SubmitParams = {
       ...form.value,
       course_ids: ids.join(','),
       course_count: ids.length,
+      courses_snapshot: JSON.stringify(snapshot),
     };
     const res = await submitCollectApi(payload);
     message.success(`任务已提交：${res.task_no}`);
@@ -245,25 +256,144 @@ async function onSubmit() {
   }
 }
 
-// ---- 详情 + 轮询 ----
-const detailOpen = ref(false);
-const detailLoading = ref(false);
-const detail = ref<null | UserCollectApi.TaskDetail>(null);
-let detailPollTimer: null | ReturnType<typeof setInterval> = null;
+// ---- 课程列表弹窗 ----
+const coursesOpen = ref(false);
+const coursesLoading = ref(false);
+// 当前查看的任务（控制行状态映射）
+const viewingTask = ref<null | UserCollectApi.TaskDetail>(null);
+// 解析后的课程行：序号 + 课程名 + 题目数 + 状态
+interface CourseRow {
+  index: number;
+  courseId: string;
+  courseName: string;
+  questionCount: number | string;
+  status: '采集中' | '失败' | '已完成' | '待采集';
+}
+const courseRows = ref<CourseRow[]>([]);
+let coursesPollTimer: null | ReturnType<typeof setInterval> = null;
 
+function statusForCourse(taskStatus: number): CourseRow['status'] {
+  switch (taskStatus) {
+    case 0: {
+      return '待采集';
+    }
+    case 1: {
+      return '采集中';
+    }
+    case 2: {
+      return '已完成';
+    }
+    case 3: {
+      return '失败';
+    }
+    default: {
+      return '待采集';
+    }
+  }
+}
+
+function buildCourseRows(detail: UserCollectApi.TaskDetail): CourseRow[] {
+  const status = statusForCourse(detail.status);
+  // 优先用快照（含 courseName）；没有快照退回 course_ids 字符串
+  const raw = detail.courses_snapshot ?? '';
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as Array<{
+        courseId?: string;
+        courseName?: string;
+      }>;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((c, i) => ({
+          courseId: String(c.courseId ?? ''),
+          courseName: c.courseName ?? '(未命名)',
+          index: i + 1,
+          // 后端目前只能给到任务级总数，按课程数均摊作为参考；status=0/1 时未知
+          questionCount: detail.status === 2 ? '-' : '',
+          status,
+        }));
+      }
+    } catch {
+      // 落到 course_ids fallback
+    }
+  }
+  const ids = (detail.course_ids ?? '').split(',').filter(Boolean);
+  return ids.map((id, i) => ({
+    courseId: id,
+    courseName: `课程 ${id}`,
+    index: i + 1,
+    questionCount: '',
+    status,
+  }));
+}
+
+async function fetchCoursesDetail(taskNo: string) {
+  try {
+    const res = await getCollectTaskApi(taskNo);
+    viewingTask.value = res;
+    courseRows.value = buildCourseRows(res);
+    if (res && [2, 3].includes(res.status)) {
+      stopCoursesPoll();
+    }
+  } catch {
+    // 单次失败不停轮询
+  }
+}
+
+function startCoursesPoll(taskNo: string) {
+  stopCoursesPoll();
+  coursesPollTimer = setInterval(() => fetchCoursesDetail(taskNo), 3000);
+}
+
+function stopCoursesPoll() {
+  if (coursesPollTimer) {
+    clearInterval(coursesPollTimer);
+    coursesPollTimer = null;
+  }
+}
+
+async function openCourses(row: UserCollectApi.TaskItem) {
+  coursesOpen.value = true;
+  coursesLoading.value = true;
+  viewingTask.value = null;
+  courseRows.value = [];
+  try {
+    await fetchCoursesDetail(row.task_no);
+    const cur = viewingTask.value as null | UserCollectApi.TaskDetail;
+    if (cur && (cur.status === 0 || cur.status === 1)) {
+      startCoursesPoll(row.task_no);
+    }
+  } finally {
+    coursesLoading.value = false;
+  }
+}
+
+function closeCourses() {
+  coursesOpen.value = false;
+  stopCoursesPoll();
+  viewingTask.value = null;
+  courseRows.value = [];
+  loadList();
+}
+
+onUnmounted(() => {
+  stopCoursesPoll();
+  stopListPoll();
+});
+
+// ---- 主表 ----
 function statusTag(status: number) {
   switch (status) {
     case 0: {
       return h(NTag, { type: 'default', size: 'small' }, () => '排队中');
     }
     case 1: {
-      return h(NTag, { type: 'info', size: 'small' }, () => '执行中');
+      return h(NTag, { type: 'info', size: 'small' }, () => '采集中');
     }
     case 2: {
-      return h(NTag, { type: 'success', size: 'small' }, () => '成功');
+      return h(NTag, { type: 'success', size: 'small' }, () => '采集成功');
     }
     case 3: {
-      return h(NTag, { type: 'error', size: 'small' }, () => '失败');
+      return h(NTag, { type: 'error', size: 'small' }, () => '采集失败');
     }
     default: {
       return h(NTag, { size: 'small' }, () => '未知');
@@ -271,81 +401,85 @@ function statusTag(status: number) {
   }
 }
 
-async function fetchDetail(taskNo: string) {
-  try {
-    detail.value = await getCollectTaskApi(taskNo);
-    if (detail.value && [2, 3].includes(detail.value.status)) {
-      stopDetailPoll();
-    }
-  } catch {
-    // 单次失败不停轮询
-  }
-}
-
-function startDetailPoll(taskNo: string) {
-  stopDetailPoll();
-  detailPollTimer = setInterval(() => fetchDetail(taskNo), 3000);
-}
-
-function stopDetailPoll() {
-  if (detailPollTimer) {
-    clearInterval(detailPollTimer);
-    detailPollTimer = null;
-  }
-}
-
-async function openDetail(row: UserCollectApi.TaskItem) {
-  detailOpen.value = true;
-  detailLoading.value = true;
-  detail.value = null;
-  try {
-    await fetchDetail(row.task_no);
-    const cur = detail.value as null | UserCollectApi.TaskDetail;
-    if (cur && (cur.status === 0 || cur.status === 1)) {
-      startDetailPoll(row.task_no);
-    }
-  } finally {
-    detailLoading.value = false;
-  }
-}
-
-function closeDetail() {
-  detailOpen.value = false;
-  stopDetailPoll();
-  detail.value = null;
-  loadList();
-}
-
-onUnmounted(() => {
-  stopDetailPoll();
-  stopListPoll();
-});
-
-// ---- 表格 ----
 const columns: DataTableColumns<UserCollectApi.TaskItem> = [
-  { title: '任务号', key: 'task_no', width: 220 },
-  { title: '类型', key: 'collect_type', width: 100 },
-  { title: '课程数', key: 'course_count', width: 80 },
-  { title: '题目数', key: 'question_count', width: 80 },
-  { title: '成功', key: 'success_count', width: 70 },
-  { title: '失败', key: 'fail_count', width: 70 },
+  { type: 'selection', width: 40 },
+  {
+    title: '序号',
+    key: '_index',
+    width: 60,
+    render: (_row, idx) => (page.value - 1) * pageSize.value + idx + 1,
+  },
+  { title: '账号', key: 'account_phone', width: 140 },
+  {
+    title: '采集类型',
+    key: 'collect_type',
+    width: 110,
+    render: (row) => TYPE_LABEL[row.collect_type] ?? row.collect_type,
+  },
+  { title: '课程数量', key: 'course_count', width: 100, align: 'center' },
+  { title: '题目数量', key: 'question_count', width: 100, align: 'center' },
   {
     title: '状态',
     key: 'status',
-    width: 100,
+    width: 110,
+    align: 'center',
     render: (row) => statusTag(row.status),
+  },
+  {
+    title: '错误信息',
+    key: 'error_message',
+    minWidth: 180,
+    ellipsis: { tooltip: true },
+    render: (row) => row.error_message || '-',
   },
   { title: '创建时间', key: 'created_at', width: 180 },
   {
     title: '操作',
     key: 'actions',
-    width: 80,
+    width: 110,
+    align: 'center',
     render: (row) =>
       h(
         NButton,
-        { size: 'small', onClick: () => openDetail(row) },
-        () => '详情',
+        {
+          size: 'small',
+          text: true,
+          type: 'primary',
+          onClick: () => openCourses(row),
+        },
+        () => '👁 查看课程',
       ),
+  },
+];
+
+const courseColumns: DataTableColumns<CourseRow> = [
+  { title: '序号', key: 'index', width: 70, align: 'center' },
+  { title: '课程名称', key: 'courseName', minWidth: 240 },
+  {
+    title: '题目数量',
+    key: 'questionCount',
+    width: 100,
+    align: 'center',
+    render: (row) => row.questionCount || '-',
+  },
+  {
+    title: '状态',
+    key: 'status',
+    width: 100,
+    align: 'center',
+    render: (row) => {
+      const map = {
+        采集中: 'info',
+        待采集: 'default',
+        已完成: 'success',
+        失败: 'error',
+      } as const;
+      return h(
+        NTag,
+        { size: 'small', type: map[row.status] ?? 'default' },
+        () => row.status,
+      );
+    },
   },
 ];
 
@@ -519,74 +653,54 @@ onMounted(loadList);
       </template>
     </NModal>
 
-    <!-- 详情 + 轮询 -->
+    <!-- 查看课程列表 -->
     <NModal
-      :show="detailOpen"
+      :show="coursesOpen"
       preset="card"
-      title="采集任务详情"
-      style="width: 680px"
-      :on-close="closeDetail"
-      @update:show="(v) => !v && closeDetail()"
+      title="课程列表"
+      style="width: 880px"
+      :on-close="closeCourses"
+      @update:show="(v) => !v && closeCourses()"
     >
-      <div v-if="detailLoading && !detail" class="text-muted-foreground py-4">
+      <div
+        v-if="coursesLoading && courseRows.length === 0"
+        class="text-muted-foreground py-4"
+      >
         加载中...
       </div>
-      <template v-else-if="detail">
-        <NDescriptions bordered size="small" :column="2">
-          <NDescriptionsItem label="任务号" :span="2">
-            {{ detail.task_no }}
-          </NDescriptionsItem>
-          <NDescriptionsItem label="状态">
-            <component :is="statusTag(detail.status)" />
-          </NDescriptionsItem>
-          <NDescriptionsItem label="类型">{{
-            detail.collect_type
-          }}</NDescriptionsItem>
-          <NDescriptionsItem label="账号">{{
-            detail.account_phone
-          }}</NDescriptionsItem>
-          <NDescriptionsItem label="课程数">{{
-            detail.course_count
-          }}</NDescriptionsItem>
-          <NDescriptionsItem label="题目数">{{
-            detail.question_count
-          }}</NDescriptionsItem>
-          <NDescriptionsItem label="成功/失败">
-            {{ detail.success_count }} / {{ detail.fail_count }}
-          </NDescriptionsItem>
-          <NDescriptionsItem v-if="detail.course_ids" label="课程 IDs" :span="2">
-            <span class="break-all text-xs">{{ detail.course_ids }}</span>
-          </NDescriptionsItem>
-          <NDescriptionsItem
-            v-if="detail.error_message"
-            label="错误信息"
-            :span="2"
-          >
-            <span class="text-error break-all text-xs">
-              {{ detail.error_message }}
-            </span>
-          </NDescriptionsItem>
-          <NDescriptionsItem label="创建时间">{{
-            detail.created_at
-          }}</NDescriptionsItem>
-          <NDescriptionsItem label="更新时间">{{
-            detail.updated_at
-          }}</NDescriptionsItem>
-        </NDescriptions>
-
+      <template v-else>
+        <NDataTable
+          :columns="courseColumns"
+          :data="courseRows"
+          :row-key="(row: CourseRow) => row.courseId || String(row.index)"
+          :pagination="false"
+          size="small"
+          :bordered="true"
+          :max-height="420"
+        />
         <NAlert
-          v-if="[0, 1].includes(detail.status)"
+          v-if="
+            viewingTask && (viewingTask.status === 0 || viewingTask.status === 1)
+          "
           type="info"
           :show-icon="false"
           class="mt-3"
         >
-          任务未完成，详情每 3 秒自动刷新。关闭弹窗会停止轮询。
+          任务未完成，列表每 3 秒自动刷新。关闭弹窗会停止轮询。
+        </NAlert>
+        <NAlert
+          v-else-if="viewingTask && viewingTask.status === 3 && viewingTask.error_message"
+          type="error"
+          :show-icon="false"
+          class="mt-3"
+        >
+          {{ viewingTask.error_message }}
         </NAlert>
       </template>
 
       <template #footer>
         <NSpace justify="end">
-          <NButton @click="closeDetail">关闭</NButton>
+          <NButton @click="closeCourses">关闭</NButton>
         </NSpace>
       </template>
     </NModal>
