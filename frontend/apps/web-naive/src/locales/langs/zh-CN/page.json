@@ -25,7 +25,33 @@
     "detail": "详情",
     "export": "导出",
     "retry": "重试",
-    "stop": "停止"
+    "stop": "停止",
+    "search": "查询",
+    "reset": "重置",
+    "confirm": "确认",
+    "cancel": "取消"
+  },
+  "user": {
+    "plan": "我的套餐",
+    "recharge": "在线充值",
+    "apiSource": "题库配置",
+    "announcement": "通知公告",
+    "doc": "对接文档"
+  },
+  "enum": {
+    "planType": {
+      "unlimited": "不限次套餐",
+      "limited": "限次套餐",
+      "exhaustive": "用完即止套餐"
+    },
+    "orderStatus": {
+      "pending": "未支付",
+      "success": "已支付",
+      "failed": "失败",
+      "cancelled": "已取消",
+      "expired": "已过期",
+      "refunded": "已退款"
+    }
   },
   "messages": {
     "loadFailed": "加载失败",

@@ -68,6 +68,20 @@ export namespace AdminQuestionApi {
     es_warning?: string;
     [k: string]: any;
   }
+
+  export interface Stats {
+    total: number;
+    status_breakdown: {
+      active: number;
+      disabled: number;
+    };
+    dict: {
+      category_count: number;
+      type_count: number;
+      source_count: number;
+      tag_count: number;
+    };
+  }
 }
 
 export async function listQuestionsApi(params?: AdminQuestionApi.ListParams) {
@@ -101,8 +115,13 @@ export async function deleteQuestionApi(id: string) {
   return requestClient.delete('/admin/question/delete', { params: { id } });
 }
 
-export async function reindexQuestionsApi() {
+export async function reindexQuestionsApi(id?: string) {
   return requestClient.post<AdminQuestionApi.ReindexResult>(
     '/admin/question/reindex',
+    id ? { id } : {},
   );
+}
+
+export async function statsQuestionsApi() {
+  return requestClient.get<AdminQuestionApi.Stats>('/admin/question/stats');
 }

@@ -27,9 +27,11 @@ import {
   createApiKeyApi,
   deleteApiKeyApi,
   listApiKeysApi,
+  regenerateApiSecretApi,
   toggleApiKeyApi,
   type ApiKeyApi,
 } from '#/api/user/api-key';
+import { NCheckbox } from 'naive-ui';
 
 const message = useMessage();
 
@@ -44,9 +46,25 @@ const createOpen = ref(false);
 const createForm = ref<{ app_name: string }>({ app_name: '' });
 const creating = ref(false);
 
-// 新建成功后展示的一次性 secret
+// 新建 / 重置 共用的 secret 强弹 Modal（只在生成时回传一次，关闭即丢）
+// 用 secretMode 区分入口：create 标 "创建成功"；regen 标 "已重置"，避免误导用户
 const secretModalOpen = ref(false);
 const secretResult = ref<ApiKeyApi.CreateResult | null>(null);
+const secretConfirmed = ref(false);
+const secretMode = ref<'create' | 'regen'>('create');
+
+async function onRegenerate(row: ApiKeyApi.ApiKeyItem) {
+  try {
+    const r = await regenerateApiSecretApi(row.id);
+    secretResult.value = r;
+    secretConfirmed.value = false;
+    secretMode.value = 'regen';
+    secretModalOpen.value = true;
+    load();
+  } catch {
+    message.error('重新生成失败（后端未实现？）');
+  }
+}
 
 async function load() {
   loading.value = true;
@@ -77,6 +95,8 @@ async function onCreate() {
     createOpen.value = false;
     createForm.value.app_name = '';
     secretResult.value = data;
+    secretConfirmed.value = false;
+    secretMode.value = 'create';
     secretModalOpen.value = true;
     load();
   } catch {
@@ -134,15 +154,37 @@ const columns: DataTableColumns<ApiKeyApi.ApiKeyItem> = [
   },
   { title: '创建时间', key: 'created_at', width: 180 },
   {
+    title: '今日调用',
+    key: 'today_count',
+    width: 100,
+    render: (row: any) => row.today_count ?? '-',
+  },
+  {
+    title: '累计调用',
+    key: 'total_count',
+    width: 100,
+    render: (row: any) => row.total_count ?? '-',
+  },
+  {
     title: '操作',
     key: 'actions',
-    width: 180,
+    width: 260,
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
         h(
           NButton,
           { size: 'small', onClick: () => onToggle(row) },
           () => (row.status === 1 ? '禁用' : '启用'),
+        ),
+        h(
+          NPopconfirm,
+          { onPositiveClick: () => onRegenerate(row) },
+          {
+            default: () =>
+              `重新生成会作废旧的 Secret，已接入的服务需同步更新。确认继续？`,
+            trigger: () =>
+              h(NButton, { size: 'small', type: 'warning', ghost: true }, () => '重置密钥'),
+          },
         ),
         h(
           NPopconfirm,
@@ -447,17 +489,21 @@ onMounted(load);
       </NForm>
     </NModal>
 
-    <!-- 一次性 secret 展示 -->
+    <!-- 一次性 secret 展示（创建/重置复用） -->
     <NModal
       v-model:show="secretModalOpen"
       preset="card"
-      title="API Key 创建成功"
+      :title="secretMode === 'regen' ? 'API Secret 已重置' : 'API Key 创建成功'"
       style="width: 560px"
       :mask-closable="false"
-      :closable="true"
+      :closable="secretConfirmed"
     >
       <NAlert type="warning" :show-icon="false" class="mb-3">
-        api_secret 仅此一次显示。关闭本弹窗后将无法再次查看，请立即复制保存。
+        {{
+          secretMode === 'regen'
+            ? '新 api_secret 仅此一次显示，旧密钥已立即作废；已接入的服务需同步替换，否则将调用失败。'
+            : 'api_secret 仅此一次显示。关闭本弹窗后将无法再次查看，请立即复制保存。'
+        }}
       </NAlert>
       <div class="space-y-3">
         <div>
@@ -469,10 +515,19 @@ onMounted(load);
           <NText code>{{ secretResult?.api_secret }}</NText>
         </div>
       </div>
+      <NCheckbox v-model:checked="secretConfirmed" class="mt-3">
+        我已妥善保存 API Secret
+      </NCheckbox>
       <template #footer>
         <NSpace justify="end">
-          <NButton @click="secretModalOpen = false">关闭</NButton>
           <NButton type="primary" @click="copySecret">复制 Secret</NButton>
+          <NButton
+            type="primary"
+            :disabled="!secretConfirmed"
+            @click="secretModalOpen = false"
+          >
+            关闭
+          </NButton>
         </NSpace>
       </template>
     </NModal>

@@ -38,18 +38,30 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
 
   /**
    * 重认证：清 token + 跳登录（或在 modal 模式下展示登录弹窗）
+   *
+   * 轮询场景下（支付页 3s / 支付记录 60s / 采集 5s）token 失效瞬间可能有多个请求
+   * 同时命中 40002，不加锁会反复 setAccessToken(null) + logout()，触发多次路由跳转 / modal 弹出。
+   * 用模块级 in-flight flag 收敛：一次窗口内只真正 reAuth 一次，其它 40002 安静吞掉。
    */
+  let reAuthInFlight = false;
   async function doReAuthenticate() {
-    const accessStore = useAccessStore();
-    const authStore = useAuthStore();
-    accessStore.setAccessToken(null);
-    if (
-      preferences.app.loginExpiredMode === 'modal' &&
-      accessStore.isAccessChecked
-    ) {
-      accessStore.setLoginExpired(true);
-    } else {
-      await authStore.logout();
+    if (reAuthInFlight) return;
+    reAuthInFlight = true;
+    try {
+      const accessStore = useAccessStore();
+      const authStore = useAuthStore();
+      accessStore.setAccessToken(null);
+      if (
+        preferences.app.loginExpiredMode === 'modal' &&
+        accessStore.isAccessChecked
+      ) {
+        accessStore.setLoginExpired(true);
+      } else {
+        await authStore.logout();
+      }
+    } finally {
+      // 跳转/logout 完成后才解锁；如果进了 modal 模式，modal 关闭意味着用户重新登录，这里锁释不释放都不影响（拿到新 token 不会再 40002）
+      reAuthInFlight = false;
     }
   }
 
@@ -96,6 +108,25 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
 
   // 业务错误码派发：40002 → 重认证；40003 → 无权；40006 → 配额；50001 → 服务异常 banner
   // 注意：后注册者后包装，最先执行；这里需要在 errorMessage 之前生效，所以放在它之前注册。
+  //
+  // Toast 节流：轮询场景（支付页 3s / 支付记录 60s / 采集 5s）如果后端在抖动，50001 会连环触发，
+  // 刷屏影响用户操作。同一 (code + msg) 5 秒内只弹一次，保留第一条提示即可。
+  const toastCooldown = new Map<string, number>();
+  function maybeToast(
+    level: 'error' | 'warning',
+    code: number,
+    msg: string,
+  ) {
+    const key = `${code}:${msg}`;
+    const now = Date.now();
+    const last = toastCooldown.get(key) ?? 0;
+    if (now - last < 5000) return;
+    toastCooldown.set(key, now);
+    // 懒清理：尺寸涨到 50 时清一次（5s 窗口内很难累积）
+    if (toastCooldown.size > 50) toastCooldown.clear();
+    level === 'error' ? message.error(msg) : message.warning(msg);
+  }
+
   client.addResponseInterceptor({
     rejected: async (error: any) => {
       const responseData = error?.response?.data;
@@ -110,21 +141,21 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
             return Promise.reject(error);
           }
           case 40003: {
-            message.error(msg || '权限不足');
+            maybeToast('error', 40003, msg || '权限不足');
             return Promise.reject(error);
           }
           case 40006: {
-            message.warning(msg || '账户配额不足，请充值或升级套餐');
+            maybeToast('warning', 40006, msg || '账户配额不足，请充值或升级套餐');
             return Promise.reject(error);
           }
           case 50001: {
-            message.error(msg || '服务暂不可用，请稍后重试');
+            maybeToast('error', 50001, msg || '服务暂不可用，请稍后重试');
             return Promise.reject(error);
           }
           default: {
             // 其它业务错误码（如 40001 / 40004）走通用文案
             if (msg) {
-              message.error(msg);
+              maybeToast('error', code, msg);
               return Promise.reject(error);
             }
           }

@@ -1,182 +1,464 @@
 <script lang="ts" setup>
-import { onMounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { computed, onMounted, ref } from 'vue';
 
 import {
   NAlert,
   NButton,
   NCard,
+  NCode,
+  NDataTable,
+  NDescriptions,
+  NDescriptionsItem,
   NEmpty,
-  NInput,
-  NInputGroup,
+  NModal,
+  NRadio,
+  NRadioGroup,
+  NSpace,
   NSpin,
+  NTabs,
+  NTabPane,
   NTag,
   useMessage,
+  type DataTableColumns,
 } from 'naive-ui';
 
 import {
-  getDocArticleApi,
-  listDocCategoriesApi,
-  type UserDocApi,
+  getDocMetaApi,
+  type DocMeta,
 } from '#/api/user/doc';
+import {
+  listApiKeysApi,
+  setDefaultApiKeyApi,
+  type ApiKeyApi,
+} from '#/api/user/api-key';
+import { maskKey } from '#/utils/mask';
 
-const route = useRoute();
-const router = useRouter();
 const message = useMessage();
 
-const categoriesLoading = ref(false);
-const categories = ref<UserDocApi.Category[]>([]);
+// 顶卡：API 密钥信息
+const meta = ref<DocMeta>({
+  api_base_url: '',
+  header_name: 'x-api-secret',
+});
+const keys = ref<ApiKeyApi.ApiKeyItem[]>([]);
+const defaultKeyId = ref<null | number>(null);
+const metaLoading = ref(false);
 
-const articleLoading = ref(false);
-const article = ref<null | UserDocApi.Article>(null);
-const notFound = ref(false);
-
-// slug 既走 URL query 也走手输，URL 为准；用 watch 同步。
-const slugInput = ref('');
-
-async function loadCategories() {
-  categoriesLoading.value = true;
-  try {
-    // 后端分页默认 1/20，这里 page_size 设大一些覆盖常见规模。
-    const res = await listDocCategoriesApi({ page: 1, page_size: 100 });
-    categories.value = res.list ?? [];
-  } catch {
-    message.error('文档分类加载失败');
-  } finally {
-    categoriesLoading.value = false;
-  }
-}
-
-async function loadArticle(slug: string) {
-  if (!slug) {
-    article.value = null;
-    notFound.value = false;
-    return;
-  }
-  articleLoading.value = true;
-  notFound.value = false;
-  article.value = null;
-  try {
-    article.value = await getDocArticleApi(slug);
-  } catch (err: any) {
-    // 后端 40004 会被统一拦截器弹 toast；这里同时把页面切到"未找到"态。
-    if (err?.response?.data?.code === 40_004) {
-      notFound.value = true;
-    }
-  } finally {
-    articleLoading.value = false;
-  }
-}
-
-function openSlug() {
-  const s = slugInput.value.trim();
-  if (!s) {
-    message.warning('请输入文档 slug');
-    return;
-  }
-  // 写到 URL 让 watch 去加载，保证刷新/分享链接也能命中同一文档。
-  router.replace({ query: { ...route.query, slug: s } });
-}
-
-function clearSlug() {
-  slugInput.value = '';
-  router.replace({ query: { ...route.query, slug: undefined } });
-}
-
-watch(
-  () => route.query.slug,
-  (slug) => {
-    const s = typeof slug === 'string' ? slug : '';
-    slugInput.value = s;
-    loadArticle(s);
-  },
-  { immediate: false },
+const defaultKey = computed(() =>
+  keys.value.find((k) => k.id === defaultKeyId.value) ?? keys.value[0] ?? null,
 );
 
-onMounted(() => {
-  loadCategories();
-  const initial = typeof route.query.slug === 'string' ? route.query.slug : '';
-  slugInput.value = initial;
-  loadArticle(initial);
+async function loadMeta() {
+  metaLoading.value = true;
+  try {
+    const [m, list] = await Promise.all([
+      getDocMetaApi(),
+      listApiKeysApi({ page: 1, page_size: 100 }),
+    ]);
+    meta.value = m;
+    keys.value = (list?.list ?? []).filter((k) => k.status === 1);
+    // 默认 key：meta 优先 → localStorage → 第一条
+    let defId: null | number = null;
+    if (m.default_api_key) {
+      const hit = keys.value.find((k) => k.api_key === m.default_api_key);
+      if (hit) defId = hit.id;
+    }
+    if (!defId) {
+      try {
+        const saved = Number(localStorage.getItem('default_api_key_id'));
+        if (saved && keys.value.some((k) => k.id === saved)) defId = saved;
+      } catch {
+        // ignore
+      }
+    }
+    defaultKeyId.value = defId ?? keys.value[0]?.id ?? null;
+  } finally {
+    metaLoading.value = false;
+  }
+}
+
+function copy(text: string) {
+  if (!text) {
+    message.warning('无可复制内容');
+    return;
+  }
+  navigator.clipboard
+    ?.writeText(text)
+    .then(() => message.success('已复制'))
+    .catch(() => message.error('复制失败'));
+}
+
+// 设置默认 key Modal
+const setModalVisible = ref(false);
+const setChoice = ref<null | number>(null);
+
+function openSetModal() {
+  setChoice.value = defaultKeyId.value;
+  setModalVisible.value = true;
+}
+
+async function confirmSetDefault() {
+  if (!setChoice.value) {
+    setModalVisible.value = false;
+    return;
+  }
+  try {
+    await setDefaultApiKeyApi(setChoice.value);
+    defaultKeyId.value = setChoice.value;
+    message.success('已设为默认');
+  } catch {
+    message.error('设置失败');
+  }
+  setModalVisible.value = false;
+}
+
+// ===== Tab1 接口说明 =====
+const endpointParams = [
+  {
+    name: 'question',
+    type: 'string',
+    required: '是',
+    desc: '题干文本，建议 URL 编码',
+  },
+  {
+    name: 'type',
+    type: 'string',
+    required: '否',
+    desc: '题型：single/multiple/judgement/completion',
+  },
+  { name: 'options', type: 'string', required: '否', desc: '选项，逗号分隔' },
+];
+const endpointParamsCols: DataTableColumns<(typeof endpointParams)[number]> = [
+  { title: '字段', key: 'name', width: 140 },
+  { title: '类型', key: 'type', width: 100 },
+  { title: '必填', key: 'required', width: 80 },
+  { title: '说明', key: 'desc' },
+];
+const respFields = [
+  { name: 'code', type: 'int', desc: '1 成功，其他错误码' },
+  { name: 'msg', type: 'string', desc: '提示信息' },
+  { name: 'data.answer', type: 'string', desc: '命中答案' },
+  { name: 'data.from', type: 'string', desc: '数据来源' },
+  { name: 'data.es_synced', type: 'bool', desc: '是否已同步到 ES（最终一致）' },
+];
+const respCols: DataTableColumns<(typeof respFields)[number]> = [
+  { title: '字段', key: 'name', width: 160 },
+  { title: '类型', key: 'type', width: 100 },
+  { title: '说明', key: 'desc' },
+];
+
+// ===== Tab3 OCS 配置 =====
+const ocsConfig = computed(() => {
+  const url = `${meta.value.api_base_url}?title={title}&type={type}&options={options}`;
+  return JSON.stringify(
+    {
+      name: '搜题平台',
+      homepage: window.location.origin,
+      url,
+      method: 'get',
+      contentType: 'json',
+      data: {},
+      headers: {
+        [meta.value.header_name]: defaultKey.value?.api_key ?? '<your_api_secret>',
+      },
+      handler: "return (res.code === 1) ? [res.msg, res.data.answer] : [res.msg, undefined]",
+    },
+    null,
+    2,
+  );
 });
+
+// ===== Tab4 请求示例 =====
+const exampleTab = ref<'curl' | 'js' | 'php' | 'python'>('curl');
+
+const curlExample = computed(
+  () => `curl -X GET "${meta.value.api_base_url}?question=hello" \\
+  -H "${meta.value.header_name}: ${defaultKey.value?.api_key ?? '<api_secret>'}"`,
+);
+
+const pyExample = computed(
+  () => `import requests
+
+headers = {"${meta.value.header_name}": "${defaultKey.value?.api_key ?? '<api_secret>'}"}
+resp = requests.get("${meta.value.api_base_url}", params={"question": "hello"}, headers=headers, timeout=5)
+print(resp.json())`,
+);
+
+const jsExample = computed(
+  () => `fetch("${meta.value.api_base_url}?question=hello", {
+  headers: { "${meta.value.header_name}": "${defaultKey.value?.api_key ?? '<api_secret>'}" }
+}).then(r => r.json()).then(console.log);`,
+);
+
+const phpExample = computed(
+  () => `<?php
+$ch = curl_init("${meta.value.api_base_url}?question=hello");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, ["${meta.value.header_name}: ${defaultKey.value?.api_key ?? '<api_secret>'}"]);
+echo curl_exec($ch);`,
+);
+
+onMounted(loadMeta);
 </script>
 
 <template>
-  <div class="p-6">
-    <NCard title="文档中心" class="mb-4">
-      <NAlert type="info" :show-icon="false" class="mb-3">
-        文档按 slug 直达。可通过公告/消息中的链接自动打开，也可在下方手动输入
-        slug（如 <code>getting-started</code>）查看。
-      </NAlert>
+  <div class="doc-page p-6">
+    <!-- 顶卡：API 密钥 -->
+    <NCard :bordered="false" size="small" class="mb-4">
+      <NSpin :show="metaLoading">
+        <NAlert type="warning" :show-icon="false" class="mb-3">
+          请妥善保管您的 API 密钥，切勿泄漏或提交到代码仓库。
+        </NAlert>
 
-      <NInputGroup>
-        <NInput
-          v-model:value="slugInput"
-          placeholder="输入文档 slug，如 getting-started"
-          @keyup.enter="openSlug"
-        />
-        <NButton type="primary" @click="openSlug">打开</NButton>
-        <NButton v-if="slugInput" @click="clearSlug">清空</NButton>
-      </NInputGroup>
+        <div class="grid gap-2">
+          <div class="row">
+            <span class="row-label">API 密钥：</span>
+            <span class="row-value mono">
+              {{ defaultKey?.api_key ? maskKey(defaultKey.api_key) : '暂未生成' }}
+            </span>
+            <NButton
+              size="small"
+              type="primary"
+              ghost
+              :disabled="!defaultKey?.api_key"
+              @click="copy(defaultKey?.api_key ?? '')"
+            >
+              复制
+            </NButton>
+            <NButton size="small" @click="openSetModal">设置</NButton>
+          </div>
+          <div class="row">
+            <span class="row-label">接口地址：</span>
+            <span class="row-value mono">{{ meta.api_base_url }}</span>
+            <NButton
+              size="small"
+              type="primary"
+              ghost
+              @click="copy(meta.api_base_url)"
+            >
+              复制
+            </NButton>
+          </div>
+          <div class="row">
+            <span class="row-label">鉴权头名：</span>
+            <span class="row-value mono">{{ meta.header_name }}</span>
+          </div>
+        </div>
+      </NSpin>
     </NCard>
 
-    <div class="grid gap-4 md:grid-cols-[280px_1fr]">
-      <NCard title="分类" :segmented="{ content: true }">
-        <NSpin :show="categoriesLoading">
-          <NEmpty
-            v-if="!categoriesLoading && categories.length === 0"
-            description="暂无分类"
-            class="py-6"
-          />
-          <ul v-else class="space-y-2">
-            <li
-              v-for="c in categories"
-              :key="c.id"
-              class="border-border flex items-center justify-between border-b py-1.5"
-            >
-              <span class="text-sm">{{ c.name }}</span>
-              <NTag size="small" :bordered="false" type="info">
-                {{ c.slug }}
-              </NTag>
-            </li>
-          </ul>
-          <div class="text-muted-foreground mt-3 text-xs">
-            分类下的文章列表目前仅在管理端开放（后端约束）。
-          </div>
-        </NSpin>
-      </NCard>
-
-      <NCard :title="article?.title ?? '文章内容'">
-        <NSpin :show="articleLoading">
-          <NAlert
-            v-if="notFound"
-            type="warning"
-            title="文档不存在"
-            :show-icon="false"
+    <!-- 底卡：接口文档 Tabs -->
+    <NCard :bordered="false" size="small" title="接口文档">
+      <NTabs type="line" animated default-value="intro">
+        <!-- Tab1 接口说明 -->
+        <NTabPane name="intro" tab="接口说明">
+          <NDescriptions
+            label-placement="left"
+            :column="1"
+            bordered
+            size="small"
           >
-            请确认 slug 是否正确，或稍后重试。
-          </NAlert>
+            <NDescriptionsItem label="请求方法">
+              <NTag type="success" size="small">GET</NTag>
+            </NDescriptionsItem>
+            <NDescriptionsItem label="接口地址">
+              <span class="mono">{{ meta.api_base_url }}</span>
+            </NDescriptionsItem>
+            <NDescriptionsItem label="Content-Type">
+              application/json
+            </NDescriptionsItem>
+            <NDescriptionsItem label="鉴权方式">
+              Header <code>{{ meta.header_name }}</code>
+            </NDescriptionsItem>
+          </NDescriptions>
 
-          <NEmpty
-            v-else-if="!article"
-            description="请在上方输入 slug 打开文档"
-            class="py-10"
+          <div class="sub-title">请求参数</div>
+          <NDataTable
+            :columns="endpointParamsCols"
+            :data="endpointParams"
+            :bordered="true"
+            size="small"
           />
 
-          <template v-else>
-            <div class="text-muted-foreground mb-3 text-xs">
-              slug: <code>{{ article.slug }}</code>
-              <span v-if="article.updated_at"> · 更新于 {{ article.updated_at }}</span>
-            </div>
-            <p v-if="article.summary" class="text-muted-foreground mb-3 text-sm">
-              {{ article.summary }}
-            </p>
-            <!-- MVP：后端存的是 markdown 源文，暂未引入 markdown 渲染器；
-                 用 pre 保留换行便于阅读，P4 再接入 markdown-it 做富文本渲染。 -->
-            <pre class="bg-card whitespace-pre-wrap break-words rounded p-3 text-sm leading-relaxed">{{ article.content_md }}</pre>
-          </template>
-        </NSpin>
-      </NCard>
-    </div>
+          <div class="sub-title">响应结构</div>
+          <NDataTable
+            :columns="respCols"
+            :data="respFields"
+            :bordered="true"
+            size="small"
+          />
+        </NTabPane>
+
+        <!-- Tab2 参数详解 -->
+        <NTabPane name="params" tab="参数详解">
+          <div class="sub-title">题型 type 枚举</div>
+          <ul class="param-list">
+            <li><code>single</code> — 单选题</li>
+            <li><code>multiple</code> — 多选题</li>
+            <li><code>judgement</code> — 判断题</li>
+            <li><code>completion</code> — 填空题</li>
+          </ul>
+          <div class="sub-title">错误码</div>
+          <ul class="param-list">
+            <li><code>40002</code> — 鉴权失败</li>
+            <li><code>40006</code> — 余额/配额不足</li>
+            <li><code>40404</code> — 题目未命中</li>
+            <li><code>50001</code> — 上游接口异常</li>
+          </ul>
+          <div class="sub-title">示例响应</div>
+          <NCode
+            language="json"
+            :code="`{\n  \&quot;code\&quot;: 1,\n  \&quot;msg\&quot;: \&quot;success\&quot;,\n  \&quot;data\&quot;: {\n    \&quot;answer\&quot;: \&quot;A\&quot;,\n    \&quot;from\&quot;: \&quot;cache\&quot;,\n    \&quot;es_synced\&quot;: true\n  }\n}`"
+            show-line-numbers
+          />
+        </NTabPane>
+
+        <!-- Tab3 OCS 配置 -->
+        <NTabPane name="ocs" tab="OCS 配置">
+          <NAlert type="info" :show-icon="false" class="mb-3">
+            粘贴到 OCS 自定义题库即可使用。已自动注入您的默认密钥。
+          </NAlert>
+          <NSpace>
+            <NButton type="primary" size="small" @click="copy(ocsConfig)">
+              一键复制配置
+            </NButton>
+          </NSpace>
+          <div class="mt-2">
+            <NCode language="json" :code="ocsConfig" show-line-numbers />
+          </div>
+        </NTabPane>
+
+        <!-- Tab4 请求示例 -->
+        <NTabPane name="example" tab="请求示例">
+          <NTabs v-model:value="exampleTab" type="segment" size="small">
+            <NTabPane name="curl" tab="cURL">
+              <NButton size="tiny" class="copy-btn" @click="copy(curlExample)">
+                复制
+              </NButton>
+              <NCode language="bash" :code="curlExample" show-line-numbers />
+            </NTabPane>
+            <NTabPane name="python" tab="Python">
+              <NButton size="tiny" class="copy-btn" @click="copy(pyExample)">
+                复制
+              </NButton>
+              <NCode language="python" :code="pyExample" show-line-numbers />
+            </NTabPane>
+            <NTabPane name="js" tab="JavaScript">
+              <NButton size="tiny" class="copy-btn" @click="copy(jsExample)">
+                复制
+              </NButton>
+              <NCode language="javascript" :code="jsExample" show-line-numbers />
+            </NTabPane>
+            <NTabPane name="php" tab="PHP">
+              <NButton size="tiny" class="copy-btn" @click="copy(phpExample)">
+                复制
+              </NButton>
+              <NCode language="php" :code="phpExample" show-line-numbers />
+            </NTabPane>
+          </NTabs>
+        </NTabPane>
+      </NTabs>
+    </NCard>
+
+    <!-- 设置默认密钥 Modal -->
+    <NModal
+      v-model:show="setModalVisible"
+      preset="card"
+      title="选择默认密钥"
+      style="width: 480px"
+    >
+      <NEmpty v-if="keys.length === 0" description="暂无启用中的 API Key" />
+      <NRadioGroup v-else v-model:value="setChoice">
+        <NSpace vertical>
+          <NRadio v-for="k in keys" :key="k.id" :value="k.id">
+            {{ k.app_name }}
+            <span class="mono ml-2 text-xs text-gray-400">
+              {{ maskKey(k.api_key, 12, 4) }}
+            </span>
+          </NRadio>
+        </NSpace>
+      </NRadioGroup>
+      <template #footer>
+        <NSpace justify="end">
+          <NButton @click="setModalVisible = false">取消</NButton>
+          <NButton type="primary" @click="confirmSetDefault">确认</NButton>
+        </NSpace>
+      </template>
+    </NModal>
   </div>
 </template>
+
+<style scoped>
+.doc-page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+.row-label {
+  width: 90px;
+  color: #666;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.row-value {
+  flex: 1;
+  font-size: 13px;
+  color: #333;
+  word-break: break-all;
+}
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.sub-title {
+  margin: 16px 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2080f0;
+  padding-left: 6px;
+  border-left: 3px solid #2080f0;
+}
+.param-list {
+  padding-left: 24px;
+  line-height: 1.9;
+  font-size: 13px;
+  color: #555;
+}
+.param-list code {
+  background: #f5f7fa;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.copy-btn {
+  float: right;
+  margin-bottom: 4px;
+}
+.grid {
+  display: grid;
+}
+.gap-2 {
+  gap: 8px;
+}
+.ml-2 {
+  margin-left: 8px;
+}
+.text-xs {
+  font-size: 12px;
+}
+.text-gray-400 {
+  color: #999;
+}
+.mt-2 {
+  margin-top: 8px;
+}
+.mb-3 {
+  margin-bottom: 12px;
+}
+.mb-4 {
+  margin-bottom: 16px;
+}
+</style>

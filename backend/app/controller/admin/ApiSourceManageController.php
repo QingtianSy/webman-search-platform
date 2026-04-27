@@ -55,4 +55,12 @@ class ApiSourceManageController
         }
         return ApiResponse::success((new ApiSourceAdminService())->getTestResult($taskId));
     }
+
+    // 全局源启禁切换（0↔1）。与 user 端 /user/api-source/toggle 不共享数据表。
+    public function toggle(Request $request)
+    {
+        $id = (int) $request->post('id', 0);
+        $result = (new ApiSourceAdminService())->toggle($id);
+        return ApiResponse::success($result, ((int) $result['status']) === 1 ? '已启用' : '已禁用');
+    }
 }

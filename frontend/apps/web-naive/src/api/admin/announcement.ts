@@ -50,7 +50,7 @@ export namespace AdminAnnouncementApi {
   export type UpdatePayload = Partial<CreatePayload> & { id: number };
 }
 
-export async function listAnnouncementsApi(
+export async function listAdminAnnouncementsApi(
   params?: AdminAnnouncementApi.ListParams,
 ) {
   return requestClient.get<AdminAnnouncementApi.Page>(

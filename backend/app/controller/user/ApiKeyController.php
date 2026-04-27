@@ -58,4 +58,29 @@ class ApiKeyController
         (new OperateLogRepository())->create(['user_id' => $userId, 'module' => 'api_key', 'action' => 'delete', 'content' => "删除API Key ID:{$id}", 'ip' => $request->getRealIp()]);
         return ApiResponse::success($result, '删除成功');
     }
+
+    public function setDefault(Request $request)
+    {
+        $userId = (int) ($request->userId ?? 0);
+        $id = (int) $request->post('id', 0);
+        if ($id <= 0) {
+            return ApiResponse::error(40001, 'API Key ID 不能为空');
+        }
+        (new ApiKeyService())->setDefault($userId, $id);
+        (new OperateLogRepository())->create(['user_id' => $userId, 'module' => 'api_key', 'action' => 'set_default', 'content' => "设为默认 ID:{$id}", 'ip' => $request->getRealIp()]);
+        return ApiResponse::success(null, '已设为默认');
+    }
+
+    // 明文 secret 只返这一次，前端需立即提示用户复制保存，服务端仅保存 bcrypt hash。
+    public function regenerate(Request $request)
+    {
+        $userId = (int) ($request->userId ?? 0);
+        $id = (int) $request->post('id', 0);
+        if ($id <= 0) {
+            return ApiResponse::error(40001, 'API Key ID 不能为空');
+        }
+        $result = (new ApiKeyService())->regenerate($userId, $id);
+        (new OperateLogRepository())->create(['user_id' => $userId, 'module' => 'api_key', 'action' => 'regenerate', 'content' => "重置 Secret ID:{$id}", 'ip' => $request->getRealIp()]);
+        return ApiResponse::success($result, 'Secret 已重置，请立即保存');
+    }
 }

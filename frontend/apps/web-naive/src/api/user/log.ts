@@ -16,6 +16,38 @@ export namespace UserLogApi {
     page_size?: number;
   }
 
+  /** 日志筛选扩展参数（🆕 后端若未支持则忽略；无副作用）。 */
+  export interface BalanceFilter extends PageParams {
+    type?: number | string;
+    order_no?: string;
+    date_from?: string;
+    date_to?: string;
+  }
+
+  export interface PaymentFilter extends PageParams {
+    status?: number | string;
+    pay_method?: string;
+    order_no?: string;
+    date_from?: string;
+    date_to?: string;
+  }
+
+  export interface LoginFilter extends PageParams {
+    status?: number | string;
+    ip?: string;
+    date_from?: string;
+    date_to?: string;
+  }
+
+  export interface OperateFilter extends PageParams {
+    module?: string;
+    action?: string;
+    status?: number | string;
+    ip?: string;
+    date_from?: string;
+    date_to?: string;
+  }
+
   export interface Page<T> {
     list: T[];
     total: number;
@@ -72,28 +104,28 @@ export namespace UserLogApi {
   }
 }
 
-export async function listBalanceLogsApi(params?: UserLogApi.PageParams) {
+export async function listBalanceLogsApi(params?: UserLogApi.BalanceFilter) {
   return requestClient.get<UserLogApi.Page<UserLogApi.BalanceLog>>(
     '/user/log/balance',
     { params },
   );
 }
 
-export async function listPaymentLogsApi(params?: UserLogApi.PageParams) {
+export async function listPaymentLogsApi(params?: UserLogApi.PaymentFilter) {
   return requestClient.get<UserLogApi.Page<UserLogApi.PaymentLog>>(
     '/user/log/payment',
     { params },
   );
 }
 
-export async function listLoginLogsApi(params?: UserLogApi.PageParams) {
+export async function listLoginLogsApi(params?: UserLogApi.LoginFilter) {
   return requestClient.get<UserLogApi.Page<UserLogApi.LoginLog>>(
     '/user/log/login',
     { params },
   );
 }
 
-export async function listOperateLogsApi(params?: UserLogApi.PageParams) {
+export async function listOperateLogsApi(params?: UserLogApi.OperateFilter) {
   return requestClient.get<UserLogApi.Page<UserLogApi.OperateLog>>(
     '/user/log/operate',
     { params },

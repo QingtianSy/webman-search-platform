@@ -2,11 +2,16 @@
 
 namespace app\controller\auth;
 
+use app\exception\BusinessException;
 use app\repository\mysql\LoginLogRepository;
+use app\repository\mysql\OperateLogRepository;
+use app\repository\mysql\UserRepository;
 use app\service\auth\AuthService;
 use app\service\auth\JwtService;
+use app\service\auth\PasswordService;
 use app\validate\auth\RegisterValidate;
 use support\ApiResponse;
+use support\Db;
 use support\Request;
 
 class AuthController
@@ -140,5 +145,130 @@ class AuthController
         }
         (new AuthService())->logout($userId);
         return ApiResponse::success(null, '已登出');
+    }
+
+    // 改密码：校验旧密码 → 写新 hash → bump sessions_invalidated_at（所有活跃 token 立刻失效，
+    // 包括本次请求自己携带的那条；前端改密成功后需重新登录）。
+    public function changePassword(Request $request)
+    {
+        $userId = (int) ($request->userId ?? 0);
+        if ($userId <= 0) {
+            return ApiResponse::error(40002, '未登录');
+        }
+        $old = (string) $request->post('old_password', '');
+        $new = (string) $request->post('new_password', '');
+        if ($old === '' || $new === '') {
+            return ApiResponse::error(40001, '原密码与新密码不能为空');
+        }
+        if (strlen($new) < 6) {
+            return ApiResponse::error(40001, '新密码至少 6 位');
+        }
+        if ($old === $new) {
+            return ApiResponse::error(40001, '新密码不能与原密码相同');
+        }
+
+        try {
+            $user = (new UserRepository())->findByIdStrict($userId);
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('用户服务暂不可用，请稍后重试', 50001);
+        }
+        if (!$user) {
+            return ApiResponse::error(40002, '用户不存在');
+        }
+
+        if (!(new PasswordService())->verify($old, $user)) {
+            return ApiResponse::error(40004, '原密码不正确');
+        }
+
+        $hash = password_hash($new, PASSWORD_DEFAULT);
+        $ok = Db::table('users')->where('id', $userId)->update([
+            'password_hash' => $hash,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+        if ($ok === false) {
+            throw new BusinessException('密码更新失败，请稍后重试', 50001);
+        }
+
+        // 全站会话失效：复用 logout 的 bump + bust，让本次请求之后的调用立刻被拒
+        (new AuthService())->logout($userId);
+
+        (new OperateLogRepository())->create([
+            'user_id' => $userId,
+            'module' => 'auth',
+            'action' => 'change_password',
+            'content' => '修改登录密码',
+            'ip' => $request->getRealIp(),
+        ]);
+
+        return ApiResponse::success(null, '密码已更新，请重新登录');
+    }
+
+    // 强制下线：把 sessions_invalidated_at 推到 now+1ms，本次 token 也会被废弃。
+    // 前端应在 200 后主动清本地 token 并跳登录。
+    public function invalidateSessions(Request $request)
+    {
+        $userId = (int) ($request->userId ?? 0);
+        if ($userId <= 0) {
+            return ApiResponse::error(40002, '未登录');
+        }
+        (new AuthService())->logout($userId);
+        (new OperateLogRepository())->create([
+            'user_id' => $userId,
+            'module' => 'auth',
+            'action' => 'invalidate_sessions',
+            'content' => '强制所有会话下线',
+            'ip' => $request->getRealIp(),
+        ]);
+        return ApiResponse::success(null, '所有会话已下线');
+    }
+
+    // 头像上传：multipart/form-data，字段名 file；落 public/avatars/{uid}_{ts}.{ext}；
+    // 写回 users.avatar 为相对 URL（/avatars/xxx），前端按 API_BASE 拼接或直接走静态。
+    public function uploadAvatar(Request $request)
+    {
+        $userId = (int) ($request->userId ?? 0);
+        if ($userId <= 0) {
+            return ApiResponse::error(40002, '未登录');
+        }
+        $file = $request->file('file');
+        if (!$file || !$file->isValid()) {
+            return ApiResponse::error(40001, '请选择头像文件');
+        }
+        $size = $file->getSize();
+        if ($size <= 0 || $size > 2 * 1024 * 1024) {
+            return ApiResponse::error(40001, '头像不能超过 2MB');
+        }
+        $ext = strtolower($file->getUploadExtension() ?: '');
+        $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        if (!in_array($ext, $allowed, true)) {
+            return ApiResponse::error(40001, '仅支持 jpg/png/gif/webp');
+        }
+
+        $dir = public_path() . DIRECTORY_SEPARATOR . 'avatars';
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
+            throw new BusinessException('头像目录不可写', 50001);
+        }
+        $name = $userId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $path = $dir . DIRECTORY_SEPARATOR . $name;
+        if (!$file->move($path)) {
+            throw new BusinessException('头像保存失败', 50001);
+        }
+
+        $url = '/avatars/' . $name;
+        try {
+            (new UserRepository())->updateProfileStrict($userId, ['avatar' => $url]);
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('用户信息服务暂不可用', 50001);
+        }
+
+        (new OperateLogRepository())->create([
+            'user_id' => $userId,
+            'module' => 'auth',
+            'action' => 'upload_avatar',
+            'content' => '更新头像 ' . $url,
+            'ip' => $request->getRealIp(),
+        ]);
+
+        return ApiResponse::success(['url' => $url], '头像已更新');
     }
 }

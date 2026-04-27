@@ -2,9 +2,11 @@
 
 namespace app\controller\user;
 
+use app\exception\BusinessException;
 use app\service\user\ApiSourceService;
 use app\validate\user\ApiSourceValidate;
 use support\ApiResponse;
+use support\Db;
 use support\Request;
 
 class ApiSourceController
@@ -85,5 +87,30 @@ class ApiSourceController
             return ApiResponse::error(40001, '缺少 task_id');
         }
         return ApiResponse::success((new ApiSourceService())->getTestResult($userId, $taskId));
+    }
+
+    // 启禁切换：0↔1 翻转；行归属校验不通过 → 40004。
+    public function toggle(Request $request)
+    {
+        $userId = (int) ($request->userId ?? 0);
+        $id = (int) $request->post('id', 0);
+        if ($id <= 0) {
+            return ApiResponse::error(40001, '接口源 ID 不能为空');
+        }
+        try {
+            $row = Db::table('user_api_sources')->where('id', $id)->where('user_id', $userId)->first();
+            if (!$row) {
+                return ApiResponse::error(40004, '接口源不存在');
+            }
+            $next = ((int) $row->status) === 1 ? 0 : 1;
+            Db::table('user_api_sources')->where('id', $id)->update([
+                'status' => $next,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+            return ApiResponse::success(['id' => $id, 'status' => $next], $next === 1 ? '已启用' : '已禁用');
+        } catch (\Throwable $e) {
+            error_log('[ApiSourceController] toggle failed: ' . $e->getMessage());
+            throw new BusinessException('接口源服务暂不可用，请稍后重试', 50001);
+        }
     }
 }

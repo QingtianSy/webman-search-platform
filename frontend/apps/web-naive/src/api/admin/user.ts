@@ -8,6 +8,10 @@ import { requestClient } from '#/api/request';
  *   - DELETE /admin/user/delete?id=
  *   - PUT    /admin/user/toggle-status   body: {id}
  *   - PUT    /admin/user/assign-roles    body: {user_id, role_ids[]}
+ *   - PUT    /admin/user/reset-password  🆕 body: {id, new_password}
+ *   - PUT    /admin/user/adjust-balance  🆕 body: {id, amount, remark}（+充值/-消费）
+ *   - PUT    /admin/user/gift-plan       🆕 body: {id, plan_id, duration}
+ *   - POST   /admin/user/force-offline   🆕 body: {id}（同步强制下线）
  *
  * 列表每行返回 roles: [{id,name,code}]，password_hash/password 已在后端 makeHidden 里过滤。
  * 危险行为（改密码 / 禁用 / 改角色）会触发后端 revokeToken：bump sessions_invalidated_at + Redis 标记，原 token 立即失效。
@@ -26,6 +30,10 @@ export namespace AdminUserApi {
     mobile?: string;
     email?: string;
     status: number;
+    avatar?: string;
+    balance?: number | string;
+    plan_id?: number | null;
+    plan_expire_at?: string | null;
     roles?: RoleRef[];
     created_at?: string;
     updated_at?: string;
@@ -91,4 +99,39 @@ export async function toggleUserStatusApi(id: number) {
 
 export async function assignUserRolesApi(user_id: number, role_ids: number[]) {
   return requestClient.put('/admin/user/assign-roles', { user_id, role_ids });
+}
+
+// 🆕 管理员重置密码
+export async function resetUserPasswordApi(id: number, new_password: string) {
+  return requestClient.put('/admin/user/reset-password', {
+    id,
+    new_password,
+  });
+}
+
+// 🆕 管理员调整余额（正负）
+export async function adjustUserBalanceApi(
+  id: number,
+  amount: number,
+  remark: string,
+) {
+  return requestClient.put('/admin/user/adjust-balance', {
+    id,
+    amount,
+    remark,
+  });
+}
+
+// 🆕 赠送套餐
+export async function giftUserPlanApi(
+  id: number,
+  plan_id: number,
+  duration: number,
+) {
+  return requestClient.put('/admin/user/gift-plan', { id, plan_id, duration });
+}
+
+// 🆕 强制下线
+export async function forceOfflineUserApi(id: number) {
+  return requestClient.post('/admin/user/force-offline', { id });
 }

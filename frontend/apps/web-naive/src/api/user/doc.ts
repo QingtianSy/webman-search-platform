@@ -64,5 +64,32 @@ export async function getDocArticleApi(slug: string) {
 }
 
 export async function getDocConfigApi() {
-  return requestClient.get<UserDocApi.PublicConfig>('/user/doc/config');
+  try {
+    return await requestClient.get<UserDocApi.PublicConfig>('/user/doc/config');
+  } catch {
+    return {} as UserDocApi.PublicConfig;
+  }
+}
+
+/**
+ * 对接文档元信息（API 基础地址、默认 key、头部名）。
+ * 🆕 后端未实现时返回浏览器端默认兜底。
+ */
+export interface DocMeta {
+  api_base_url: string;
+  default_api_key?: string;
+  header_name: string;
+}
+
+export async function getDocMetaApi(): Promise<DocMeta> {
+  try {
+    const r = await requestClient.get<DocMeta>('/user/doc/meta');
+    if (r && (r.api_base_url || r.header_name)) return r;
+    throw new Error('empty');
+  } catch {
+    return {
+      api_base_url: `${window.location.origin}/api/v1/open/v1`,
+      header_name: 'x-api-secret',
+    };
+  }
 }

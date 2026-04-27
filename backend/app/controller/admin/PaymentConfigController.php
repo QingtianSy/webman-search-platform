@@ -76,4 +76,67 @@ class PaymentConfigController
         EpayClient::clearConfigCache();
         return ApiResponse::success($result, '支付配置更新成功');
     }
+
+    /**
+     * 支付配置连通性诊断。不创建真实订单、不动用金额，只校验：
+     *   1) 必填项是否齐全（apiurl/pid/key；RSA 多校验一对密钥）
+     *   2) apiurl 是否 HTTPS 可达（HEAD /mapi.php，超时 5s）
+     * 用于管理员保存配置后的"自检按钮"，避免真下单踩雷。
+     */
+    public function testPay(Request $request)
+    {
+        EpayClient::clearConfigCache();
+        $client = new EpayClient();
+        if (!$client->isConfigured()) {
+            return ApiResponse::error(40001, '支付配置不完整：请检查 apiurl/pid/key 及 RSA 密钥对', [
+                'configured' => false,
+            ]);
+        }
+
+        try {
+            $rows = (new SystemConfigRepository())->getByGroupStrict('payment');
+        } catch (\RuntimeException $e) {
+            return ApiResponse::error(50001, '配置服务暂不可用，请稍后重试');
+        }
+        $map = array_column($rows, 'config_value', 'config_key');
+        $apiurl = rtrim((string) ($map['epay_apiurl'] ?? ''), '/') . '/';
+        $signType = strtoupper((string) ($map['epay_sign_type'] ?? 'MD5'));
+
+        $diagnostic = [
+            'configured' => true,
+            'sign_type' => $signType,
+            'apiurl_reachable' => false,
+            'http_status' => null,
+            'error' => null,
+        ];
+
+        // 对端可达性探测：HEAD 根路径；用 curl 直连，避免把 EpayClient 内部 http 改造成可 mock。
+        $probeUrl = $apiurl . 'mapi.php';
+        $ch = curl_init($probeUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_NOBODY => true,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 3,
+            CURLOPT_TIMEOUT => 5,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        curl_exec($ch);
+        $err = curl_error($ch);
+        $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($err !== '') {
+            $diagnostic['error'] = $err;
+            return ApiResponse::error(50001, '支付网关不可达：' . $err, $diagnostic);
+        }
+        $diagnostic['http_status'] = $http;
+        // 2xx/3xx/405（部分网关对 HEAD 拒绝但服务活着）均视为可达
+        $diagnostic['apiurl_reachable'] = ($http > 0 && $http < 500);
+        if (!$diagnostic['apiurl_reachable']) {
+            return ApiResponse::error(50001, "支付网关响应异常：HTTP {$http}", $diagnostic);
+        }
+
+        return ApiResponse::success($diagnostic, '支付配置自检通过');
+    }
 }

@@ -29,7 +29,9 @@ export namespace AuthApi {
 
   export interface BackendUser {
     avatar?: null | string;
+    email?: null | string;
     id: number;
+    mobile?: null | string;
     nickname?: null | string;
     status?: number;
     username: string;

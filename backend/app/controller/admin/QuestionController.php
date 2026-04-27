@@ -56,8 +56,28 @@ class QuestionController
         return CsvExporter::export('questions_' . date('Ymd_His') . $suffix . '.csv', $headers, $rows);
     }
 
+    public function stats(Request $request)
+    {
+        return ApiResponse::success((new QuestionAdminService())->stats(), '题库统计');
+    }
+
     public function reindex(Request $request)
     {
+        // 可选参数 id（或 question_id）：若传则走单条同步，不传则整库重建。
+        $id = $request->input('id', $request->input('question_id', ''));
+        $id = is_string($id) ? trim($id) : '';
+
+        if ($id !== '') {
+            $ok = (new QuestionIndexService())->sync($id);
+            if (!$ok) {
+                return ApiResponse::error(40004, '题目不存在或同步失败', ['question_id' => $id]);
+            }
+            return ApiResponse::success([
+                'question_id' => $id,
+                'synced' => true,
+            ], '单条同步完成');
+        }
+
         $result = (new QuestionIndexService())->rebuild();
         if (empty($result['rebuilt'])) {
             return ApiResponse::error(50001, $result['error'] ?? 'ES索引重建失败');

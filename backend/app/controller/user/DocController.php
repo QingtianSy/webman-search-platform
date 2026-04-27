@@ -2,6 +2,8 @@
 
 namespace app\controller\user;
 
+use app\exception\BusinessException;
+use app\repository\mysql\SystemConfigRepository;
 use app\service\user\DocService;
 use support\ApiResponse;
 use support\Request;
@@ -34,5 +36,25 @@ class DocController
     public function config(Request $request)
     {
         return ApiResponse::success((new DocService())->config());
+    }
+
+    // 文档首卡元信息：接口地址 / 鉴权头 / RSA 公钥。
+    // 来源 system_configs group=doc；缺键给空串，前端页面不至于白屏。
+    public function meta(Request $request)
+    {
+        try {
+            $rows = (new SystemConfigRepository())->getByGroupStrict('doc');
+        } catch (\RuntimeException $e) {
+            throw new BusinessException('配置服务暂不可用，请稍后重试', 50001);
+        }
+        $kv = [];
+        foreach ($rows as $r) {
+            $kv[$r['config_key']] = (string) ($r['config_value'] ?? '');
+        }
+        return ApiResponse::success([
+            'api_base_url' => $kv['doc_api_base_url'] ?? ($kv['api_base_url'] ?? ''),
+            'header_name' => $kv['doc_header_name'] ?? ($kv['header_name'] ?? 'Authorization'),
+            'rsa_pub_key' => $kv['doc_rsa_pub_key'] ?? ($kv['rsa_pub_key'] ?? ''),
+        ]);
     }
 }

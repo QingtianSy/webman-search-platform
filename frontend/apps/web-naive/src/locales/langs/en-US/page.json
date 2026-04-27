@@ -25,7 +25,33 @@
     "detail": "Detail",
     "export": "Export",
     "retry": "Retry",
-    "stop": "Stop"
+    "stop": "Stop",
+    "search": "Search",
+    "reset": "Reset",
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+  "user": {
+    "plan": "My Plan",
+    "recharge": "Recharge",
+    "apiSource": "API Sources",
+    "announcement": "Announcements",
+    "doc": "API Doc"
+  },
+  "enum": {
+    "planType": {
+      "unlimited": "Unlimited",
+      "limited": "Limited",
+      "exhaustive": "Lifetime"
+    },
+    "orderStatus": {
+      "pending": "Pending",
+      "success": "Paid",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "expired": "Expired",
+      "refunded": "Refunded"
+    }
   },
   "messages": {
     "loadFailed": "Load failed",

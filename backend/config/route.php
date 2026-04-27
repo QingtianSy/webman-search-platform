@@ -51,6 +51,8 @@ use app\controller\admin\ProxyController;
 use app\controller\admin\CollectConfigController;
 use app\controller\admin\PaymentConfigController;
 use app\controller\admin\DocConfigController;
+use app\controller\admin\LogController as AdminLogController;
+use app\controller\admin\UploadController as AdminUploadController;
 use app\controller\user\PaymentController;
 use app\controller\PaymentCallbackController;
 use app\controller\open\HealthController as OpenHealthController;
@@ -69,6 +71,9 @@ Route::get('/api/v1/auth/profile', [UnifiedAuthController::class, 'profile'])->m
 Route::get('/api/v1/auth/menus', [UnifiedAuthController::class, 'menus'])->middleware([UserAuthMiddleware::class]);
 Route::get('/api/v1/auth/permissions', [UnifiedAuthController::class, 'permissions'])->middleware([UserAuthMiddleware::class]);
 Route::put('/api/v1/auth/update-profile', [UnifiedAuthController::class, 'updateProfile'])->middleware([UserAuthMiddleware::class]);
+Route::post('/api/v1/auth/change-password', [UnifiedAuthController::class, 'changePassword'])->middleware([UserAuthMiddleware::class]);
+Route::post('/api/v1/auth/invalidate-sessions', [UnifiedAuthController::class, 'invalidateSessions'])->middleware([UserAuthMiddleware::class]);
+Route::post('/api/v1/auth/upload-avatar', [UnifiedAuthController::class, 'uploadAvatar'])->middleware([UserAuthMiddleware::class]);
 Route::post('/api/v1/auth/logout', [UnifiedAuthController::class, 'logout'])->middleware([UserAuthMiddleware::class]);
 
 // 用户端路由（需要用户认证）
@@ -76,16 +81,21 @@ Route::group('/api/v1/user', function () {
     Route::get('/dashboard/overview', [DashboardController::class, 'overview']);
     Route::get('/announcement/list', [UserAnnouncementController::class, 'index']);
     Route::get('/announcement/detail', [UserAnnouncementController::class, 'detail']);
+    Route::post('/announcement/read', [UserAnnouncementController::class, 'markRead']);
     Route::get('/api-key/list', [ApiKeyController::class, 'index']);
     Route::get('/api-key/detail', [ApiKeyController::class, 'detail']);
     Route::post('/api-key/create', [ApiKeyController::class, 'create']);
     Route::post('/api-key/toggle', [ApiKeyController::class, 'toggle']);
+    Route::post('/api-key/set-default', [ApiKeyController::class, 'setDefault']);
+    Route::post('/api-key/regenerate', [ApiKeyController::class, 'regenerate']);
     Route::delete('/api-key/delete', [ApiKeyController::class, 'delete']);
     Route::get('/wallet/detail', [BillingController::class, 'wallet']);
     Route::get('/plan/current', [BillingController::class, 'currentPlan']);
+    Route::get('/plan/list', [BillingController::class, 'planList']);
     Route::get('/doc/category/list', [DocController::class, 'categories']);
     Route::get('/doc/article/detail', [DocController::class, 'detail']);
     Route::get('/doc/config', [DocController::class, 'config']);
+    Route::get('/doc/meta', [DocController::class, 'meta']);
     Route::get('/collect/task/list', [CollectController::class, 'tasks']);
     Route::get('/collect/task/detail', [CollectController::class, 'detail']);
     Route::post('/collect/query-courses', [CollectController::class, 'queryCourses'])->middleware([new RateLimitMiddleware(10, 60, 'user')]);
@@ -104,8 +114,13 @@ Route::group('/api/v1/user', function () {
     Route::post('/api-source/test', [UserApiSourceController::class, 'test']);
     Route::post('/api-source/test-submit', [UserApiSourceController::class, 'testSubmit']);
     Route::get('/api-source/test-result', [UserApiSourceController::class, 'testResult']);
+    Route::post('/api-source/toggle', [UserApiSourceController::class, 'toggle']);
     Route::post('/order/create', [PaymentController::class, 'create'])->middleware([new RateLimitMiddleware(5, 60, 'user')]);
     Route::get('/order/list', [PaymentController::class, 'list']);
+    Route::get('/order/detail', [PaymentController::class, 'detail']);
+    Route::post('/order/continue', [PaymentController::class, 'continuePay']);
+    Route::post('/order/cancel', [PaymentController::class, 'cancel']);
+    Route::get('/payment/methods', [PaymentController::class, 'methods']);
 })->middleware([UserAuthMiddleware::class]);
 
 // 管理端路由（需要管理员认证）
@@ -118,6 +133,7 @@ Route::group('/api/v1/admin', function () {
     Route::delete('/question/delete', [QuestionController::class, 'delete']);
     Route::get('/question/export', [QuestionController::class, 'export']);
     Route::post('/question/reindex', [QuestionController::class, 'reindex']);
+    Route::get('/question/stats', [QuestionController::class, 'stats']);
     Route::get('/question-category/list', [QuestionCategoryController::class, 'index']);
     Route::post('/question-category/create', [QuestionCategoryController::class, 'create']);
     Route::put('/question-category/update', [QuestionCategoryController::class, 'update']);
@@ -163,6 +179,11 @@ Route::group('/api/v1/admin', function () {
     Route::delete('/announcement/delete', [AnnouncementController::class, 'delete']);
     Route::get('/log/search/list', [SearchLogController::class, 'index']);
     Route::get('/log/search/export', [SearchLogController::class, 'export']);
+    Route::delete('/log/search/delete', [SearchLogController::class, 'delete']);
+    Route::get('/log/balance', [AdminLogController::class, 'balance']);
+    Route::get('/log/payment', [AdminLogController::class, 'payment']);
+    Route::get('/log/operate', [AdminLogController::class, 'operate']);
+    Route::get('/log/login', [AdminLogController::class, 'login']);
     Route::get('/doc/article/list', [DocManageController::class, 'articles']);
     Route::post('/doc/article/create', [DocManageController::class, 'create']);
     Route::put('/doc/article/update', [DocManageController::class, 'update']);
@@ -176,6 +197,7 @@ Route::group('/api/v1/admin', function () {
     Route::post('/api-source/test', [ApiSourceManageController::class, 'test']);
     Route::post('/api-source/test-submit', [ApiSourceManageController::class, 'testSubmit']);
     Route::get('/api-source/test-result', [ApiSourceManageController::class, 'testResult']);
+    Route::post('/api-source/toggle', [ApiSourceManageController::class, 'toggle']);
     Route::get('/system-config/list', [SystemConfigController::class, 'index']);
     Route::post('/system-config/update', [SystemConfigController::class, 'update']);
 
@@ -198,6 +220,7 @@ Route::group('/api/v1/admin', function () {
     // 支付配置（系统管理）
     Route::get('/payment-config/list', [PaymentConfigController::class, 'list']);
     Route::post('/payment-config/update', [PaymentConfigController::class, 'update']);
+    Route::post('/payment-config/test-pay', [PaymentConfigController::class, 'testPay']);
 
     // 文档配置（含 api_key，走专用入口做脱敏展示与合并写入，禁止通用 system-config 入口修改）
     Route::get('/doc-config/list', [DocConfigController::class, 'list']);
@@ -205,6 +228,10 @@ Route::group('/api/v1/admin', function () {
 
     // 系统监控
     Route::get('/monitor/overview', [MonitorController::class, 'overview']);
+    Route::get('/monitor/logs', [MonitorController::class, 'logs']);
+
+    // 通用文件上传（scene=announcement|doc|question）
+    Route::post('/upload', [AdminUploadController::class, 'upload']);
 })->middleware([AdminAuthMiddleware::class]);
 
 // 开放 API 路由（API Key 认证）

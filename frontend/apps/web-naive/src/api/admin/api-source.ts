@@ -101,3 +101,8 @@ export async function getAdminApiSourceTestResultApi(task_id: string) {
     { params: { task_id } },
   );
 }
+
+// 🆕 管理端启禁 API 源（后端 Phase 2 末尾补 /admin/api-source/toggle）
+export async function toggleAdminApiSourceApi(id: number) {
+  return requestClient.post('/admin/api-source/toggle', { id });
+}

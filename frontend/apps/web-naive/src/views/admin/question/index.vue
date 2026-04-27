@@ -26,6 +26,7 @@ import {
   deleteQuestionApi,
   listQuestionsApi,
   reindexQuestionsApi,
+  statsQuestionsApi,
   updateQuestionApi,
 } from '#/api/admin';
 
@@ -171,6 +172,40 @@ async function onDelete(row: AdminQuestionApi.Question) {
 }
 
 const reindexing = ref(false);
+// 行级同步中的 question_id 集合
+const rowSyncing = ref<Set<string>>(new Set());
+
+const stats = ref<AdminQuestionApi.Stats | null>(null);
+const statsLoading = ref(false);
+
+async function loadStats() {
+  statsLoading.value = true;
+  try {
+    stats.value = await statsQuestionsApi();
+  } catch {
+    // 失败静默；interceptor 已提示
+  } finally {
+    statsLoading.value = false;
+  }
+}
+
+async function onReindexRow(row: AdminQuestionApi.Question) {
+  if (!row.question_id) return;
+  rowSyncing.value.add(row.question_id);
+  // 触发响应
+  rowSyncing.value = new Set(rowSyncing.value);
+  try {
+    await reindexQuestionsApi(row.question_id);
+    message.success('已同步到 ES');
+    load();
+  } catch {
+    // interceptor
+  } finally {
+    rowSyncing.value.delete(row.question_id);
+    rowSyncing.value = new Set(rowSyncing.value);
+  }
+}
+
 function onReindex() {
   dialog.warning({
     title: '全量重建 ES 索引',
@@ -230,7 +265,7 @@ const columns: DataTableColumns<AdminQuestionApi.Question> = [
   {
     title: '操作',
     key: 'actions',
-    width: 150,
+    width: 220,
     fixed: 'right',
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
@@ -238,6 +273,15 @@ const columns: DataTableColumns<AdminQuestionApi.Question> = [
           NButton,
           { size: 'small', type: 'primary', onClick: () => openEdit(row) },
           () => '编辑',
+        ),
+        h(
+          NButton,
+          {
+            size: 'small',
+            loading: rowSyncing.value.has(row.question_id ?? ''),
+            onClick: () => onReindexRow(row),
+          },
+          () => '同步ES',
         ),
         h(
           NPopconfirm,
@@ -252,11 +296,37 @@ const columns: DataTableColumns<AdminQuestionApi.Question> = [
   },
 ];
 
-onMounted(load);
+onMounted(() => {
+  load();
+  loadStats();
+});
 </script>
 
 <template>
   <div class="p-6">
+    <NCard v-if="stats" class="mb-4" size="small">
+      <div class="flex flex-wrap gap-6">
+        <div>
+          <div class="text-xs text-gray-500">题目总数</div>
+          <div class="text-2xl font-semibold">{{ stats.total }}</div>
+        </div>
+        <div>
+          <div class="text-xs text-gray-500">启用 / 禁用</div>
+          <div class="text-2xl font-semibold">
+            {{ stats.status_breakdown.active }} /
+            <span class="text-gray-400">{{ stats.status_breakdown.disabled }}</span>
+          </div>
+        </div>
+        <div>
+          <div class="text-xs text-gray-500">分类 · 题型 · 来源 · 标签</div>
+          <div class="text-2xl font-semibold">
+            {{ stats.dict.category_count }} · {{ stats.dict.type_count }} ·
+            {{ stats.dict.source_count }} · {{ stats.dict.tag_count }}
+          </div>
+        </div>
+      </div>
+    </NCard>
+
     <NCard title="题目管理">
       <template #header-extra>
         <NSpace>

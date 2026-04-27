@@ -54,3 +54,33 @@ export async function toggleApiKeyApi(id: number, status: number) {
 export async function deleteApiKeyApi(id: number) {
   return requestClient.delete('/user/api-key/delete', { params: { id } });
 }
+
+/**
+ * 设置默认 API Key（用于文档/控制台展示）。
+ * 🆕 后端若未实现返 404，前端做本地存储兜底。
+ */
+export async function setDefaultApiKeyApi(id: number) {
+  try {
+    return await requestClient.post<void>('/user/api-key/set-default', null, {
+      params: { id },
+    });
+  } catch {
+    try {
+      localStorage.setItem('default_api_key_id', String(id));
+    } catch {
+      // ignore
+    }
+  }
+}
+
+/**
+ * 重新生成 api_secret（原 secret 作废）。
+ * 🆕 后端若未实现，抛错由调用方兜底。
+ */
+export async function regenerateApiSecretApi(id: number) {
+  return requestClient.post<ApiKeyApi.CreateResult>(
+    '/user/api-key/regenerate',
+    null,
+    { params: { id } },
+  );
+}

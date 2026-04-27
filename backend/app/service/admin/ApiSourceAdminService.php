@@ -93,4 +93,38 @@ class ApiSourceAdminService
         unset($row['user_id'], $row['scope']);
         return $row;
     }
+
+    // 管理端对 api_sources 表（全局共享源）做 0↔1 翻转。
+    // 注意：与 user 端 toggle 不同，这里没有 user_id 归属校验，目标是全局源。
+    public function toggle(int $id): array
+    {
+        if ($id <= 0) {
+            throw new BusinessException('接口源 ID 不能为空', 40001);
+        }
+        $pdo = \support\adapter\MySqlClient::pdo();
+        if (!$pdo) {
+            throw new BusinessException('接口源服务暂不可用，请稍后重试', 50001);
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT id, status FROM api_sources WHERE id = :id LIMIT 1');
+            $stmt->execute(['id' => $id]);
+            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$row) {
+                throw new BusinessException('接口源不存在', 40004);
+            }
+            $next = ((int) $row['status']) === 1 ? 0 : 1;
+            $upd = $pdo->prepare('UPDATE api_sources SET status = :s, updated_at = :t WHERE id = :id');
+            $upd->execute([
+                's' => $next,
+                't' => date('Y-m-d H:i:s'),
+                'id' => $id,
+            ]);
+            return ['id' => $id, 'status' => $next];
+        } catch (BusinessException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            error_log('[ApiSourceAdminService] toggle failed: ' . $e->getMessage());
+            throw new BusinessException('接口源服务暂不可用，请稍后重试', 50001);
+        }
+    }
 }

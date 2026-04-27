@@ -75,12 +75,23 @@ export namespace SearchApi {
     page: number;
     page_size: number;
   }
+
+  export interface HistoryParams {
+    page?: number;
+    page_size?: number;
+    /** 关键词模糊匹配 */
+    keyword?: string;
+    /** 题型过滤（后端若未实现则忽略） */
+    question_type?: number | string;
+    /** 状态过滤：1=成功 0=失败 */
+    status?: number | string;
+  }
 }
 
 export async function searchQueryApi(params: SearchApi.QueryParams) {
   return requestClient.post<SearchApi.QueryResult>('/user/search/query', params);
 }
 
-export async function searchHistoryApi(params?: { page?: number; page_size?: number }) {
+export async function searchHistoryApi(params?: SearchApi.HistoryParams) {
   return requestClient.get<SearchApi.HistoryResult>('/user/search/logs', { params });
 }

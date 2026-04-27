@@ -1,16 +1,23 @@
 <script lang="ts" setup>
+// 管理端 · API 源管理。docs/07 §3.2.11。
+// 管理端对源只读（不 create/update/delete）：只维护启禁 + 同步/异步测试 + 查看详情。
+// 列表额外展示 user_id / owner_username（多用户列），标记该源归属。
+// 启禁走 /admin/api-source/toggle。
 import type { DataTableColumns } from 'naive-ui';
 
 import { h, onBeforeUnmount, onMounted, ref } from 'vue';
 
 import {
+  NAlert,
   NButton,
   NCard,
   NDataTable,
   NDescriptions,
   NDescriptionsItem,
   NModal,
+  NPopconfirm,
   NSpace,
+  NSwitch,
   NTag,
   useMessage,
 } from 'naive-ui';
@@ -22,6 +29,7 @@ import {
   listAdminApiSourcesApi,
   submitTestAdminApiSourceApi,
   testAdminApiSourceApi,
+  toggleAdminApiSourceApi,
 } from '#/api/admin';
 
 const message = useMessage();
@@ -76,6 +84,17 @@ async function openDetail(row: AdminApiSourceApi.Source) {
   }
 }
 
+// ========= 启禁 =========
+async function onToggle(row: AdminApiSourceApi.Source) {
+  try {
+    await toggleAdminApiSourceApi(row.id);
+    message.success(row.status === 1 ? '已禁用' : '已启用');
+    load();
+  } catch {
+    // 拦截器负责提示
+  }
+}
+
 // ========= 同步测试 =========
 const syncTesting = ref<null | number>(null);
 async function onSyncTest(row: AdminApiSourceApi.Source) {
@@ -83,9 +102,9 @@ async function onSyncTest(row: AdminApiSourceApi.Source) {
   try {
     const res = await testAdminApiSourceApi(row.id);
     if (res?.success) {
-      message.success(`[同步] 测试通过：${res?.data?.message ?? ''}`);
+      message.success(`[同步] 测试通过:${res?.data?.message ?? ''}`);
     } else {
-      message.error(`[同步] 测试失败：${res?.data?.message ?? '未知错误'}`);
+      message.error(`[同步] 测试失败:${res?.data?.message ?? '未知错误'}`);
     }
     load();
   } catch {
@@ -127,7 +146,6 @@ async function pollOnce() {
     asyncTestingId.value = null;
     return;
   }
-  // 仍在 pending/running：1.5s 继续轮询
   pollTimer = setTimeout(pollOnce, 1500);
 }
 
@@ -157,26 +175,39 @@ onBeforeUnmount(stopPoll);
 
 const columns: DataTableColumns<AdminApiSourceApi.Source> = [
   { title: 'ID', key: 'id', width: 70 },
-  { title: '名称', key: 'name', width: 180 },
-  { title: '编码', key: 'code', width: 140 },
+  { title: '名称', key: 'name', width: 180, ellipsis: { tooltip: true } },
+  { title: '编码', key: 'code', width: 120 },
+  {
+    title: '归属用户',
+    key: 'user_id',
+    width: 140,
+    render: (row) => {
+      const uname = (row as any).owner_username ?? (row as any).username;
+      const uid = (row as any).user_id;
+      if (!uid && !uname) return '-';
+      return h(
+        'span',
+        { class: 'text-xs' },
+        uname ? `${uname} #${uid ?? '-'}` : `#${uid}`,
+      );
+    },
+  },
   { title: 'endpoint', key: 'endpoint', ellipsis: { tooltip: true } },
   { title: '优先级', key: 'priority', width: 80 },
   {
     title: '状态',
     key: 'status',
-    width: 80,
+    width: 90,
     render: (row) =>
-      row.status === 1
-        ? h(NTag, { type: 'success', size: 'small' }, () => '启用')
-        : h(NTag, { size: 'small' }, () => '禁用'),
+      h(NSwitch, {
+        size: 'small',
+        value: row.status === 1,
+        onUpdateValue: () => onToggle(row),
+      }),
   },
-  { title: '成功', key: 'success_count', width: 80 },
-  { title: '失败', key: 'fail_count', width: 80 },
-  {
-    title: '上次测试',
-    key: 'last_tested_at',
-    width: 170,
-  },
+  { title: '成功', key: 'success_count', width: 70 },
+  { title: '失败', key: 'fail_count', width: 70 },
+  { title: '上次测试', key: 'last_tested_at', width: 170 },
   {
     title: '上次结果',
     key: 'last_test_status',
@@ -195,25 +226,38 @@ const columns: DataTableColumns<AdminApiSourceApi.Source> = [
     fixed: 'right',
     render: (row) =>
       h(NSpace, { size: 'small' }, () => [
-        h(NButton, { size: 'small', onClick: () => openDetail(row) }, () => '详情'),
         h(
           NButton,
-          {
-            size: 'small',
-            type: 'primary',
-            loading: syncTesting.value === row.id,
-            onClick: () => onSyncTest(row),
-          },
-          () => '同步测试',
+          { size: 'small', quaternary: true, onClick: () => openDetail(row) },
+          () => '详情',
         ),
         h(
           NButton,
           {
             size: 'small',
-            loading: asyncTestingId.value === row.id,
-            onClick: () => onAsyncTest(row),
+            quaternary: true,
+            type: 'primary',
+            loading: syncTesting.value === row.id,
+            onClick: () => onSyncTest(row),
           },
-          () => '异步测试',
+          () => '同步测',
+        ),
+        h(
+          NPopconfirm,
+          { onPositiveClick: () => onAsyncTest(row) },
+          {
+            default: () => '异步测试将投递后台任务，完成后自动轮询',
+            trigger: () =>
+              h(
+                NButton,
+                {
+                  size: 'small',
+                  quaternary: true,
+                  loading: asyncTestingId.value === row.id,
+                },
+                () => '异步测',
+              ),
+          },
         ),
       ]),
   },
@@ -224,10 +268,15 @@ onMounted(load);
 
 <template>
   <div class="p-6">
-    <NCard title="API 源管理">
+    <NCard title="API 源管理（只读）">
       <template #header-extra>
         <NButton @click="load">刷新</NButton>
       </template>
+
+      <NAlert type="info" class="mb-4" :bordered="false">
+        管理端对 API 源仅提供只读 + 启禁 + 测试能力；源的增/改/删走用户端
+        <code class="mx-1">/user/api-source/*</code>（各用户自建）。
+      </NAlert>
 
       <NDataTable
         remote
@@ -235,7 +284,7 @@ onMounted(load);
         :columns="columns"
         :data="rows"
         :row-key="(row: AdminApiSourceApi.Source) => row.id"
-        :scroll-x="1500"
+        :scroll-x="1600"
         :pagination="{
           page,
           pageSize,
@@ -263,13 +312,21 @@ onMounted(load);
       >
         <NDescriptionsItem label="ID">{{ detail.id }}</NDescriptionsItem>
         <NDescriptionsItem label="名称">{{ detail.name }}</NDescriptionsItem>
-        <NDescriptionsItem label="编码">{{ detail.code ?? '-' }}</NDescriptionsItem>
-        <NDescriptionsItem label="优先级">{{ detail.priority ?? '-' }}</NDescriptionsItem>
+        <NDescriptionsItem label="编码">
+          {{ detail.code ?? '-' }}
+        </NDescriptionsItem>
+        <NDescriptionsItem label="优先级">
+          {{ detail.priority ?? '-' }}
+        </NDescriptionsItem>
         <NDescriptionsItem label="状态">
           {{ detail.status === 1 ? '启用' : '禁用' }}
         </NDescriptionsItem>
-        <NDescriptionsItem label="上次测试">{{ detail.last_tested_at ?? '-' }}</NDescriptionsItem>
-        <NDescriptionsItem label="上次结果">{{ detail.last_test_status ?? '-' }}</NDescriptionsItem>
+        <NDescriptionsItem label="上次测试">
+          {{ detail.last_tested_at ?? '-' }}
+        </NDescriptionsItem>
+        <NDescriptionsItem label="上次结果">
+          {{ detail.last_test_status ?? '-' }}
+        </NDescriptionsItem>
         <NDescriptionsItem label="成功/失败">
           {{ detail.success_count ?? 0 }} / {{ detail.fail_count ?? 0 }}
         </NDescriptionsItem>

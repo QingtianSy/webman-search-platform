@@ -6,6 +6,7 @@ use app\exception\BusinessException;
 use app\repository\mysql\ApiKeyRepository;
 use PDO;
 use support\adapter\MySqlClient;
+use support\Db;
 
 class ApiKeyService
 {
@@ -102,5 +103,57 @@ class ApiKeyService
             throw new BusinessException('API Key 不存在', 40001);
         }
         return true;
+    }
+
+    // 设为默认：单事务把同用户其它 key 的 is_default=0 + 当前 id=1；id 归属本人校验失败抛 40001。
+    // 依赖迁移 0023 给 user_api_keys 添加了 is_default 列。
+    public function setDefault(int $userId, int $id): bool
+    {
+        try {
+            return Db::transaction(function () use ($userId, $id) {
+                $target = Db::table('user_api_keys')->where('id', $id)->where('user_id', $userId)->first();
+                if (!$target) {
+                    throw new BusinessException('API Key 不存在', 40001);
+                }
+                Db::table('user_api_keys')->where('user_id', $userId)->where('id', '!=', $id)->update(['is_default' => 0]);
+                Db::table('user_api_keys')->where('id', $id)->update(['is_default' => 1, 'updated_at' => date('Y-m-d H:i:s')]);
+                return true;
+            });
+        } catch (BusinessException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            error_log("[ApiKeyService] setDefault failed: " . $e->getMessage());
+            throw new BusinessException('API Key 服务暂不可用，请稍后重试', 50001);
+        }
+    }
+
+    // 重新生成 secret：返回明文一次，DB 只存 bcrypt hash。api_key 不变，避免客户端需要重新配置公钥侧。
+    public function regenerate(int $userId, int $id): array
+    {
+        $pdo = MySqlClient::pdo();
+        if (!$pdo) {
+            throw new BusinessException('API Key 服务暂不可用，请稍后重试', 50001);
+        }
+        $check = $pdo->prepare('SELECT id, api_key, app_name FROM user_api_keys WHERE id = :id AND user_id = :uid LIMIT 1');
+        $check->execute(['id' => $id, 'uid' => $userId]);
+        $row = $check->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            throw new BusinessException('API Key 不存在', 40001);
+        }
+        $newSecret = 'sk_' . bin2hex(random_bytes(24));
+        $newHash = password_hash($newSecret, PASSWORD_BCRYPT);
+        try {
+            $stmt = $pdo->prepare('UPDATE user_api_keys SET api_secret_hash = :h, updated_at = NOW() WHERE id = :id AND user_id = :uid');
+            $stmt->execute(['h' => $newHash, 'id' => $id, 'uid' => $userId]);
+        } catch (\PDOException $e) {
+            error_log("[ApiKeyService] regenerate failed: " . $e->getMessage());
+            throw new BusinessException('重置 Secret 失败，请稍后重试', 50001);
+        }
+        return [
+            'id' => (int) $row['id'],
+            'api_key' => $row['api_key'],
+            'api_secret' => $newSecret,
+            'app_name' => $row['app_name'],
+        ];
     }
 }
