@@ -1,12 +1,13 @@
 <script lang="ts" setup>
 import type { DataTableColumns } from 'naive-ui';
 
-import { computed, h, onMounted, onUnmounted, ref } from 'vue';
+import { computed, h, onMounted, onUnmounted, ref, watch } from 'vue';
 
 import {
   NAlert,
   NButton,
   NCard,
+  NCheckbox,
   NDataTable,
   NDescriptions,
   NDescriptionsItem,
@@ -14,10 +15,9 @@ import {
   NFormItem,
   NInput,
   NModal,
-  NSelect,
+  NRadio,
+  NRadioGroup,
   NSpace,
-  NStep,
-  NSteps,
   NTag,
   useMessage,
 } from 'naive-ui';
@@ -39,7 +39,6 @@ const total = ref(0);
 const page = ref(1);
 const pageSize = ref(20);
 
-// 列表级轮询：只要当前页存在 pending/running 的任务就保持 5s 刷新，终态则停
 const LIST_POLL_MS = 5000;
 let listPollTimer: null | ReturnType<typeof setInterval> = null;
 
@@ -91,10 +90,8 @@ function onPageSizeChange(ps: number) {
   loadList();
 }
 
-// ---- 两步 Wizard ----
-// step 0 = 账号认证 + 查询课程；step 1 = 选课程 + 提交
+// ---- 提交弹窗（单页布局，按截图设计） ----
 const submitOpen = ref(false);
-const wizardStep = ref<0 | 1>(0);
 const queryingCourses = ref(false);
 const submitting = ref(false);
 const coursesResult = ref<null | UserCollectApi.QueryCoursesResult>(null);
@@ -103,28 +100,79 @@ const selectedCourseIds = ref<string[]>([]);
 const form = ref<UserCollectApi.SubmitParams>({
   account: '',
   password: '',
-  collect_type: 'courses',
+  collect_type: 'course',
   course_ids: '',
   course_count: 0,
   school_name: '',
 });
 
-const typeOptions = [
-  { label: '全量课程（courses）', value: 'courses' },
-  { label: '单门课程（course）', value: 'course' },
-  { label: '章节（chapter）', value: 'chapter' },
-  { label: '考试（exam）', value: 'exam' },
-  { label: '作业（homework）', value: 'homework' },
+// 采集类型按截图：整号 / 单课程 / 章节测试 / 作业 / 考试
+const TYPE_OPTIONS = [
+  { label: '整号采集', value: 'courses' as const },
+  { label: '单课程采集', value: 'course' as const },
+  { label: '章节测试', value: 'chapter' as const },
+  { label: '作业', value: 'homework' as const },
+  { label: '考试', value: 'exam' as const },
 ];
 
+const isWholeAccount = computed(() => form.value.collect_type === 'courses');
+
+const courses = computed(() => coursesResult.value?.courses ?? []);
+const totalCount = computed(() => courses.value.length);
+const selectedCount = computed(() =>
+  isWholeAccount.value ? totalCount.value : selectedCourseIds.value.length,
+);
+const allChecked = computed(
+  () => totalCount.value > 0 && selectedCount.value === totalCount.value,
+);
+const someChecked = computed(
+  () => selectedCount.value > 0 && selectedCount.value < totalCount.value,
+);
+
+function courseKey(c: UserCollectApi.QueryCoursesResult['courses'][number]) {
+  return String(c.courseId ?? c.clazzId ?? '');
+}
+
+function toggleCourse(id: string, checked: boolean) {
+  if (isWholeAccount.value) return; // 整号锁定
+  if (checked) {
+    if (!selectedCourseIds.value.includes(id))
+      selectedCourseIds.value.push(id);
+  } else {
+    selectedCourseIds.value = selectedCourseIds.value.filter((x) => x !== id);
+  }
+}
+
+function toggleAll(checked: boolean) {
+  if (isWholeAccount.value) return;
+  selectedCourseIds.value = checked
+    ? courses.value.map((c) => courseKey(c)).filter(Boolean)
+    : [];
+}
+
+// 切到整号 → 清掉手选；切回其它 → 也清空，让用户重新挑
+watch(
+  () => form.value.collect_type,
+  () => {
+    selectedCourseIds.value = [];
+  },
+);
+
+// 账号/密码改了，已查询的结果失效
+watch([() => form.value.account, () => form.value.password], () => {
+  if (coursesResult.value) {
+    coursesResult.value = null;
+    selectedCourseIds.value = [];
+  }
+});
+
 function resetWizard() {
-  wizardStep.value = 0;
   coursesResult.value = null;
   selectedCourseIds.value = [];
   form.value = {
     account: '',
     password: '',
-    collect_type: 'courses',
+    collect_type: 'course',
     course_ids: '',
     course_count: 0,
     school_name: '',
@@ -144,7 +192,6 @@ function closeWizard() {
   submitOpen.value = false;
 }
 
-// Step 1 → Step 2
 async function onQueryCourses() {
   if (!form.value.account || !form.value.password) {
     message.warning('请先填写账号和密码');
@@ -157,60 +204,40 @@ async function onQueryCourses() {
       password: form.value.password,
     });
     coursesResult.value = res;
-    if (res.schoolName) {
-      form.value.school_name = res.schoolName;
-    }
+    selectedCourseIds.value = [];
+    if (res.schoolName) form.value.school_name = res.schoolName;
     message.success(`已试登成功，共 ${res.courseCount} 门课程`);
-    wizardStep.value = 1;
   } catch {
-    // 拦截器已 toast（账号错误 / 限流 / 第三方故障）
+    // 拦截器已 toast
   } finally {
     queryingCourses.value = false;
   }
 }
 
-const courseSelectOptions = computed(() =>
-  (coursesResult.value?.courses ?? []).map((c) => ({
-    label: `${c.courseName ?? '(未命名)'} · ${c.courseId ?? ''}`,
-    value: String(c.courseId ?? c.clazzId ?? ''),
-  })),
-);
-
-function backToStep1() {
-  wizardStep.value = 0;
-  // 保留账号密码，清查询结果（用户可能要改账号）
-  coursesResult.value = null;
-  selectedCourseIds.value = [];
-}
-
-// Step 2 → 提交
 async function onSubmit() {
-  if (
-    form.value.collect_type !== 'courses' &&
-    selectedCourseIds.value.length === 0 &&
-    !form.value.course_ids
-  ) {
-    message.warning('请选择或填写要采集的课程 ID');
+  if (!coursesResult.value) {
+    message.warning('请先点「查询课程」');
+    return;
+  }
+  if (!isWholeAccount.value && selectedCourseIds.value.length === 0) {
+    message.warning('请勾选至少一门课程');
     return;
   }
   submitting.value = true;
   try {
+    const ids = isWholeAccount.value
+      ? courses.value.map((c) => courseKey(c)).filter(Boolean)
+      : selectedCourseIds.value;
     const payload: UserCollectApi.SubmitParams = {
       ...form.value,
-      course_ids:
-        selectedCourseIds.value.length > 0
-          ? selectedCourseIds.value.join(',')
-          : form.value.course_ids,
-      course_count:
-        selectedCourseIds.value.length > 0
-          ? selectedCourseIds.value.length
-          : form.value.course_count,
+      course_ids: ids.join(','),
+      course_count: ids.length,
     };
     const res = await submitCollectApi(payload);
     message.success(`任务已提交：${res.task_no}`);
     submitOpen.value = false;
     resetWizard();
-    loadList(); // 新任务刚下发，必然 pending，loadList 会自动启轮询
+    loadList();
   } catch {
     // ignored
   } finally {
@@ -355,30 +382,24 @@ onMounted(loadList);
       />
     </NCard>
 
-    <!-- 两步 Wizard：Step1 账号认证 → Step2 选课提交 -->
+    <!-- 提交采集任务（单页布局） -->
     <NModal
       :show="submitOpen"
       preset="card"
-      title="新建采集任务"
-      style="width: 640px"
+      title="提交采集任务"
+      style="width: 720px"
       :mask-closable="false"
       :close-on-esc="!submitting && !queryingCourses"
       :on-close="closeWizard"
       @update:show="(v) => !v && closeWizard()"
     >
-      <NSteps :current="wizardStep + 1" size="small" class="mb-4">
-        <NStep title="账号认证" description="试登并获取课程列表" />
-        <NStep title="选择课程" description="设定采集范围并提交" />
-      </NSteps>
-
-      <!-- Step 1 -->
-      <template v-if="wizardStep === 0">
-        <NForm :model="form" label-placement="top">
-          <NFormItem label="超星账号" required>
+      <NForm :model="form" label-placement="left" label-width="70">
+        <div class="grid grid-cols-2 gap-x-4">
+          <NFormItem label="账号" required>
             <NInput
               v-model:value="form.account"
               placeholder="手机号"
-              :disabled="queryingCourses"
+              :disabled="queryingCourses || submitting"
             />
           </NFormItem>
           <NFormItem label="密码" required>
@@ -387,94 +408,113 @@ onMounted(loadList);
               type="password"
               show-password-on="click"
               placeholder="登录密码"
-              :disabled="queryingCourses"
+              :disabled="queryingCourses || submitting"
             />
           </NFormItem>
-        </NForm>
-        <NAlert type="warning" :show-icon="false" class="mb-2">
-          试登仅用于校验账号并拉取课程列表，密码不会落库（会随提交任务转交 worker 执行一次性登录）。
-        </NAlert>
-      </template>
-
-      <!-- Step 2 -->
-      <template v-else>
-        <div class="text-muted-foreground mb-3 text-xs">
-          <template v-if="coursesResult">
-            {{ coursesResult.userName }} · {{ coursesResult.schoolName }} · 共
-            {{ coursesResult.courseCount }} 门课程
-          </template>
         </div>
-        <NForm :model="form" label-placement="top">
-          <NFormItem label="采集类型" required>
-            <NSelect
-              v-model:value="form.collect_type"
-              :options="typeOptions"
-              :disabled="submitting"
-            />
-          </NFormItem>
 
-          <NFormItem
-            v-if="courseSelectOptions.length > 0"
-            label="选择课程（可多选，留空=全量）"
+        <div class="mb-4">
+          <NButton
+            type="primary"
+            :loading="queryingCourses"
+            :disabled="!form.account || !form.password || submitting"
+            @click="onQueryCourses"
           >
-            <NSelect
-              v-model:value="selectedCourseIds"
-              multiple
-              filterable
-              :options="courseSelectOptions"
-              :disabled="submitting"
-              placeholder="不选则按 course_ids 输入"
-            />
-          </NFormItem>
-
-          <NFormItem
-            v-if="
-              form.collect_type !== 'courses' &&
-              selectedCourseIds.length === 0
-            "
-            label="课程 ID（逗号分隔）"
+            查询课程
+          </NButton>
+          <span
+            v-if="coursesResult"
+            class="text-muted-foreground ml-3 text-xs"
           >
-            <NInput
-              v-model:value="form.course_ids"
-              placeholder="course_id1,course_id2"
-              :disabled="submitting"
-            />
-          </NFormItem>
+            {{ coursesResult.userName }} ·
+            {{ coursesResult.schoolName || '未知学校' }} · 共
+            {{ coursesResult.courseCount }} 门
+          </span>
+        </div>
 
-          <NFormItem label="学校名称（可选，用于地域代理策略）">
-            <NInput
-              v-model:value="form.school_name"
-              placeholder="如：某某大学"
-              :disabled="submitting"
-            />
-          </NFormItem>
-        </NForm>
-      </template>
+        <NFormItem label="采集类型" required>
+          <NRadioGroup v-model:value="form.collect_type" :disabled="submitting">
+            <NRadio
+              v-for="opt in TYPE_OPTIONS"
+              :key="opt.value"
+              :value="opt.value"
+            >
+              {{ opt.label }}
+            </NRadio>
+          </NRadioGroup>
+        </NFormItem>
+
+        <NFormItem label="课程选择">
+          <div class="w-full">
+            <div v-if="!coursesResult" class="text-muted-foreground text-xs">
+              请先点「查询课程」
+            </div>
+            <template v-else>
+              <div class="mb-2 flex items-center gap-3">
+                <NCheckbox
+                  v-if="!isWholeAccount"
+                  :checked="allChecked"
+                  :indeterminate="someChecked"
+                  :disabled="submitting"
+                  @update:checked="toggleAll"
+                >
+                  全选
+                </NCheckbox>
+                <span
+                  v-if="isWholeAccount"
+                  class="text-muted-foreground text-xs"
+                >
+                  整号采集将采集所有课程，已自动选中全部课程
+                </span>
+                <span v-else class="text-muted-foreground text-xs">
+                  已选: {{ selectedCount }} / {{ totalCount }}
+                </span>
+              </div>
+              <div
+                class="course-list"
+                :class="{ 'course-list--locked': isWholeAccount }"
+              >
+                <div
+                  v-for="c in courses"
+                  :key="courseKey(c)"
+                  class="course-item"
+                >
+                  <NCheckbox
+                    :checked="
+                      isWholeAccount ||
+                      selectedCourseIds.includes(courseKey(c))
+                    "
+                    :disabled="isWholeAccount || submitting"
+                    @update:checked="(v: boolean) => toggleCourse(courseKey(c), v)"
+                  >
+                    <span class="course-name">{{
+                      c.courseName ?? '(未命名)'
+                    }}</span>
+                    <span
+                      v-if="c.teacherName"
+                      class="course-meta text-muted-foreground"
+                    >
+                      {{ c.teacherName }}
+                    </span>
+                  </NCheckbox>
+                </div>
+              </div>
+            </template>
+          </div>
+        </NFormItem>
+      </NForm>
 
       <template #footer>
         <NSpace justify="end">
-          <template v-if="wizardStep === 0">
-            <NButton :disabled="queryingCourses" @click="closeWizard">
-              取消
-            </NButton>
-            <NButton
-              type="primary"
-              :loading="queryingCourses"
-              :disabled="!form.account || !form.password"
-              @click="onQueryCourses"
-            >
-              下一步：查询课程
-            </NButton>
-          </template>
-          <template v-else>
-            <NButton :disabled="submitting" @click="backToStep1">
-              上一步
-            </NButton>
-            <NButton :disabled="submitting" @click="closeWizard">取消</NButton>
-            <NButton type="primary" :loading="submitting" @click="onSubmit">
-              提交任务
-            </NButton>
-          </template>
+          <NButton :disabled="submitting" @click="closeWizard">取消</NButton>
+          <NButton
+            type="primary"
+            :loading="submitting"
+            :disabled="!coursesResult"
+            @click="onSubmit"
+          >
+            提交采集
+          </NButton>
         </NSpace>
       </template>
     </NModal>
@@ -499,23 +539,39 @@ onMounted(loadList);
           <NDescriptionsItem label="状态">
             <component :is="statusTag(detail.status)" />
           </NDescriptionsItem>
-          <NDescriptionsItem label="类型">{{ detail.collect_type }}</NDescriptionsItem>
-          <NDescriptionsItem label="账号">{{ detail.account_phone }}</NDescriptionsItem>
-          <NDescriptionsItem label="课程数">{{ detail.course_count }}</NDescriptionsItem>
-          <NDescriptionsItem label="题目数">{{ detail.question_count }}</NDescriptionsItem>
+          <NDescriptionsItem label="类型">{{
+            detail.collect_type
+          }}</NDescriptionsItem>
+          <NDescriptionsItem label="账号">{{
+            detail.account_phone
+          }}</NDescriptionsItem>
+          <NDescriptionsItem label="课程数">{{
+            detail.course_count
+          }}</NDescriptionsItem>
+          <NDescriptionsItem label="题目数">{{
+            detail.question_count
+          }}</NDescriptionsItem>
           <NDescriptionsItem label="成功/失败">
             {{ detail.success_count }} / {{ detail.fail_count }}
           </NDescriptionsItem>
           <NDescriptionsItem v-if="detail.course_ids" label="课程 IDs" :span="2">
             <span class="break-all text-xs">{{ detail.course_ids }}</span>
           </NDescriptionsItem>
-          <NDescriptionsItem v-if="detail.error_message" label="错误信息" :span="2">
+          <NDescriptionsItem
+            v-if="detail.error_message"
+            label="错误信息"
+            :span="2"
+          >
             <span class="text-error break-all text-xs">
               {{ detail.error_message }}
             </span>
           </NDescriptionsItem>
-          <NDescriptionsItem label="创建时间">{{ detail.created_at }}</NDescriptionsItem>
-          <NDescriptionsItem label="更新时间">{{ detail.updated_at }}</NDescriptionsItem>
+          <NDescriptionsItem label="创建时间">{{
+            detail.created_at
+          }}</NDescriptionsItem>
+          <NDescriptionsItem label="更新时间">{{
+            detail.updated_at
+          }}</NDescriptionsItem>
         </NDescriptions>
 
         <NAlert
@@ -536,3 +592,32 @@ onMounted(loadList);
     </NModal>
   </div>
 </template>
+
+<style scoped>
+.course-list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 8px 12px;
+  border: 1px solid var(--n-border-color, #e5e7eb);
+  border-radius: 4px;
+}
+.course-list--locked {
+  background: rgba(24, 160, 88, 0.06);
+  border-color: rgba(24, 160, 88, 0.4);
+}
+.course-item {
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--n-divider-color, #f0f0f0);
+}
+.course-item:last-child {
+  border-bottom: none;
+}
+.course-name {
+  font-weight: 500;
+  margin-right: 8px;
+}
+.course-meta {
+  font-size: 12px;
+  margin-left: 4px;
+}
+</style>
