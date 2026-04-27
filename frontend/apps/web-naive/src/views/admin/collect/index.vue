@@ -48,15 +48,23 @@ const statusOptions = [
   { label: '已停止', value: 4 },
 ];
 
+const TYPE_LABEL: Record<string, string> = {
+  chapter: '章节测试',
+  course: '单课程',
+  courses: '整号',
+  exam: '考试',
+  homework: '作业',
+};
+
 function statusTag(status: number) {
-  const map: Record<number, { type: any; text: string }> = {
-    0: { type: 'default', text: '待执行' },
-    1: { type: 'info', text: '执行中' },
-    2: { type: 'success', text: '成功' },
-    3: { type: 'error', text: '失败' },
-    4: { type: 'warning', text: '已停止' },
+  const map: Record<number, { text: string; type: any }> = {
+    0: { text: '待执行', type: 'default' },
+    1: { text: '执行中', type: 'info' },
+    2: { text: '成功', type: 'success' },
+    3: { text: '失败', type: 'error' },
+    4: { text: '已停止', type: 'warning' },
   };
-  const m = map[status] ?? { type: 'default', text: `未知(${status})` };
+  const m = map[status] ?? { text: `未知(${status})`, type: 'default' };
   return h(NTag, { size: 'small', type: m.type }, () => m.text);
 }
 
@@ -145,18 +153,30 @@ const columns: DataTableColumns<AdminCollectApi.Task> = [
     ellipsis: { tooltip: true },
   },
   { title: '用户ID', key: 'user_id', width: 80 },
-  { title: '来源', key: 'source', width: 120 },
-  { title: '关键词', key: 'keyword', width: 160, ellipsis: { tooltip: true } },
+  { title: '账号', key: 'account_phone', width: 140 },
+  {
+    title: '采集类型',
+    key: 'collect_type',
+    width: 100,
+    render: (row) => TYPE_LABEL[row.collect_type ?? ''] ?? row.collect_type ?? '-',
+  },
+  { title: '课程数', key: 'course_count', width: 80, align: 'center' },
+  { title: '题目数', key: 'question_count', width: 80, align: 'center' },
   {
     title: '状态',
     key: 'status',
-    width: 90,
+    width: 100,
+    align: 'center',
     render: (row) => statusTag(row.status),
   },
-  { title: '进度', key: 'progress', width: 80 },
-  { title: '命中', key: 'result_count', width: 80 },
-  { title: '创建', key: 'created_at', width: 170 },
-  { title: '完成', key: 'finished_at', width: 170 },
+  {
+    title: '错误信息',
+    key: 'error_message',
+    minWidth: 180,
+    ellipsis: { tooltip: true },
+    render: (row) => row.error_message || '-',
+  },
+  { title: '创建时间', key: 'created_at', width: 170 },
   {
     title: '操作',
     key: 'actions',
@@ -191,9 +211,9 @@ const columns: DataTableColumns<AdminCollectApi.Task> = [
             ? h(
                 NButton,
                 {
+                  onClick: () => onRetry(row),
                   size: 'small',
                   type: 'primary',
-                  onClick: () => onRetry(row),
                 },
                 () => '重试',
               )
@@ -217,7 +237,7 @@ onMounted(load);
         <NInputGroup>
           <NInput
             v-model:value="filter.keyword"
-            placeholder="任务号/关键词/来源"
+            placeholder="任务号/账号"
             clearable
             style="width: 260px"
             @keydown.enter="onSearch"
@@ -258,45 +278,35 @@ onMounted(load);
       style="width: 720px"
     >
       <div v-if="detailLoading">加载中...</div>
-      <NDescriptions v-else-if="detail" bordered :column="2" label-placement="left">
+      <NDescriptions
+        v-else-if="detail"
+        bordered
+        :column="2"
+        label-placement="left"
+      >
         <NDescriptionsItem label="ID">{{ detail.id }}</NDescriptionsItem>
         <NDescriptionsItem label="任务号">{{ detail.task_no }}</NDescriptionsItem>
         <NDescriptionsItem label="用户ID">{{ detail.user_id ?? '-' }}</NDescriptionsItem>
-        <NDescriptionsItem label="来源">{{ detail.source ?? '-' }}</NDescriptionsItem>
-        <NDescriptionsItem label="关键词">{{ detail.keyword ?? '-' }}</NDescriptionsItem>
-        <NDescriptionsItem label="状态">
-          <NTag
-            size="small"
-            :type="
-              detail.status === 2
-                ? 'success'
-                : detail.status === 3
-                  ? 'error'
-                  : detail.status === 4
-                    ? 'warning'
-                    : detail.status === 1
-                      ? 'info'
-                      : 'default'
-            "
-          >
-            {{
-              {
-                0: '待执行',
-                1: '执行中',
-                2: '成功',
-                3: '失败',
-                4: '已停止',
-              }[detail.status] ?? `未知(${detail.status})`
-            }}
-          </NTag>
+        <NDescriptionsItem label="账号">{{ detail.account_phone ?? '-' }}</NDescriptionsItem>
+        <NDescriptionsItem label="采集类型">
+          {{ TYPE_LABEL[detail.collect_type ?? ''] ?? detail.collect_type ?? '-' }}
         </NDescriptionsItem>
-        <NDescriptionsItem label="进度">{{ detail.progress ?? '-' }}</NDescriptionsItem>
-        <NDescriptionsItem label="命中条数">{{ detail.result_count ?? '-' }}</NDescriptionsItem>
+        <NDescriptionsItem label="状态">
+          <component :is="statusTag(detail.status)" />
+        </NDescriptionsItem>
+        <NDescriptionsItem label="课程数">{{ detail.course_count ?? '-' }}</NDescriptionsItem>
+        <NDescriptionsItem label="题目数">{{ detail.question_count ?? '-' }}</NDescriptionsItem>
+        <NDescriptionsItem label="成功/失败">
+          {{ detail.success_count ?? 0 }} / {{ detail.fail_count ?? 0 }}
+        </NDescriptionsItem>
+        <NDescriptionsItem label="Runner PID">{{ detail.runner_script || '-' }}</NDescriptionsItem>
         <NDescriptionsItem label="创建时间">{{ detail.created_at }}</NDescriptionsItem>
         <NDescriptionsItem label="更新时间">{{ detail.updated_at ?? '-' }}</NDescriptionsItem>
-        <NDescriptionsItem label="完成时间" :span="2">{{ detail.finished_at ?? '-' }}</NDescriptionsItem>
-        <NDescriptionsItem label="消息" :span="2">
-          <div style="white-space: pre-wrap">{{ detail.message || '-' }}</div>
+        <NDescriptionsItem v-if="detail.course_ids" label="课程 IDs" :span="2">
+          <span class="break-all text-xs">{{ detail.course_ids }}</span>
+        </NDescriptionsItem>
+        <NDescriptionsItem v-if="detail.error_message" label="错误信息" :span="2">
+          <div class="text-error" style="white-space: pre-wrap">{{ detail.error_message }}</div>
         </NDescriptionsItem>
       </NDescriptions>
     </NModal>

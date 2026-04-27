@@ -16,15 +16,24 @@ export namespace AdminCollectApi {
     id: number;
     task_no: string;
     user_id?: number;
-    source?: string;
-    keyword?: string;
+    account_id?: number;
+    account_phone?: string;
+    /** courses | course | chapter | exam | homework */
+    collect_type?: string;
+    course_count?: number;
+    question_count?: number;
+    success_count?: number;
+    fail_count?: number;
+    /** 0=待执行 1=执行中 2=成功 3=失败 4=已停止 */
     status: number;
-    progress?: number;
-    message?: string;
-    result_count?: number;
+    error_message?: null | string;
+    runner_script?: null | string;
+    next_script?: null | string;
     created_at: string;
+    /** 详情才返 */
+    course_ids?: string;
+    courses_snapshot?: null | string;
     updated_at?: string;
-    finished_at?: string;
   }
 
   export interface ListParams {
