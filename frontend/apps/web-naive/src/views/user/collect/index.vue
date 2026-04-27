@@ -134,8 +134,14 @@ const someChecked = computed(
   () => selectedCount.value > 0 && selectedCount.value < totalCount.value,
 );
 
-function courseKey(c: UserCollectApi.QueryCoursesResult['courses'][number]) {
-  return String(c.courseId ?? c.clazzId ?? '');
+function courseKey(
+  c: UserCollectApi.QueryCoursesResult['courses'][number],
+  idx: number,
+) {
+  // 后端 courseId 偶有解析为空（regex 没匹配到），此时退到 idx 兜底，
+  // 避免多门空 id 课程共用 "" key → 选一个看起来全选。
+  const id = String(c.courseId ?? c.clazzId ?? '').trim();
+  return id || `__idx_${idx}`;
 }
 
 function toggleCourse(id: string, checked: boolean) {
@@ -151,7 +157,7 @@ function toggleCourse(id: string, checked: boolean) {
 function toggleAll(checked: boolean) {
   if (isWholeAccount.value) return;
   selectedCourseIds.value = checked
-    ? courses.value.map((c) => courseKey(c)).filter(Boolean)
+    ? courses.value.map((c, i) => courseKey(c, i)).filter(Boolean)
     : [];
 }
 
@@ -229,19 +235,24 @@ async function onSubmit() {
   submitting.value = true;
   try {
     const ids = isWholeAccount.value
-      ? courses.value.map((c) => courseKey(c)).filter(Boolean)
+      ? courses.value.map((c, i) => courseKey(c, i)).filter(Boolean)
       : selectedCourseIds.value;
     // 课程快照：保留所选课程的 id+name，详情页"查看课程"渲染列表用
-    const snapshot = courses.value
-      .filter((c) => ids.includes(courseKey(c)))
-      .map((c) => ({
-        courseId: courseKey(c),
-        courseName: c.courseName ?? '',
-      }));
+    // 真 courseId 才进 course_ids（worker 用），合成 __idx_ 的过滤掉
+    const selectedCourses = courses.value.filter((c, i) =>
+      ids.includes(courseKey(c, i)),
+    );
+    const realIds = selectedCourses
+      .map((c) => String(c.courseId ?? c.clazzId ?? '').trim())
+      .filter(Boolean);
+    const snapshot = selectedCourses.map((c) => ({
+      courseId: String(c.courseId ?? c.clazzId ?? ''),
+      courseName: c.courseName ?? '',
+    }));
     const payload: UserCollectApi.SubmitParams = {
       ...form.value,
-      course_ids: ids.join(','),
-      course_count: ids.length,
+      course_ids: realIds.join(','),
+      course_count: selectedCourses.length,
       courses_snapshot: JSON.stringify(snapshot),
     };
     const res = await submitCollectApi(payload);
@@ -527,7 +538,7 @@ onMounted(loadList);
       :on-close="closeWizard"
       @update:show="(v) => !v && closeWizard()"
     >
-      <NForm :model="form" label-placement="left" label-width="70">
+      <NForm :model="form" label-placement="left" label-width="80">
         <div class="grid grid-cols-2 gap-x-4">
           <NFormItem label="账号" required>
             <NInput
@@ -605,17 +616,17 @@ onMounted(loadList);
               :class="{ 'course-list--locked': isWholeAccount }"
             >
               <div
-                v-for="c in courses"
-                :key="courseKey(c)"
+                v-for="(c, i) in courses"
+                :key="courseKey(c, i)"
                 class="course-item"
               >
                 <NCheckbox
                   :checked="
                     isWholeAccount ||
-                    selectedCourseIds.includes(courseKey(c))
+                    selectedCourseIds.includes(courseKey(c, i))
                   "
                   :disabled="isWholeAccount || submitting"
-                  @update:checked="(v: boolean) => toggleCourse(courseKey(c), v)"
+                  @update:checked="(v: boolean) => toggleCourse(courseKey(c, i), v)"
                 >
                   <span class="course-name">{{
                     c.courseName ?? '(未命名)'
