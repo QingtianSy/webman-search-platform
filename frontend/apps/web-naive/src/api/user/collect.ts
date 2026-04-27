@@ -47,6 +47,8 @@ export namespace UserCollectApi {
     course_ids: string;
     /** 提交时课程快照 JSON 字符串：[{courseId, courseName}]。无快照时为空串。 */
     courses_snapshot?: null | string;
+    /** 按 course_id 聚合的题目数；Mongo 不可用时为 {} */
+    course_stats?: Record<string, number>;
     updated_at: string;
   }
 

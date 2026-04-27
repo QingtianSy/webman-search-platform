@@ -599,6 +599,37 @@ class QuestionRepository
         }
     }
 
+    /**
+     * 按 task_no 聚合，每个 course_id 下的题目数。
+     * 给"采集任务详情 → 查看课程"用，前端展示每门课的题目数列。
+     * 返回 ['course_id_1' => 12, 'course_id_2' => 5]，Mongo 不可用 / 失败时返 []。
+     */
+    public function countByTaskNoGroupByCourse(string $taskNo): array
+    {
+        $db = MongoClient::connection();
+        if (!$db) {
+            return [];
+        }
+        try {
+            $cursor = $db->selectCollection('questions')->aggregate([
+                ['$match' => ['task_no' => $taskNo]],
+                ['$group' => ['_id' => '$course_id', 'count' => ['$sum' => 1]]],
+            ]);
+            $map = [];
+            foreach ($cursor as $row) {
+                $cid = (string) ($row['_id'] ?? '');
+                if ($cid === '') {
+                    continue;
+                }
+                $map[$cid] = (int) ($row['count'] ?? 0);
+            }
+            return $map;
+        } catch (\Throwable $e) {
+            error_log("[QuestionRepository] countByTaskNoGroupByCourse failed: " . $e->getMessage());
+            return [];
+        }
+    }
+
     // 采集导入后的 ES 索引回灌用：按 task_no 流式 yield，避免一次性把整批题目（可能 10W+）全部堆到 PHP 内存。
     // 调用方负责在外层做 2000 条一批的 bulkIndex。
     public function findByTaskNoIterator(string $taskNo): \Generator

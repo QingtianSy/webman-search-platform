@@ -305,6 +305,7 @@ function statusForCourse(taskStatus: number): CourseRow['status'] {
 
 function buildCourseRows(detail: UserCollectApi.TaskDetail): CourseRow[] {
   const status = statusForCourse(detail.status);
+  const stats = detail.course_stats ?? {};
   // 优先用快照（含 courseName）；没有快照退回 course_ids 字符串
   const raw = detail.courses_snapshot ?? '';
   if (raw) {
@@ -314,14 +315,19 @@ function buildCourseRows(detail: UserCollectApi.TaskDetail): CourseRow[] {
         courseName?: string;
       }>;
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((c, i) => ({
-          courseId: String(c.courseId ?? ''),
-          courseName: c.courseName ?? '(未命名)',
-          index: i + 1,
-          // 后端目前只能给到任务级总数，按课程数均摊作为参考；status=0/1 时未知
-          questionCount: detail.status === 2 ? '-' : '',
-          status,
-        }));
+        return parsed.map((c, i) => {
+          const cid = String(c.courseId ?? '');
+          const count = cid && stats[cid] != null ? stats[cid] : '';
+          return {
+            courseId: cid,
+            courseName: c.courseName ?? '(未命名)',
+            index: i + 1,
+            // status=2 时若 mongo 给不到数就 0；进行中显示空
+            questionCount:
+              count === '' && detail.status === 2 ? 0 : count,
+            status,
+          };
+        });
       }
     } catch {
       // 落到 course_ids fallback
@@ -332,7 +338,7 @@ function buildCourseRows(detail: UserCollectApi.TaskDetail): CourseRow[] {
     courseId: id,
     courseName: `课程 ${id}`,
     index: i + 1,
-    questionCount: '',
+    questionCount: stats[id] ?? (detail.status === 2 ? 0 : ''),
     status,
   }));
 }
@@ -471,7 +477,7 @@ const courseColumns: DataTableColumns<CourseRow> = [
     key: 'questionCount',
     width: 100,
     align: 'center',
-    render: (row) => row.questionCount || '-',
+    render: (row) => (row.questionCount === '' ? '-' : String(row.questionCount)),
   },
   {
     title: '状态',

@@ -3,6 +3,7 @@
 namespace app\service\user;
 
 use app\exception\BusinessException;
+use app\repository\mongo\QuestionRepository;
 use app\repository\mysql\CollectAccountRepository;
 use app\repository\mysql\CollectTaskDetailRepository;
 use app\repository\mysql\CollectTaskRepository;
@@ -27,11 +28,18 @@ class CollectService
     public function detail(int $userId, string $taskNo): array
     {
         try {
-            return (new CollectTaskDetailRepository())->findByTaskNoStrict($taskNo, $userId);
+            $row = (new CollectTaskDetailRepository())->findByTaskNoStrict($taskNo, $userId);
         } catch (\Throwable $e) {
             error_log("[CollectService] detail failed: " . $e->getMessage());
             throw new BusinessException('采集任务详情暂不可用，请稍后重试', 50001);
         }
+        if (empty($row)) {
+            return $row;
+        }
+        // 顺便把每门课的题目数算出来给前端"查看课程"列表用。
+        // Mongo 不可用就返 []，前端降级到 - 占位，不让详情整体失败。
+        $row['course_stats'] = (new QuestionRepository())->countByTaskNoGroupByCourse($taskNo);
+        return $row;
     }
 
     public function queryCourses(string $account, string $password): array
