@@ -566,7 +566,7 @@ onMounted(loadList);
           </span>
         </div>
 
-        <NFormItem label="采集类型" required>
+        <NFormItem v-if="coursesResult" label="采集类型" required>
           <NRadioGroup v-model:value="form.collect_type" :disabled="submitting">
             <NRadio
               v-for="opt in TYPE_OPTIONS"
@@ -578,62 +578,57 @@ onMounted(loadList);
           </NRadioGroup>
         </NFormItem>
 
-        <NFormItem label="课程选择">
+        <NFormItem v-if="coursesResult" label="课程选择">
           <div class="w-full">
-            <div v-if="!coursesResult" class="text-muted-foreground text-xs">
-              请先点「查询课程」
-            </div>
-            <template v-else>
-              <div class="mb-2 flex items-center gap-3">
-                <NCheckbox
-                  v-if="!isWholeAccount"
-                  :checked="allChecked"
-                  :indeterminate="someChecked"
-                  :disabled="submitting"
-                  @update:checked="toggleAll"
-                >
-                  全选
-                </NCheckbox>
-                <span
-                  v-if="isWholeAccount"
-                  class="text-muted-foreground text-xs"
-                >
-                  整号采集将采集所有课程，已自动选中全部课程
-                </span>
-                <span v-else class="text-muted-foreground text-xs">
-                  已选: {{ selectedCount }} / {{ totalCount }}
-                </span>
-              </div>
-              <div
-                class="course-list"
-                :class="{ 'course-list--locked': isWholeAccount }"
+            <div class="mb-2 flex items-center gap-3">
+              <NCheckbox
+                v-if="!isWholeAccount"
+                :checked="allChecked"
+                :indeterminate="someChecked"
+                :disabled="submitting"
+                @update:checked="toggleAll"
               >
-                <div
-                  v-for="c in courses"
-                  :key="courseKey(c)"
-                  class="course-item"
+                全选
+              </NCheckbox>
+              <span
+                v-if="isWholeAccount"
+                class="text-muted-foreground text-xs"
+              >
+                整号采集将采集所有课程，已自动选中全部课程
+              </span>
+              <span v-else class="text-muted-foreground text-xs">
+                已选: {{ selectedCount }} / {{ totalCount }}
+              </span>
+            </div>
+            <div
+              class="course-list"
+              :class="{ 'course-list--locked': isWholeAccount }"
+            >
+              <div
+                v-for="c in courses"
+                :key="courseKey(c)"
+                class="course-item"
+              >
+                <NCheckbox
+                  :checked="
+                    isWholeAccount ||
+                    selectedCourseIds.includes(courseKey(c))
+                  "
+                  :disabled="isWholeAccount || submitting"
+                  @update:checked="(v: boolean) => toggleCourse(courseKey(c), v)"
                 >
-                  <NCheckbox
-                    :checked="
-                      isWholeAccount ||
-                      selectedCourseIds.includes(courseKey(c))
-                    "
-                    :disabled="isWholeAccount || submitting"
-                    @update:checked="(v: boolean) => toggleCourse(courseKey(c), v)"
+                  <span class="course-name">{{
+                    c.courseName ?? '(未命名)'
+                  }}</span>
+                  <span
+                    v-if="c.teacherName"
+                    class="course-meta text-muted-foreground"
                   >
-                    <span class="course-name">{{
-                      c.courseName ?? '(未命名)'
-                    }}</span>
-                    <span
-                      v-if="c.teacherName"
-                      class="course-meta text-muted-foreground"
-                    >
-                      {{ c.teacherName }}
-                    </span>
-                  </NCheckbox>
-                </div>
+                    {{ c.teacherName }}
+                  </span>
+                </NCheckbox>
               </div>
-            </template>
+            </div>
           </div>
         </NFormItem>
       </NForm>
