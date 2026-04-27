@@ -17,7 +17,7 @@ class AnnouncementController
 
         $builder = Announcement::query()->where('status', 1)
             ->where(function ($q) {
-                $q->whereNull('publish_at')->orWhere('publish_at', '<=', now());
+                $q->whereNull('publish_at')->orWhere('publish_at', '<=', date('Y-m-d H:i:s'));
             });
         if (in_array($type, ['notice', 'announcement'], true)) {
             $builder->where('type', $type);
@@ -48,7 +48,7 @@ class AnnouncementController
             ->where('id', $id)
             ->where('status', 1)
             ->where(function ($q) {
-                $q->whereNull('publish_at')->orWhere('publish_at', '<=', now());
+                $q->whereNull('publish_at')->orWhere('publish_at', '<=', date('Y-m-d H:i:s'));
             })
             ->first(['id', 'title', 'content', 'type', 'publish_at', 'created_at']);
 
