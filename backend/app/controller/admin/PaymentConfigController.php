@@ -24,19 +24,13 @@ class PaymentConfigController
         'payment_max_amount',
     ];
 
-    // 这几个字段 list() 返回时会被 SystemConfigAdminService::maskRow 改成 head****tail / ****，
-    // 如果管理员只是打开列表点保存，前端会把脱敏串原样回传，这里必须拦下来，
-    // 否则真实密钥会被覆盖成 **** 导致支付链路全挂。
-    private const MASKABLE_KEYS = [
-        'epay_key',
-        'epay_platform_public_key',
-        'epay_merchant_private_key',
-    ];
-
     public function list(Request $request)
     {
-        $service = new SystemConfigAdminService();
-        $configs = $service->getByGroup('payment');
+        try {
+            $configs = (new SystemConfigRepository())->getByGroupStrict('payment');
+        } catch (\RuntimeException $e) {
+            return ApiResponse::error(50001, '配置服务暂不可用，请稍后重试');
+        }
         return ApiResponse::success([
             'list' => $configs,
             'total' => count($configs),
@@ -52,12 +46,6 @@ class PaymentConfigController
         }
         if (!in_array($key, self::ALLOWED_KEYS, true)) {
             return ApiResponse::error(40001, '不允许修改该配置');
-        }
-
-        // 敏感字段且值里带 **** 视为脱敏回写：拒绝保存，避免把真实密钥覆盖成掩码串。
-        // 想"不改"就留空/不传；想改就填完整新值。
-        if (in_array($key, self::MASKABLE_KEYS, true) && str_contains((string) $value, '****')) {
-            return ApiResponse::error(40001, '该字段当前为脱敏展示，请填写完整新值后再保存');
         }
 
         if (in_array($key, ['epay_alipay_enabled', 'epay_wxpay_enabled', 'epay_qqpay_enabled'], true)) {
