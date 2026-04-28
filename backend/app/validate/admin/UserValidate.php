@@ -77,4 +77,45 @@ class UserValidate
             'role_ids' => array_map('intval', $roleIds),
         ];
     }
+
+    public function adjustBalance(array $data): array
+    {
+        $id = (int) ($data['id'] ?? 0);
+        if ($id <= 0) {
+            throw new BusinessException('用户ID不能为空', ResponseCode::PARAM_ERROR);
+        }
+        $amount = (float) ($data['amount'] ?? 0);
+        if ($amount == 0) {
+            throw new BusinessException('调整金额不能为 0', ResponseCode::PARAM_ERROR);
+        }
+        $remark = trim((string) ($data['remark'] ?? ''));
+        if ($remark === '') {
+            throw new BusinessException('调整备注不能为空', ResponseCode::PARAM_ERROR);
+        }
+        return ['id' => $id, 'amount' => $amount, 'remark' => $remark];
+    }
+
+    public function setSubscription(array $data): array
+    {
+        $id = (int) ($data['id'] ?? 0);
+        if ($id <= 0) {
+            throw new BusinessException('用户ID不能为空', ResponseCode::PARAM_ERROR);
+        }
+        // plan_id = null/0 表示清除套餐
+        $planId = isset($data['plan_id']) ? (int) $data['plan_id'] : null;
+        return ['id' => $id, 'plan_id' => $planId ?: null];
+    }
+
+    public function resetPassword(array $data): array
+    {
+        $id = (int) ($data['id'] ?? 0);
+        if ($id <= 0) {
+            throw new BusinessException('用户ID不能为空', ResponseCode::PARAM_ERROR);
+        }
+        $newPassword = (string) ($data['new_password'] ?? '');
+        if (mb_strlen($newPassword) < 6) {
+            throw new BusinessException('新密码长度不能小于6位', ResponseCode::PARAM_ERROR);
+        }
+        return ['id' => $id, 'new_password' => $newPassword];
+    }
 }

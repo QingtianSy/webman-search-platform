@@ -156,6 +156,10 @@ Route::group('/api/v1/admin', function () {
     Route::delete('/user/delete', [UserController::class, 'delete']);
     Route::put('/user/toggle-status', [UserController::class, 'toggleStatus']);
     Route::put('/user/assign-roles', [UserController::class, 'assignRoles']);
+    Route::put('/user/adjust-balance', [UserController::class, 'adjustBalance']);
+    Route::put('/user/set-subscription', [UserController::class, 'setSubscription']);
+    Route::put('/user/reset-password', [UserController::class, 'resetPassword']);
+    Route::post('/user/force-offline', [UserController::class, 'forceOffline']);
     Route::get('/role/list', [RoleController::class, 'index']);
     Route::post('/role/create', [RoleController::class, 'create']);
     Route::put('/role/update', [RoleController::class, 'update']);

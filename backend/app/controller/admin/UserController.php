@@ -49,4 +49,40 @@ class UserController
             '角色分配成功'
         );
     }
+
+    public function adjustBalance(Request $request)
+    {
+        $data = (new UserValidate())->adjustBalance($request->post());
+        return ApiResponse::success(
+            (new UserAdminService())->adjustBalance($data['id'], $data['amount'], $data['remark']),
+            '余额调整成功'
+        );
+    }
+
+    public function setSubscription(Request $request)
+    {
+        $data = (new UserValidate())->setSubscription($request->post());
+        return ApiResponse::success(
+            (new UserAdminService())->setSubscription($data['id'], $data['plan_id']),
+            $data['plan_id'] ? '套餐设置成功' : '套餐已清除'
+        );
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $data = (new UserValidate())->resetPassword($request->post());
+        return ApiResponse::success(
+            (new UserAdminService())->resetPassword($data['id'], $data['new_password']),
+            '密码重置成功'
+        );
+    }
+
+    public function forceOffline(Request $request)
+    {
+        $id = AdminId::parse($request->post(), 'id', '用户ID');
+        return ApiResponse::success(
+            (new UserAdminService())->forceOffline($id),
+            '强制下线成功'
+        );
+    }
 }

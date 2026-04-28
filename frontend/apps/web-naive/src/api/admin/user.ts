@@ -10,11 +10,13 @@ import { requestClient } from '#/api/request';
  *   - PUT    /admin/user/assign-roles    body: {user_id, role_ids[]}
  *   - PUT    /admin/user/reset-password  🆕 body: {id, new_password}
  *   - PUT    /admin/user/adjust-balance  🆕 body: {id, amount, remark}（+充值/-消费）
- *   - PUT    /admin/user/gift-plan       🆕 body: {id, plan_id, duration}
+ *   - PUT    /admin/user/set-subscription 🆕 body: {id, plan_id}（plan_id=null 清除套餐）
  *   - POST   /admin/user/force-offline   🆕 body: {id}（同步强制下线）
  *
- * 列表每行返回 roles: [{id,name,code}]，password_hash/password 已在后端 makeHidden 里过滤。
- * 危险行为（改密码 / 禁用 / 改角色）会触发后端 revokeToken：bump sessions_invalidated_at + Redis 标记，原 token 立即失效。
+ * 列表每行返回 roles: [{id,name,code}] + balance + subscription_{name,expire_at,is_unlimited,remain_quota}。
+ * password_hash/password 已在后端 makeHidden 里过滤。
+ * 危险行为（改密码 / 禁用 / 改角色）会触发后端 revokeToken。
+ * 编辑套餐（set-subscription）不会吊销 token——仅清 quota cache。
  */
 export namespace AdminUserApi {
   export interface RoleRef {
@@ -32,8 +34,10 @@ export namespace AdminUserApi {
     status: number;
     avatar?: string;
     balance?: number | string;
-    plan_id?: number | null;
-    plan_expire_at?: string | null;
+    subscription_name?: string | null;
+    subscription_expire_at?: string | null;
+    subscription_is_unlimited?: number | null;
+    subscription_remain_quota?: number | null;
     roles?: RoleRef[];
     created_at?: string;
     updated_at?: string;
@@ -122,13 +126,12 @@ export async function adjustUserBalanceApi(
   });
 }
 
-// 🆕 赠送套餐
-export async function giftUserPlanApi(
+// 🆕 设置/清除套餐（plan_id=null 清除）
+export async function setUserSubscriptionApi(
   id: number,
-  plan_id: number,
-  duration: number,
+  plan_id: number | null,
 ) {
-  return requestClient.put('/admin/user/gift-plan', { id, plan_id, duration });
+  return requestClient.put('/admin/user/set-subscription', { id, plan_id });
 }
 
 // 🆕 强制下线

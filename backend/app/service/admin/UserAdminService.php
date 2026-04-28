@@ -4,6 +4,8 @@ namespace app\service\admin;
 
 use app\exception\BusinessException;
 use app\model\admin\User;
+use app\repository\mysql\BalanceLogRepository;
+use app\repository\redis\QuotaCacheRepository;
 use app\repository\redis\TokenCacheRepository;
 use app\repository\redis\UserAuthCacheRepository;
 use app\service\auth\JwtService;
@@ -47,9 +49,17 @@ class UserAdminService
 
         $userIds = array_column($list, 'id');
         $roleMap = $this->getRoleMap($userIds);
+        $walletMap = $this->getWalletMap($userIds);
+        $subMap = $this->getSubscriptionMap($userIds);
         foreach ($list as &$row) {
             unset($row['type']);
             $row['roles'] = $roleMap[(int) $row['id']] ?? [];
+            $row['balance'] = $walletMap[(int) $row['id']] ?? '0.00';
+            $sub = $subMap[(int) $row['id']] ?? null;
+            $row['subscription_name'] = $sub['name'] ?? null;
+            $row['subscription_expire_at'] = $sub['expire_at'] ?? null;
+            $row['subscription_is_unlimited'] = $sub ? (int) $sub['is_unlimited'] : null;
+            $row['subscription_remain_quota'] = $sub ? (int) $sub['remain_quota'] : null;
         }
         return Pagination::format($list, $total, $page, $pageSize);
     }
@@ -273,5 +283,163 @@ class UserAdminService
             ];
         }
         return $map;
+    }
+
+    protected function getWalletMap(array $userIds): array
+    {
+        if (empty($userIds)) {
+            return [];
+        }
+        $rows = Db::table('wallets')
+            ->whereIn('user_id', $userIds)
+            ->select('user_id', 'balance')
+            ->get()
+            ->toArray();
+        $map = [];
+        foreach ($rows as $r) {
+            $r = (array) $r;
+            $map[(int) $r['user_id']] = $r['balance'];
+        }
+        return $map;
+    }
+
+    protected function getSubscriptionMap(array $userIds): array
+    {
+        if (empty($userIds)) {
+            return [];
+        }
+        $rows = Db::table('user_subscriptions')
+            ->whereIn('user_id', $userIds)
+            ->where(function ($q) {
+                $q->whereNull('expire_at')->orWhere('expire_at', '>', date('Y-m-d H:i:s'));
+            })
+            ->select('user_id', 'name', 'is_unlimited', 'remain_quota', 'expire_at')
+            ->orderBy('id', 'desc')
+            ->get()
+            ->toArray();
+        $map = [];
+        foreach ($rows as $r) {
+            $r = (array) $r;
+            $uid = (int) $r['user_id'];
+            if (!isset($map[$uid])) {
+                $map[$uid] = $r;
+            }
+        }
+        return $map;
+    }
+
+    public function adjustBalance(int $id, float $amount, string $remark): array
+    {
+        $row = User::query()->find($id);
+        if (!$row) {
+            throw new BusinessException('用户不存在', 40001);
+        }
+        if ($amount == 0) {
+            throw new BusinessException('调整金额不能为 0', 40001);
+        }
+
+        return Db::transaction(function () use ($id, $amount, $remark) {
+            $wallet = Db::table('wallets')->where('user_id', $id)->lockForUpdate()->first();
+            if (!$wallet) {
+                Db::table('wallets')->insert([
+                    'user_id' => $id, 'balance' => 0, 'frozen_balance' => 0,
+                    'total_recharge' => 0, 'total_consume' => 0,
+                    'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s'),
+                ]);
+                $wallet = Db::table('wallets')->where('user_id', $id)->lockForUpdate()->first();
+            }
+            $wallet = (array) $wallet;
+            $oldBalance = (float) $wallet['balance'];
+            $newBalance = round($oldBalance + $amount, 2);
+            if ($newBalance < 0) {
+                throw new BusinessException('余额不足，扣减后为负', 40001);
+            }
+
+            $updates = ['balance' => $newBalance, 'updated_at' => date('Y-m-d H:i:s')];
+            if ($amount > 0) {
+                $updates['total_recharge'] = Db::raw("total_recharge + {$amount}");
+            } else {
+                $absAmount = abs($amount);
+                $updates['total_consume'] = Db::raw("total_consume + {$absAmount}");
+            }
+            Db::table('wallets')->where('user_id', $id)->update($updates);
+
+            (new BalanceLogRepository())->create([
+                'user_id' => $id,
+                'type' => $amount > 0 ? 'admin_recharge' : 'admin_deduct',
+                'amount' => $amount,
+                'balance_after' => $newBalance,
+                'remark' => $remark,
+            ]);
+
+            return ['success' => true, 'action' => 'adjust_balance', 'id' => $id, 'balance' => number_format($newBalance, 2, '.', '')];
+        });
+    }
+
+    public function setSubscription(int $id, ?int $planId): array
+    {
+        $row = User::query()->find($id);
+        if (!$row) {
+            throw new BusinessException('用户不存在', 40001);
+        }
+
+        return Db::transaction(function () use ($id, $planId) {
+            if ($planId === null || $planId === 0) {
+                // 清除套餐
+                Db::table('user_subscriptions')->where('user_id', $id)->delete();
+                (new QuotaCacheRepository())->deleteUserQuota($id);
+                return ['success' => true, 'action' => 'clear_subscription', 'id' => $id];
+            }
+
+            $plan = Db::table('plans')->where('id', $planId)->where('status', 1)->first();
+            if (!$plan) {
+                throw new BusinessException('套餐不存在或已下架', 40001);
+            }
+            $plan = (array) $plan;
+
+            $duration = (int) $plan['duration'];
+            $isUnlimited = (int) $plan['is_unlimited'];
+            $quota = (int) $plan['quota'];
+            $expireAt = $duration > 0 ? date('Y-m-d H:i:s', strtotime("+{$duration} days")) : null;
+            $remainQuota = $isUnlimited ? 0 : $quota;
+
+            // 清旧 + 插新
+            Db::table('user_subscriptions')->where('user_id', $id)->delete();
+            Db::table('user_subscriptions')->insert([
+                'user_id' => $id,
+                'name' => $plan['name'],
+                'is_unlimited' => $isUnlimited,
+                'remain_quota' => $remainQuota,
+                'used_quota' => 0,
+                'expire_at' => $expireAt,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+            (new QuotaCacheRepository())->deleteUserQuota($id);
+
+            return ['success' => true, 'action' => 'set_subscription', 'id' => $id, 'plan_name' => $plan['name']];
+        });
+    }
+
+    public function resetPassword(int $id, string $newPassword): array
+    {
+        $row = User::query()->find($id);
+        if (!$row) {
+            throw new BusinessException('用户不存在', 40001);
+        }
+        $row->password_hash = password_hash($newPassword, PASSWORD_DEFAULT);
+        $row->save();
+        $this->revokeToken($id);
+        return ['success' => true, 'action' => 'reset_password', 'id' => $id];
+    }
+
+    public function forceOffline(int $id): array
+    {
+        $row = User::query()->find($id);
+        if (!$row) {
+            throw new BusinessException('用户不存在', 40001);
+        }
+        $this->revokeToken($id);
+        return ['success' => true, 'action' => 'force_offline', 'id' => $id];
     }
 }

@@ -2,7 +2,7 @@
 // 管理端 · 用户管理。docs/07 §3.2.2。
 // 列表：+ 状态 switch / 脱敏显示 / 余额 & 套餐列
 // 详情 Drawer 4 Tab：基本 · 角色 · 套餐/额度 · 安全
-// 危险操作：重置密码 · 强制下线 · 调整余额 · 赠送套餐
+// 危险操作：重置密码 · 强制下线 · 调整余额 · 编辑套餐
 import type { DataTableColumns } from 'naive-ui';
 
 import { h, onMounted, reactive, ref } from 'vue';
@@ -38,10 +38,10 @@ import {
   createUserApi,
   deleteUserApi,
   forceOfflineUserApi,
-  giftUserPlanApi,
   listRolesApi,
   listUsersApi,
   resetUserPasswordApi,
+  setUserSubscriptionApi,
   toggleUserStatusApi,
   updateUserApi,
 } from '#/api/admin';
@@ -145,7 +145,6 @@ const form = reactive<{
   balance_delta: number;
   balance_remark: string;
   plan_id: null | number;
-  plan_duration: number;
 }>({
   username: '',
   password: '',
@@ -157,7 +156,6 @@ const form = reactive<{
   balance_delta: 0,
   balance_remark: '',
   plan_id: null,
-  plan_duration: 30,
 });
 const saving = ref(false);
 
@@ -175,7 +173,6 @@ function openCreate() {
     balance_delta: 0,
     balance_remark: '',
     plan_id: null,
-    plan_duration: 30,
   });
   editorVisible.value = true;
 }
@@ -194,7 +191,6 @@ function openEdit(row: AdminUserApi.User) {
     balance_delta: 0,
     balance_remark: '',
     plan_id: null,
-    plan_duration: 30,
   });
   editorVisible.value = true;
 }
@@ -212,13 +208,9 @@ async function onSave() {
     message.warning('密码至少 6 位');
     return;
   }
-  // 编辑模式的余额/套餐校验
+  // 编辑模式的余额校验
   if (editing.value && form.balance_delta !== 0 && !form.balance_remark.trim()) {
     message.warning('调整余额必须填写备注');
-    return;
-  }
-  if (editing.value && form.plan_id && form.plan_duration < 1) {
-    message.warning('赠送套餐时长至少 1 天');
     return;
   }
   saving.value = true;
@@ -243,8 +235,8 @@ async function onSave() {
           form.balance_remark,
         );
       }
-      if (form.plan_id) {
-        await giftUserPlanApi(form.id, form.plan_id, form.plan_duration);
+      if (form.plan_id !== null) {
+        await setUserSubscriptionApi(form.id, form.plan_id || null);
       }
       message.success('更新成功');
     } else {
@@ -294,7 +286,6 @@ const drawerRow = ref<AdminUserApi.User | null>(null);
 const drawerTab = ref<'basic' | 'role' | 'plan' | 'security'>('basic');
 const drawerRoles = ref<number[]>([]);
 const drawerPlanId = ref<number | null>(null);
-const drawerPlanDuration = ref<number>(30);
 const drawerBalance = ref<number>(0);
 const drawerRemark = ref<string>('');
 const drawerNewPassword = ref<string>('');
@@ -302,8 +293,7 @@ const drawerNewPassword = ref<string>('');
 function openDrawer(row: AdminUserApi.User) {
   drawerRow.value = row;
   drawerRoles.value = (row.roles ?? []).map((r) => r.id);
-  drawerPlanId.value = row.plan_id ?? null;
-  drawerPlanDuration.value = 30;
+  drawerPlanId.value = null;
   drawerBalance.value = 0;
   drawerRemark.value = '';
   drawerNewPassword.value = '';
@@ -345,18 +335,22 @@ async function onDrawerAdjustBalance() {
   }
 }
 
-async function onDrawerGiftPlan() {
-  if (!drawerRow.value || !drawerPlanId.value) {
-    message.warning('请选择套餐');
-    return;
-  }
+async function onDrawerSetSubscription() {
+  if (!drawerRow.value) return;
   try {
-    await giftUserPlanApi(
-      drawerRow.value.id,
-      drawerPlanId.value,
-      drawerPlanDuration.value,
-    );
-    message.success('套餐赠送成功');
+    await setUserSubscriptionApi(drawerRow.value.id, drawerPlanId.value);
+    message.success(drawerPlanId.value ? '套餐已设置' : '套餐已清除');
+    load();
+  } catch {
+    // interceptor
+  }
+}
+
+async function onDrawerClearSubscription() {
+  if (!drawerRow.value) return;
+  try {
+    await setUserSubscriptionApi(drawerRow.value.id, null);
+    message.success('套餐已清除');
     load();
   } catch {
     // interceptor
@@ -388,12 +382,6 @@ async function onDrawerForceOffline() {
   }
 }
 
-function planLabel(id?: null | number) {
-  if (!id) return '-';
-  const opt = planOptions.value.find((p) => p.value === id);
-  return opt?.label ?? `套餐 #${id}`;
-}
-
 const columns: DataTableColumns<AdminUserApi.User> = [
   { title: 'ID', key: 'id', width: 70 },
   { title: '用户名', key: 'username', width: 140, ellipsis: { tooltip: true } },
@@ -418,17 +406,20 @@ const columns: DataTableColumns<AdminUserApi.User> = [
   },
   {
     title: '套餐',
-    key: 'plan_id',
+    key: 'subscription_name',
     width: 200,
     render: (r) =>
       h('div', { class: 'flex flex-col' }, [
-        h('span', { class: 'text-sm' }, planLabel(r.plan_id)),
-        r.plan_expire_at
-          ? h(
-              'span',
-              { class: 'text-xs text-muted-foreground' },
-              `到期：${r.plan_expire_at}`,
-            )
+        h('span', { class: 'text-sm' }, r.subscription_name ?? '-'),
+        r.subscription_name
+          ? h('span', { class: 'text-xs text-muted-foreground' }, [
+              r.subscription_is_unlimited
+                ? '不限次'
+                : `剩余 ${r.subscription_remain_quota ?? 0} 次`,
+              r.subscription_expire_at
+                ? ` · 到期：${r.subscription_expire_at}`
+                : ' · 永久',
+            ])
           : null,
       ]),
   },
@@ -623,28 +614,25 @@ onMounted(() => {
             <NInput v-model:value="form.balance_remark" placeholder="必填" />
           </NFormItem>
 
-          <!-- 编辑模式：套餐赠送（走 gift-plan 接口） -->
+          <!-- 编辑模式：套餐变更（走 set-subscription 接口，不吊销 token） -->
           <NFormItem label="当前套餐">
             <span class="text-sm">
-              {{ planLabel(editing.plan_id) }}
+              {{ editing.subscription_name ?? '无' }}
               <span
-                v-if="editing.plan_expire_at"
+                v-if="editing.subscription_expire_at"
                 class="ml-2 text-xs text-muted-foreground"
               >
-                到期：{{ editing.plan_expire_at }}
+                到期：{{ editing.subscription_expire_at }}
               </span>
             </span>
           </NFormItem>
-          <NFormItem label="赠送套餐">
+          <NFormItem label="变更套餐">
             <NSelect
               v-model:value="form.plan_id"
-              :options="planOptions"
-              clearable
+              :options="[{ label: '无套餐（清除）', value: 0 }, ...planOptions]"
               placeholder="留空则不变更"
+              clearable
             />
-          </NFormItem>
-          <NFormItem v-if="form.plan_id" label="赠送时长(天)">
-            <NInputNumber v-model:value="form.plan_duration" :min="1" />
           </NFormItem>
         </template>
       </NForm>
@@ -722,9 +710,10 @@ onMounted(() => {
             <NForm label-placement="left" label-width="auto">
               <NFormItem label="当前套餐">
                 <span class="text-sm">
-                  {{ drawerRow?.plan_id ? `套餐 #${drawerRow.plan_id}` : '无' }}
-                  <span v-if="drawerRow?.plan_expire_at" class="ml-2 text-xs text-muted-foreground">
-                    到期：{{ drawerRow.plan_expire_at }}
+                  {{ drawerRow?.subscription_name ?? '无' }}
+                  <span v-if="drawerRow?.subscription_name" class="ml-2 text-xs text-muted-foreground">
+                    {{ drawerRow?.subscription_is_unlimited ? '不限次' : `剩余 ${drawerRow?.subscription_remain_quota ?? 0} 次` }}
+                    {{ drawerRow?.subscription_expire_at ? ` · 到期：${drawerRow.subscription_expire_at}` : ' · 永久' }}
                   </span>
                 </span>
               </NFormItem>
@@ -733,18 +722,26 @@ onMounted(() => {
               </NFormItem>
             </NForm>
 
-            <NCard title="赠送套餐" size="small" class="mt-3">
+            <NCard title="编辑套餐" size="small" class="mt-3">
+              <p class="text-xs text-muted-foreground mb-3">
+                设置后立即生效，不会影响用户登录状态。
+              </p>
               <NForm label-placement="left" label-width="auto">
                 <NFormItem label="套餐">
-                  <NSelect v-model:value="drawerPlanId" :options="planOptions" />
-                </NFormItem>
-                <NFormItem label="时长 (天)">
-                  <NInputNumber v-model:value="drawerPlanDuration" :min="1" />
+                  <NSelect v-model:value="drawerPlanId" :options="planOptions" clearable placeholder="选择套餐" />
                 </NFormItem>
               </NForm>
-              <NButton type="primary" @click="onDrawerGiftPlan">
-                赠送
-              </NButton>
+              <NSpace>
+                <NButton type="primary" :disabled="!drawerPlanId" @click="onDrawerSetSubscription">
+                  设置套餐
+                </NButton>
+                <NPopconfirm v-if="drawerRow?.subscription_name" @positive-click="onDrawerClearSubscription">
+                  <template #trigger>
+                    <NButton type="warning">清除套餐</NButton>
+                  </template>
+                  确认清除 {{ drawerRow?.username }} 的当前套餐？
+                </NPopconfirm>
+              </NSpace>
             </NCard>
 
             <NCard title="调整余额" size="small" class="mt-3">
