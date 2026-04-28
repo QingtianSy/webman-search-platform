@@ -1,8 +1,4 @@
 <script lang="ts" setup>
-// 管理端 · 用户管理。docs/07 §3.2.2。
-// 列表：+ 状态 switch / 脱敏显示 / 余额 & 套餐列
-// 详情 Drawer 4 Tab：基本 · 角色 · 套餐/额度 · 安全
-// 危险操作：重置密码 · 强制下线 · 调整余额 · 编辑套餐
 import type { DataTableColumns } from 'naive-ui';
 
 import { h, onMounted, reactive, ref } from 'vue';
@@ -25,27 +21,28 @@ import {
   NSelect,
   NSpace,
   NSwitch,
-  NTabs,
   NTabPane,
+  NTabs,
   NTag,
   useMessage,
 } from 'naive-ui';
 
 import {
   adjustUserBalanceApi,
-  type AdminUserApi,
   assignUserRolesApi,
   createUserApi,
   deleteUserApi,
   forceOfflineUserApi,
+  listAdminPlansApi,
   listRolesApi,
   listUsersApi,
   resetUserPasswordApi,
   setUserSubscriptionApi,
   toggleUserStatusApi,
+  type AdminPlanApi,
+  type AdminUserApi,
   updateUserApi,
 } from '#/api/admin';
-import { listAdminPlansApi } from '#/api/admin';
 import { maskEmail, maskMobile } from '#/utils/mask';
 
 const message = useMessage();
@@ -60,6 +57,7 @@ const filter = reactive<{ keyword: string; status: '' | number }>({
   keyword: '',
   status: '',
 });
+
 const statusOptions = [
   { label: '全部', value: '' },
   { label: '启用', value: 1 },
@@ -67,24 +65,46 @@ const statusOptions = [
 ];
 
 const roleOptions = ref<{ label: string; value: number }[]>([]);
+const planCatalog = ref<AdminPlanApi.Plan[]>([]);
 const planOptions = ref<{ label: string; value: number }[]>([]);
+
+function normalizeIdList(values: number[]) {
+  return [...values].map(Number).filter((value) => value > 0).sort((a, b) => a - b);
+}
+
+function sameIdList(left: number[], right: number[]) {
+  const a = normalizeIdList(left);
+  const b = normalizeIdList(right);
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+function getPlanDuration(planId: number | null | undefined) {
+  if (!planId) return null;
+  const plan = planCatalog.value.find((item) => item.id === planId);
+  return plan ? Number(plan.duration ?? 0) : null;
+}
 
 async function loadRoles() {
   try {
     const data = await listRolesApi({ page: 1, page_size: 100 });
     roleOptions.value = (data.list ?? [])
-      .filter((r) => r.status === 1)
-      .map((r) => ({ label: `${r.name}（${r.code}）`, value: r.id }));
+      .filter((role) => role.status === 1)
+      .map((role) => ({
+        label: `${role.name} (${role.code})`,
+        value: role.id,
+      }));
   } catch {
     // ignore
   }
 }
+
 async function loadPlans() {
   try {
     const data = await listAdminPlansApi({ page: 1, page_size: 100 });
-    planOptions.value = (data.list ?? []).map((p: any) => ({
-      label: `${p.name} · ¥${p.price}`,
-      value: p.id,
+    planCatalog.value = data.list ?? [];
+    planOptions.value = planCatalog.value.map((plan) => ({
+      label: `${plan.name} · ¥${plan.price} · ${plan.duration > 0 ? `${plan.duration}天` : '永久'}`,
+      value: plan.id,
     }));
   } catch {
     // ignore
@@ -111,27 +131,31 @@ async function load() {
 
 function onSearch() {
   page.value = 1;
-  load();
+  void load();
 }
+
 function onReset() {
   filter.keyword = '';
   filter.status = '';
   page.value = 1;
-  load();
-}
-function onPageChange(p: number) {
-  page.value = p;
-  load();
-}
-function onPageSizeChange(ps: number) {
-  pageSize.value = ps;
-  page.value = 1;
-  load();
+  void load();
 }
 
-// ========== 新增/编辑 ==========
+function onPageChange(value: number) {
+  page.value = value;
+  void load();
+}
+
+function onPageSizeChange(value: number) {
+  pageSize.value = value;
+  page.value = 1;
+  void load();
+}
+
 const editorVisible = ref(false);
 const editing = ref<AdminUserApi.User | null>(null);
+const saving = ref(false);
+
 const form = reactive<{
   id?: number;
   username: string;
@@ -141,10 +165,10 @@ const form = reactive<{
   email: string;
   status: number;
   role_ids: number[];
-  // 编辑模式下的余额/套餐变更（新增模式不可用）
   balance_delta: number;
   balance_remark: string;
   plan_id: null | number;
+  plan_duration_days: null | number;
 }>({
   username: '',
   password: '',
@@ -156,8 +180,8 @@ const form = reactive<{
   balance_delta: 0,
   balance_remark: '',
   plan_id: null,
+  plan_duration_days: null,
 });
-const saving = ref(false);
 
 function openCreate() {
   editing.value = null;
@@ -173,6 +197,7 @@ function openCreate() {
     balance_delta: 0,
     balance_remark: '',
     plan_id: null,
+    plan_duration_days: null,
   });
   editorVisible.value = true;
 }
@@ -187,12 +212,22 @@ function openEdit(row: AdminUserApi.User) {
     mobile: row.mobile ?? '',
     email: row.email ?? '',
     status: row.status ?? 1,
-    role_ids: (row.roles ?? []).map((r) => r.id),
+    role_ids: (row.roles ?? []).map((role) => role.id),
     balance_delta: 0,
     balance_remark: '',
     plan_id: null,
+    plan_duration_days: null,
   });
   editorVisible.value = true;
+}
+
+function onEditorPlanChange(value: null | number) {
+  form.plan_id = value;
+  if (!value || value <= 0) {
+    form.plan_duration_days = null;
+    return;
+  }
+  form.plan_duration_days = getPlanDuration(value) ?? 30;
 }
 
 async function onSave() {
@@ -208,11 +243,20 @@ async function onSave() {
     message.warning('密码至少 6 位');
     return;
   }
-  // 编辑模式的余额校验
   if (editing.value && form.balance_delta !== 0 && !form.balance_remark.trim()) {
     message.warning('调整余额必须填写备注');
     return;
   }
+  if (
+    editing.value &&
+    form.plan_id !== null &&
+    form.plan_id > 0 &&
+    (form.plan_duration_days === null || form.plan_duration_days < 0)
+  ) {
+    message.warning('套餐时长不能小于 0');
+    return;
+  }
+
   saving.value = true;
   try {
     if (editing.value && form.id) {
@@ -223,21 +267,23 @@ async function onSave() {
         mobile: form.mobile,
         email: form.email,
         status: form.status,
-        role_ids: form.role_ids,
       };
+      const currentRoleIds = (editing.value.roles ?? []).map((role) => role.id);
+      if (!sameIdList(form.role_ids, currentRoleIds)) {
+        payload.role_ids = form.role_ids;
+      }
       if (form.password) payload.password = form.password;
-      await updateUserApi(payload);
-      // 余额 / 套餐走独立接口（各自有业务流水）
       if (form.balance_delta !== 0) {
-        await adjustUserBalanceApi(
-          form.id,
-          form.balance_delta,
-          form.balance_remark,
-        );
+        payload.balance_delta = form.balance_delta;
+        payload.balance_remark = form.balance_remark.trim();
       }
       if (form.plan_id !== null) {
-        await setUserSubscriptionApi(form.id, form.plan_id || null);
+        payload.plan_id = form.plan_id;
+        if (form.plan_id > 0) {
+          payload.plan_duration_days = form.plan_duration_days ?? getPlanDuration(form.plan_id) ?? 30;
+        }
       }
+      await updateUserApi(payload);
       message.success('更新成功');
     } else {
       await createUserApi({
@@ -247,12 +293,12 @@ async function onSave() {
         mobile: form.mobile,
         email: form.email,
         status: form.status,
-        role_ids: form.role_ids,
+        role_ids: form.role_ids.length > 0 ? form.role_ids : undefined,
       });
       message.success('创建成功');
     }
     editorVisible.value = false;
-    load();
+    await load();
   } catch {
     // interceptor
   } finally {
@@ -264,7 +310,7 @@ async function onDelete(row: AdminUserApi.User) {
   try {
     await deleteUserApi(row.id);
     message.success('删除成功');
-    load();
+    await load();
   } catch {
     // interceptor
   }
@@ -274,26 +320,27 @@ async function onToggleStatus(row: AdminUserApi.User) {
   try {
     await toggleUserStatusApi(row.id);
     message.success(row.status === 1 ? '已禁用' : '已启用');
-    load();
+    await load();
   } catch {
     // interceptor
   }
 }
 
-// ========== 详情 Drawer（4 Tab） ==========
 const drawerVisible = ref(false);
 const drawerRow = ref<AdminUserApi.User | null>(null);
-const drawerTab = ref<'basic' | 'role' | 'plan' | 'security'>('basic');
+const drawerTab = ref<'basic' | 'plan' | 'role' | 'security'>('basic');
 const drawerRoles = ref<number[]>([]);
-const drawerPlanId = ref<number | null>(null);
-const drawerBalance = ref<number>(0);
-const drawerRemark = ref<string>('');
-const drawerNewPassword = ref<string>('');
+const drawerPlanId = ref<null | number>(null);
+const drawerPlanDurationDays = ref<null | number>(null);
+const drawerBalance = ref(0);
+const drawerRemark = ref('');
+const drawerNewPassword = ref('');
 
 function openDrawer(row: AdminUserApi.User) {
   drawerRow.value = row;
-  drawerRoles.value = (row.roles ?? []).map((r) => r.id);
+  drawerRoles.value = (row.roles ?? []).map((role) => role.id);
   drawerPlanId.value = null;
+  drawerPlanDurationDays.value = null;
   drawerBalance.value = 0;
   drawerRemark.value = '';
   drawerNewPassword.value = '';
@@ -301,13 +348,22 @@ function openDrawer(row: AdminUserApi.User) {
   drawerVisible.value = true;
 }
 
+function onDrawerPlanChange(value: null | number) {
+  drawerPlanId.value = value;
+  if (!value || value <= 0) {
+    drawerPlanDurationDays.value = null;
+    return;
+  }
+  drawerPlanDurationDays.value = getPlanDuration(value) ?? 30;
+}
+
 async function onDrawerAssignRoles() {
   if (!drawerRow.value) return;
   try {
     await assignUserRolesApi(drawerRow.value.id, drawerRoles.value);
-    message.success('角色已更新（用户 token 立即失效）');
+    message.success('角色已更新，用户 token 会立即失效');
     drawerVisible.value = false;
-    load();
+    await load();
   } catch {
     // interceptor
   }
@@ -326,21 +382,36 @@ async function onDrawerAdjustBalance() {
     await adjustUserBalanceApi(
       drawerRow.value.id,
       drawerBalance.value,
-      drawerRemark.value,
+      drawerRemark.value.trim(),
     );
     message.success('余额已调整');
-    load();
+    drawerBalance.value = 0;
+    drawerRemark.value = '';
+    await load();
   } catch {
     // interceptor
   }
 }
 
 async function onDrawerSetSubscription() {
-  if (!drawerRow.value) return;
+  if (!drawerRow.value || !drawerPlanId.value) {
+    message.warning('请选择套餐');
+    return;
+  }
+  if (drawerPlanDurationDays.value === null || drawerPlanDurationDays.value < 0) {
+    message.warning('套餐时长不能小于 0');
+    return;
+  }
   try {
-    await setUserSubscriptionApi(drawerRow.value.id, drawerPlanId.value);
-    message.success(drawerPlanId.value ? '套餐已设置' : '套餐已清除');
-    load();
+    await setUserSubscriptionApi(
+      drawerRow.value.id,
+      drawerPlanId.value,
+      drawerPlanDurationDays.value,
+    );
+    message.success('套餐已设置');
+    drawerPlanId.value = null;
+    drawerPlanDurationDays.value = null;
+    await load();
   } catch {
     // interceptor
   }
@@ -349,9 +420,9 @@ async function onDrawerSetSubscription() {
 async function onDrawerClearSubscription() {
   if (!drawerRow.value) return;
   try {
-    await setUserSubscriptionApi(drawerRow.value.id, null);
+    await setUserSubscriptionApi(drawerRow.value.id, 0);
     message.success('套餐已清除');
-    load();
+    await load();
   } catch {
     // interceptor
   }
@@ -365,7 +436,7 @@ async function onDrawerResetPassword() {
   }
   try {
     await resetUserPasswordApi(drawerRow.value.id, drawerNewPassword.value);
-    message.success('密码已重置，用户下次登录需使用新密码');
+    message.success('密码已重置，用户需要重新登录');
     drawerNewPassword.value = '';
   } catch {
     // interceptor
@@ -390,34 +461,34 @@ const columns: DataTableColumns<AdminUserApi.User> = [
     title: '手机',
     key: 'mobile',
     width: 130,
-    render: (r) => maskMobile(r.mobile) || '-',
+    render: (row) => maskMobile(row.mobile) || '-',
   },
   {
     title: '邮箱',
     key: 'email',
     width: 180,
-    render: (r) => maskEmail(r.email) || '-',
+    render: (row) => maskEmail(row.email) || '-',
   },
   {
     title: '余额',
     key: 'balance',
     width: 100,
-    render: (r) => `¥${r.balance ?? '0.00'}`,
+    render: (row) => `¥${row.balance ?? '0.00'}`,
   },
   {
     title: '套餐',
     key: 'subscription_name',
-    width: 200,
-    render: (r) =>
+    width: 240,
+    render: (row) =>
       h('div', { class: 'flex flex-col' }, [
-        h('span', { class: 'text-sm' }, r.subscription_name ?? '-'),
-        r.subscription_name
+        h('span', { class: 'text-sm' }, row.subscription_name ?? '-'),
+        row.subscription_name
           ? h('span', { class: 'text-xs text-muted-foreground' }, [
-              r.subscription_is_unlimited
+              row.subscription_is_unlimited
                 ? '不限次'
-                : `剩余 ${r.subscription_remain_quota ?? 0} 次`,
-              r.subscription_expire_at
-                ? ` · 到期：${r.subscription_expire_at}`
+                : `剩余 ${row.subscription_remain_quota ?? 0} 次`,
+              row.subscription_expire_at
+                ? ` · 到期：${row.subscription_expire_at}`
                 : ' · 永久',
             ])
           : null,
@@ -432,9 +503,9 @@ const columns: DataTableColumns<AdminUserApi.User> = [
         NSpace,
         { size: 'small' },
         () =>
-          row.roles?.map((r) =>
-            h(NTag, { size: 'small', type: 'info' }, () => r.name),
-          ) ?? [h('span', { class: 'text-muted-foreground' }, '—')],
+          row.roles?.map((role) =>
+            h(NTag, { size: 'small', type: 'info' }, () => role.name),
+          ) ?? [h('span', { class: 'text-muted-foreground' }, '-')],
       ),
   },
   {
@@ -445,7 +516,9 @@ const columns: DataTableColumns<AdminUserApi.User> = [
       h(NSwitch, {
         size: 'small',
         value: row.status === 1,
-        onUpdateValue: () => onToggleStatus(row),
+        onUpdateValue: () => {
+          void onToggleStatus(row);
+        },
       }),
   },
   { title: '创建时间', key: 'created_at', width: 170 },
@@ -477,9 +550,13 @@ const columns: DataTableColumns<AdminUserApi.User> = [
         ),
         h(
           NPopconfirm,
-          { onPositiveClick: () => onDelete(row) },
           {
-            default: () => '删除不可恢复，关联钱包/API Key/采集账号会一并清理',
+            onPositiveClick: () => {
+              void onDelete(row);
+            },
+          },
+          {
+            default: () => '删除不可恢复，关联钱包、API Key、采集账号会一并清理。',
             trigger: () =>
               h(
                 NButton,
@@ -493,9 +570,9 @@ const columns: DataTableColumns<AdminUserApi.User> = [
 ];
 
 onMounted(() => {
-  loadRoles();
-  loadPlans();
-  load();
+  void loadRoles();
+  void loadPlans();
+  void load();
 });
 </script>
 
@@ -531,7 +608,7 @@ onMounted(() => {
         :columns="columns"
         :data="rows"
         :row-key="(row: AdminUserApi.User) => row.id"
-        :scroll-x="1700"
+        :scroll-x="1760"
         :pagination="{
           page,
           pageSize,
@@ -544,12 +621,11 @@ onMounted(() => {
       />
     </NCard>
 
-    <!-- 编辑/新增 Modal -->
     <NModal
       v-model:show="editorVisible"
       preset="card"
       :title="editing ? '编辑用户' : '新增用户'"
-      style="width: 560px"
+      style="width: 620px"
       :mask-closable="false"
     >
       <NForm label-placement="left" label-width="auto">
@@ -592,7 +668,6 @@ onMounted(() => {
           />
         </NFormItem>
 
-        <!-- 编辑模式：余额调整（走 adjust-balance 接口，带流水） -->
         <template v-if="editing">
           <NFormItem label="当前余额">
             <span class="text-sm">¥{{ editing.balance ?? '0.00' }}</span>
@@ -606,15 +681,10 @@ onMounted(() => {
               style="width: 100%"
             />
           </NFormItem>
-          <NFormItem
-            v-if="form.balance_delta !== 0"
-            label="调整备注"
-            required
-          >
+          <NFormItem v-if="form.balance_delta !== 0" label="调整备注" required>
             <NInput v-model:value="form.balance_remark" placeholder="必填" />
           </NFormItem>
 
-          <!-- 编辑模式：套餐变更（走 set-subscription 接口，不吊销 token） -->
           <NFormItem label="当前套餐">
             <span class="text-sm">
               {{ editing.subscription_name ?? '无' }}
@@ -632,10 +702,21 @@ onMounted(() => {
               :options="[{ label: '无套餐（清除）', value: 0 }, ...planOptions]"
               placeholder="留空则不变更"
               clearable
+              @update:value="onEditorPlanChange"
+            />
+          </NFormItem>
+          <NFormItem v-if="form.plan_id && form.plan_id > 0" label="时长（天）">
+            <NInputNumber
+              v-model:value="form.plan_duration_days"
+              :min="0"
+              :step="1"
+              placeholder="0 表示永久"
+              style="width: 100%"
             />
           </NFormItem>
         </template>
       </NForm>
+
       <template #footer>
         <NSpace justify="end">
           <NButton @click="editorVisible = false">取消</NButton>
@@ -646,15 +727,13 @@ onMounted(() => {
       </template>
     </NModal>
 
-    <!-- 详情 Drawer 4 Tab -->
-    <NDrawer v-model:show="drawerVisible" :width="640" placement="right">
+    <NDrawer v-model:show="drawerVisible" :width="680" placement="right">
       <NDrawerContent
         :title="`用户详情 · ${drawerRow?.username ?? ''}`"
         :native-scrollbar="false"
         closable
       >
         <NTabs v-model:value="drawerTab" type="line">
-          <!-- Tab 1 · 基本 -->
           <NTabPane name="basic" tab="基本">
             <NDescriptions
               v-if="drawerRow"
@@ -688,10 +767,9 @@ onMounted(() => {
             </NDescriptions>
           </NTabPane>
 
-          <!-- Tab 2 · 角色 -->
           <NTabPane name="role" tab="角色">
-            <p class="text-xs text-muted-foreground mb-3">
-              修改后用户 token 立即失效，下次请求需重登。
+            <p class="mb-3 text-xs text-muted-foreground">
+              修改角色后用户 token 会立即失效，下次请求需要重新登录。
             </p>
             <NSelect
               v-model:value="drawerRoles"
@@ -705,13 +783,15 @@ onMounted(() => {
             </div>
           </NTabPane>
 
-          <!-- Tab 3 · 套餐 & 额度 -->
-          <NTabPane name="plan" tab="套餐 & 额度">
+          <NTabPane name="plan" tab="套餐 & 余额">
             <NForm label-placement="left" label-width="auto">
               <NFormItem label="当前套餐">
                 <span class="text-sm">
                   {{ drawerRow?.subscription_name ?? '无' }}
-                  <span v-if="drawerRow?.subscription_name" class="ml-2 text-xs text-muted-foreground">
+                  <span
+                    v-if="drawerRow?.subscription_name"
+                    class="ml-2 text-xs text-muted-foreground"
+                  >
                     {{ drawerRow?.subscription_is_unlimited ? '不限次' : `剩余 ${drawerRow?.subscription_remain_quota ?? 0} 次` }}
                     {{ drawerRow?.subscription_expire_at ? ` · 到期：${drawerRow.subscription_expire_at}` : ' · 永久' }}
                   </span>
@@ -723,19 +803,37 @@ onMounted(() => {
             </NForm>
 
             <NCard title="编辑套餐" size="small" class="mt-3">
-              <p class="text-xs text-muted-foreground mb-3">
-                设置后立即生效，不会影响用户登录状态。
+              <p class="mb-3 text-xs text-muted-foreground">
+                套餐生效后立即覆盖当前套餐。时长从当前时间开始计算，填 0 表示永久。
               </p>
               <NForm label-placement="left" label-width="auto">
                 <NFormItem label="套餐">
-                  <NSelect v-model:value="drawerPlanId" :options="planOptions" clearable placeholder="选择套餐" />
+                  <NSelect
+                    v-model:value="drawerPlanId"
+                    :options="planOptions"
+                    clearable
+                    placeholder="选择套餐"
+                    @update:value="onDrawerPlanChange"
+                  />
+                </NFormItem>
+                <NFormItem v-if="drawerPlanId" label="时长（天）">
+                  <NInputNumber
+                    v-model:value="drawerPlanDurationDays"
+                    :min="0"
+                    :step="1"
+                    placeholder="0 表示永久"
+                    style="width: 100%"
+                  />
                 </NFormItem>
               </NForm>
               <NSpace>
                 <NButton type="primary" :disabled="!drawerPlanId" @click="onDrawerSetSubscription">
                   设置套餐
                 </NButton>
-                <NPopconfirm v-if="drawerRow?.subscription_name" @positive-click="onDrawerClearSubscription">
+                <NPopconfirm
+                  v-if="drawerRow?.subscription_name"
+                  @positive-click="onDrawerClearSubscription"
+                >
                   <template #trigger>
                     <NButton type="warning">清除套餐</NButton>
                   </template>
@@ -767,7 +865,6 @@ onMounted(() => {
             </NCard>
           </NTabPane>
 
-          <!-- Tab 4 · 安全 -->
           <NTabPane name="security" tab="安全">
             <NCard title="重置密码" size="small" class="mb-3">
               <NForm label-placement="left" label-width="auto">
@@ -784,13 +881,13 @@ onMounted(() => {
                 <template #trigger>
                   <NButton type="warning">重置密码</NButton>
                 </template>
-                确认重置 {{ drawerRow?.username }} 的密码？原密码立即失效。
+                确认重置 {{ drawerRow?.username }} 的密码？原密码会立即失效。
               </NPopconfirm>
             </NCard>
 
             <NCard title="强制下线" size="small">
-              <p class="text-sm text-muted-foreground mb-3">
-                吊销该用户所有 token。正在使用的设备将在下次请求时被踢回登录页。
+              <p class="mb-3 text-sm text-muted-foreground">
+                吊销该用户所有 token。正在使用的设备会在下次请求时回到登录页。
               </p>
               <NPopconfirm @positive-click="onDrawerForceOffline">
                 <template #trigger>
