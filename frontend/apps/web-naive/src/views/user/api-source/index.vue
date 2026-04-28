@@ -355,7 +355,7 @@ onMounted(loadList);
       </NSpace>
     </NCard>
 
-    <NCard :bordered="false" size="small">
+    <NCard :bordered="false" size="small" title="题库配置">
       <template #header-extra>
         <NSpace>
           <NButton type="primary" @click="openCreate">+ 添加</NButton>
