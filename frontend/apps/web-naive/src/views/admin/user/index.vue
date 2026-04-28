@@ -141,6 +141,11 @@ const form = reactive<{
   email: string;
   status: number;
   role_ids: number[];
+  // 编辑模式下的余额/套餐变更（新增模式不可用）
+  balance_delta: number;
+  balance_remark: string;
+  plan_id: null | number;
+  plan_duration: number;
 }>({
   username: '',
   password: '',
@@ -149,6 +154,10 @@ const form = reactive<{
   email: '',
   status: 1,
   role_ids: [],
+  balance_delta: 0,
+  balance_remark: '',
+  plan_id: null,
+  plan_duration: 30,
 });
 const saving = ref(false);
 
@@ -163,6 +172,10 @@ function openCreate() {
     email: '',
     status: 1,
     role_ids: [],
+    balance_delta: 0,
+    balance_remark: '',
+    plan_id: null,
+    plan_duration: 30,
   });
   editorVisible.value = true;
 }
@@ -178,6 +191,10 @@ function openEdit(row: AdminUserApi.User) {
     email: row.email ?? '',
     status: row.status ?? 1,
     role_ids: (row.roles ?? []).map((r) => r.id),
+    balance_delta: 0,
+    balance_remark: '',
+    plan_id: null,
+    plan_duration: 30,
   });
   editorVisible.value = true;
 }
@@ -195,6 +212,15 @@ async function onSave() {
     message.warning('密码至少 6 位');
     return;
   }
+  // 编辑模式的余额/套餐校验
+  if (editing.value && form.balance_delta !== 0 && !form.balance_remark.trim()) {
+    message.warning('调整余额必须填写备注');
+    return;
+  }
+  if (editing.value && form.plan_id && form.plan_duration < 1) {
+    message.warning('赠送套餐时长至少 1 天');
+    return;
+  }
   saving.value = true;
   try {
     if (editing.value && form.id) {
@@ -209,6 +235,17 @@ async function onSave() {
       };
       if (form.password) payload.password = form.password;
       await updateUserApi(payload);
+      // 余额 / 套餐走独立接口（各自有业务流水）
+      if (form.balance_delta !== 0) {
+        await adjustUserBalanceApi(
+          form.id,
+          form.balance_delta,
+          form.balance_remark,
+        );
+      }
+      if (form.plan_id) {
+        await giftUserPlanApi(form.id, form.plan_id, form.plan_duration);
+      }
       message.success('更新成功');
     } else {
       await createUserApi({
@@ -351,6 +388,12 @@ async function onDrawerForceOffline() {
   }
 }
 
+function planLabel(id?: null | number) {
+  if (!id) return '-';
+  const opt = planOptions.value.find((p) => p.value === id);
+  return opt?.label ?? `套餐 #${id}`;
+}
+
 const columns: DataTableColumns<AdminUserApi.User> = [
   { title: 'ID', key: 'id', width: 70 },
   { title: '用户名', key: 'username', width: 140, ellipsis: { tooltip: true } },
@@ -372,6 +415,22 @@ const columns: DataTableColumns<AdminUserApi.User> = [
     key: 'balance',
     width: 100,
     render: (r) => `¥${r.balance ?? '0.00'}`,
+  },
+  {
+    title: '套餐',
+    key: 'plan_id',
+    width: 200,
+    render: (r) =>
+      h('div', { class: 'flex flex-col' }, [
+        h('span', { class: 'text-sm' }, planLabel(r.plan_id)),
+        r.plan_expire_at
+          ? h(
+              'span',
+              { class: 'text-xs text-muted-foreground' },
+              `到期：${r.plan_expire_at}`,
+            )
+          : null,
+      ]),
   },
   {
     title: '角色',
@@ -481,7 +540,7 @@ onMounted(() => {
         :columns="columns"
         :data="rows"
         :row-key="(row: AdminUserApi.User) => row.id"
-        :scroll-x="1500"
+        :scroll-x="1700"
         :pagination="{
           page,
           pageSize,
@@ -541,6 +600,53 @@ onMounted(() => {
             placeholder="不选则默认 user 角色（仅新建时生效）"
           />
         </NFormItem>
+
+        <!-- 编辑模式：余额调整（走 adjust-balance 接口，带流水） -->
+        <template v-if="editing">
+          <NFormItem label="当前余额">
+            <span class="text-sm">¥{{ editing.balance ?? '0.00' }}</span>
+          </NFormItem>
+          <NFormItem label="调整金额">
+            <NInputNumber
+              v-model:value="form.balance_delta"
+              :precision="2"
+              :step="1"
+              placeholder="正数增加、负数扣减，0 表示不调整"
+              style="width: 100%"
+            />
+          </NFormItem>
+          <NFormItem
+            v-if="form.balance_delta !== 0"
+            label="调整备注"
+            required
+          >
+            <NInput v-model:value="form.balance_remark" placeholder="必填" />
+          </NFormItem>
+
+          <!-- 编辑模式：套餐赠送（走 gift-plan 接口） -->
+          <NFormItem label="当前套餐">
+            <span class="text-sm">
+              {{ planLabel(editing.plan_id) }}
+              <span
+                v-if="editing.plan_expire_at"
+                class="ml-2 text-xs text-muted-foreground"
+              >
+                到期：{{ editing.plan_expire_at }}
+              </span>
+            </span>
+          </NFormItem>
+          <NFormItem label="赠送套餐">
+            <NSelect
+              v-model:value="form.plan_id"
+              :options="planOptions"
+              clearable
+              placeholder="留空则不变更"
+            />
+          </NFormItem>
+          <NFormItem v-if="form.plan_id" label="赠送时长(天)">
+            <NInputNumber v-model:value="form.plan_duration" :min="1" />
+          </NFormItem>
+        </template>
       </NForm>
       <template #footer>
         <NSpace justify="end">
