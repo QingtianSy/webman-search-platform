@@ -105,8 +105,8 @@ Route::group('/api/v1/user', function () {
     Route::get('/api-source/list', [UserApiSourceController::class, 'index']);
     Route::get('/api-source/detail', [UserApiSourceController::class, 'detail']);
     Route::post('/api-source/create', [UserApiSourceController::class, 'create']);
-    Route::put('/api-source/update', [UserApiSourceController::class, 'update']);
-    Route::delete('/api-source/delete', [UserApiSourceController::class, 'delete']);
+    Route::post('/api-source/update', [UserApiSourceController::class, 'update']);
+    Route::post('/api-source/delete', [UserApiSourceController::class, 'delete']);
     Route::post('/api-source/test', [UserApiSourceController::class, 'test']);
     Route::post('/api-source/test-submit', [UserApiSourceController::class, 'testSubmit']);
     Route::get('/api-source/test-result', [UserApiSourceController::class, 'testResult']);
