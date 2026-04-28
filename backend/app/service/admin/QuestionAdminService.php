@@ -3,10 +3,6 @@
 namespace app\service\admin;
 
 use app\exception\BusinessException;
-use app\model\admin\QuestionCategory;
-use app\model\admin\QuestionSource;
-use app\model\admin\QuestionTag;
-use app\model\admin\QuestionType;
 use app\repository\mongo\QuestionRepository;
 use app\service\question\QuestionIndexService;
 use support\Pagination;
@@ -204,12 +200,6 @@ class QuestionAdminService
             'status_breakdown' => [
                 'active' => (int) $active,
                 'disabled' => (int) $disabled,
-            ],
-            'dict' => [
-                'category_count' => (int) QuestionCategory::query()->count(),
-                'type_count' => (int) QuestionType::query()->count(),
-                'source_count' => (int) QuestionSource::query()->count(),
-                'tag_count' => (int) QuestionTag::query()->count(),
             ],
         ];
     }

@@ -317,13 +317,6 @@ onMounted(() => {
             <span class="text-gray-400">{{ stats.status_breakdown.disabled }}</span>
           </div>
         </div>
-        <div>
-          <div class="text-xs text-gray-500">分类 · 题型 · 来源 · 标签</div>
-          <div class="text-2xl font-semibold">
-            {{ stats.dict.category_count }} · {{ stats.dict.type_count }} ·
-            {{ stats.dict.source_count }} · {{ stats.dict.tag_count }}
-          </div>
-        </div>
       </div>
     </NCard>
 

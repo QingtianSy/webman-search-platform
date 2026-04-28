@@ -20,10 +20,6 @@ class AdminAuthMiddleware implements MiddlewareInterface
     protected const ROUTE_PERMISSION_MAP = [
         '/dashboard'         => 'admin.access',
         '/question'          => 'question.manage',
-        '/question-category' => 'question.manage',
-        '/question-type'     => 'question.manage',
-        '/question-source'   => 'question.manage',
-        '/question-tag'      => 'question.manage',
         '/user'              => 'user.manage',
         '/role'              => 'role.manage',
         '/permission'        => 'role.manage',
