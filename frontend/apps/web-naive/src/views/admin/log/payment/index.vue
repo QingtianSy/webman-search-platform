@@ -45,15 +45,16 @@ const statusOptions = [
   { label: '全部状态', value: undefined },
   { label: '待支付', value: 0 },
   { label: '已支付', value: 1 },
-  { label: '已取消/过期', value: 2 },
+  { label: '已取消', value: 2 },
+  { label: '已退款', value: 3 },
+  { label: '已过期', value: 4 },
 ];
 
 const payTypeOptions = [
   { label: '全部渠道', value: '' },
   { label: '支付宝', value: 'alipay' },
   { label: '微信', value: 'wxpay' },
-  { label: 'QQ 钱包', value: 'qqpay' },
-  { label: '网银', value: 'bank' },
+  { label: 'QQ支付', value: 'qqpay' },
 ];
 
 function buildQuery() {
@@ -98,10 +99,12 @@ function onReset() {
   load();
 }
 
-const statusTag: Record<number, { type: 'default' | 'success' | 'warning'; text: string }> = {
+const statusTag: Record<number, { type: 'default' | 'error' | 'info' | 'success' | 'warning'; text: string }> = {
   0: { type: 'warning', text: '待支付' },
   1: { type: 'success', text: '已支付' },
   2: { type: 'default', text: '已取消' },
+  3: { type: 'error', text: '已退款' },
+  4: { type: 'info', text: '已过期' },
 };
 
 const columns: DataTableColumns<AdminLogApi.PaymentLog> = [

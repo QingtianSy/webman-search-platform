@@ -117,10 +117,12 @@ const submitting = ref(false);
 async function loadPayMethods() {
   payMethodsLoading.value = true;
   try {
-    payMethods.value = await getPaymentMethodsApi();
-    // 默认选第一个启用的
-    const first = payMethods.value.find((m) => m.enabled);
-    if (first) selectedPayMethod.value = first.code;
+    payMethods.value = (await getPaymentMethodsApi()).filter((m) => m.enabled);
+    const currentEnabled = payMethods.value.find(
+      (m) => m.code === selectedPayMethod.value,
+    );
+    const first = payMethods.value[0];
+    selectedPayMethod.value = currentEnabled?.code ?? first?.code ?? '';
   } finally {
     payMethodsLoading.value = false;
   }
@@ -340,7 +342,7 @@ onMounted(() => {
             class="mb-2"
             :show-icon="false"
           >
-            暂无可用支付渠道，请联系管理员
+            暂无可用支付方式，请先在支付配置中开启支付宝支付、微信支付或 QQ支付
           </NAlert>
           <NRadioGroup v-else v-model:value="selectedPayMethod">
             <NSpace vertical>
@@ -348,18 +350,8 @@ onMounted(() => {
                 v-for="m in payMethods"
                 :key="m.code"
                 :value="m.code"
-                :disabled="!m.enabled"
               >
                 {{ m.name }}
-                <NTag
-                  v-if="!m.enabled"
-                  size="small"
-                  type="default"
-                  class="ml-2"
-                  round
-                >
-                  暂未开放
-                </NTag>
               </NRadio>
             </NSpace>
           </NRadioGroup>

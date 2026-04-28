@@ -41,10 +41,9 @@ const filter = reactive({
 });
 
 const payMethodOptions = [
-  { label: '支付宝', value: 'alipay' },
+  { label: '支付宝支付', value: 'alipay' },
   { label: '微信支付', value: 'wxpay' },
-  { label: 'QQ 钱包', value: 'qqpay' },
-  { label: '网银', value: 'bank' },
+  { label: 'QQ支付', value: 'qqpay' },
 ];
 
 function payMethodLabel(code: string) {

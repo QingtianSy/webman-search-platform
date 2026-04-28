@@ -144,13 +144,13 @@ const qrImageUrl = computed(() => {
 async function loadMethods() {
   methodsLoading.value = true;
   try {
-    payMethods.value = await getPaymentMethodsApi();
+    payMethods.value = (await getPaymentMethodsApi()).filter((item) => item.enabled);
     const currentEnabled = payMethods.value.find(
-      (item) => item.code === selectedPayMethod.value && item.enabled,
+      (item) => item.code === selectedPayMethod.value,
     );
-    const firstEnabled = payMethods.value.find((item) => item.enabled);
-    if (!currentEnabled && firstEnabled) {
-      selectedPayMethod.value = firstEnabled.code;
+    const firstEnabled = payMethods.value[0];
+    if (!currentEnabled) {
+      selectedPayMethod.value = firstEnabled?.code ?? '';
     }
   } finally {
     methodsLoading.value = false;
@@ -412,7 +412,7 @@ onMounted(() => {
             :show-icon="false"
             class="mb-2"
           >
-            暂无可用支付渠道，请联系管理员
+            暂无可用支付方式，请先在支付配置中开启支付宝支付、微信支付或 QQ支付
           </NAlert>
           <NRadioGroup v-else v-model:value="selectedPayMethod">
             <NSpace>
@@ -420,12 +420,8 @@ onMounted(() => {
                 v-for="method in payMethods"
                 :key="method.code"
                 :value="method.code"
-                :disabled="!method.enabled"
               >
                 {{ method.name }}
-                <NTag v-if="!method.enabled" size="small" class="ml-2" round>
-                  暂未开放
-                </NTag>
               </NRadio>
             </NSpace>
           </NRadioGroup>

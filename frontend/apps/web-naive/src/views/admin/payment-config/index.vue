@@ -1,10 +1,9 @@
 <script lang="ts" setup>
 // 管理端 · 支付配置。docs/07 §3.2.12。
-// 彩虹易支付 · 支付方式开关 · 敏感字段 mask · 测试支付
+// 彩虹易支付 · 支付方式开关 · 测试支付
 import { computed, onMounted, reactive, ref } from 'vue';
 
 import {
-  NAlert,
   NButton,
   NCard,
   NForm,
@@ -28,12 +27,6 @@ import {
 } from '#/api/admin';
 
 const message = useMessage();
-
-const MASKED_KEYS = new Set([
-  'epay_key',
-  'epay_platform_public_key',
-  'epay_merchant_private_key',
-]);
 
 interface FieldDef {
   key: string;
@@ -59,9 +52,9 @@ const EPAY_FIELDS: FieldDef[] = [
   { key: 'epay_apiurl', label: '易支付接口地址', channel: 'epay', type: 'string', placeholder: 'https://pay.example.com/submit.php' },
   { key: 'epay_pid', label: '商户 PID', channel: 'epay', type: 'string' },
   { key: 'epay_sign_type', label: '签名类型', channel: 'epay', type: 'select' },
-  { key: 'epay_key', label: '商户 Key', channel: 'epay', type: 'password', hint: '敏感，后端已脱敏，留空则保持原值' },
-  { key: 'epay_platform_public_key', label: '平台公钥', channel: 'epay', type: 'textarea', hint: '敏感(v2)，留空保持原值' },
-  { key: 'epay_merchant_private_key', label: '商户私钥', channel: 'epay', type: 'textarea', hint: '敏感(v2)，留空保持原值' },
+  { key: 'epay_key', label: '商户 Key', channel: 'epay', type: 'password' },
+  { key: 'epay_platform_public_key', label: '平台公钥', channel: 'epay', type: 'textarea' },
+  { key: 'epay_merchant_private_key', label: '商户私钥', channel: 'epay', type: 'textarea' },
 ];
 
 const GLOBAL_FIELDS: FieldDef[] = [
@@ -79,7 +72,6 @@ const loading = ref(false);
 const saving = ref(false);
 const original = reactive<Record<string, string>>({});
 const current = reactive<Record<string, string>>({});
-const maskedMap = reactive<Record<string, boolean>>({});
 
 function normalizeSignType(value: string) {
   const v = value.trim().toUpperCase();
@@ -101,17 +93,11 @@ async function load() {
     const list = Array.isArray(data) ? data : (data as any)?.list ?? [];
     for (const k of Object.keys(original)) delete original[k];
     for (const k of Object.keys(current)) delete current[k];
-    for (const k of Object.keys(maskedMap)) delete maskedMap[k];
     for (const it of list as AdminPaymentConfigApi.Item[]) {
       const v = it.config_value ?? '';
-      const isMasked =
-        MASKED_KEYS.has(it.config_key) &&
-        (v.includes('****') || v === '' || Boolean(it.masked));
-      // 敏感字段 UI 里初始值清空，避免误把 **** 提交；提示"留空保持原值"
       const normalized = it.config_key === 'epay_sign_type' ? normalizeSignType(v) : v;
-      original[it.config_key] = isMasked ? '' : normalized;
-      current[it.config_key] = isMasked ? '' : normalized;
-      maskedMap[it.config_key] = isMasked;
+      original[it.config_key] = normalized;
+      current[it.config_key] = normalized;
     }
     for (const f of FIELDS) {
       if (!(f.key in current)) {
@@ -133,34 +119,17 @@ async function load() {
   }
 }
 
-function isSensitive(key: string) {
-  return MASKED_KEYS.has(key);
-}
-
 function isDirty(key: string) {
-  if (isSensitive(key)) {
-    // 敏感字段只有"输入非空"才算改动（留空保持原值）
-    return (current[key] ?? '').trim() !== '';
-  }
   return original[key] !== current[key];
 }
 
 async function saveOne(key: string) {
   const val = current[key] ?? '';
-  if (val.includes('****')) {
-    message.warning('值含 ****，请清空后重新输入');
-    return;
-  }
   saving.value = true;
   try {
     await updatePaymentConfigApi(key, val);
-    if (!isSensitive(key)) original[key] = val;
+    original[key] = val;
     message.success(`${key} 已保存`);
-    // 敏感字段保存后清空输入框 + 重新拉取 mask
-    if (isSensitive(key)) {
-      current[key] = '';
-      maskedMap[key] = true;
-    }
   } catch {
     // interceptor
   } finally {
@@ -184,13 +153,8 @@ async function saveAll() {
   try {
     for (const f of dirty) {
       const v = current[f.key] ?? '';
-      if (v.includes('****')) continue;
       await updatePaymentConfigApi(f.key, v);
-      if (!isSensitive(f.key)) original[f.key] = v;
-      else {
-        current[f.key] = '';
-        maskedMap[f.key] = true;
-      }
+      original[f.key] = v;
     }
     message.success(`已保存 ${dirty.length} 项`);
   } catch {
@@ -201,12 +165,12 @@ async function saveAll() {
 }
 
 function onReset(key: string) {
-  current[key] = isSensitive(key) ? '' : (original[key] ?? '');
+  current[key] = original[key] ?? '';
 }
 
 function onResetAll() {
   for (const f of editableFields.value) {
-    current[f.key] = isSensitive(f.key) ? '' : (original[f.key] ?? '');
+    current[f.key] = original[f.key] ?? '';
   }
 }
 
@@ -318,10 +282,6 @@ const payMethodDirty = computed(() =>
         </NSpace>
       </template>
 
-      <NAlert type="warning" class="mb-4" :bordered="false">
-        修改后对新订单立即生效；敏感字段（Key / 公私钥）后端返回 mask，前端留空则保持原值，不会覆盖。
-      </NAlert>
-
       <NTabs type="line" default-value="epay">
         <NTabPane name="epay" tab="彩虹易支付">
           <NForm label-placement="left" label-width="160px">
@@ -420,9 +380,7 @@ const payMethodDirty = computed(() =>
                     v-model:value="current[f.key]"
                     type="password"
                     show-password-on="click"
-                    :placeholder="
-                      maskedMap[f.key] ? '已保存，留空保持原值' : f.placeholder
-                    "
+                    :placeholder="f.placeholder"
                     style="width: 360px"
                   />
                 </template>
@@ -431,9 +389,7 @@ const payMethodDirty = computed(() =>
                     v-model:value="current[f.key]"
                     type="textarea"
                     :autosize="{ minRows: 3, maxRows: 8 }"
-                    :placeholder="
-                      maskedMap[f.key] ? '已保存，留空保持原值' : f.placeholder
-                    "
+                    :placeholder="f.placeholder"
                     style="width: 460px"
                   />
                 </template>
@@ -466,13 +422,6 @@ const payMethodDirty = computed(() =>
                   size="tiny"
                 >
                   改动
-                </NTag>
-                <NTag
-                  v-if="maskedMap[f.key]"
-                  type="info"
-                  size="tiny"
-                >
-                  已脱敏
                 </NTag>
                 <div class="text-xs text-muted-foreground flex-1 pt-1">
                   {{ f.hint ?? '' }}
