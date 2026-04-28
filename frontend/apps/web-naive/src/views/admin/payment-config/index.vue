@@ -52,7 +52,7 @@ const EPAY_FIELDS: FieldDef[] = [
   { key: 'epay_apiurl', label: '易支付接口地址', channel: 'epay', type: 'string', placeholder: 'https://pay.example.com/submit.php' },
   { key: 'epay_pid', label: '商户 PID', channel: 'epay', type: 'string' },
   { key: 'epay_sign_type', label: '签名类型', channel: 'epay', type: 'select' },
-  { key: 'epay_key', label: '商户 Key', channel: 'epay', type: 'password' },
+  { key: 'epay_key', label: '商户 Key', channel: 'epay', type: 'string' },
   { key: 'epay_platform_public_key', label: '平台公钥', channel: 'epay', type: 'textarea' },
   { key: 'epay_merchant_private_key', label: '商户私钥', channel: 'epay', type: 'textarea' },
 ];
