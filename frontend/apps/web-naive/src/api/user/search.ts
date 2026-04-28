@@ -16,7 +16,8 @@ export namespace SearchApi {
   }
 
   export interface QuestionOption {
-    key: string;
+    key?: string;
+    label?: string;
     content: string;
   }
 

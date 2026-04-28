@@ -161,7 +161,8 @@ function toggleExpand(id: string) {
 }
 
 function optionText(o: SearchApi.QuestionOption): string {
-  return `${o.key}. ${o.content}`;
+  const prefix = (o.key ?? o.label ?? '').trim();
+  return prefix ? `${prefix}. ${o.content}` : o.content;
 }
 </script>
 
@@ -341,8 +342,8 @@ function optionText(o: SearchApi.QuestionOption): string {
 
           <div v-if="item.options?.length" class="space-y-1 text-sm">
             <div
-              v-for="opt in item.options"
-              :key="opt.key"
+              v-for="(opt, optIdx) in item.options"
+              :key="opt.key ?? opt.label ?? `${item.question_id}-opt-${optIdx}`"
               class="text-muted-foreground"
             >
               {{ optionText(opt) }}
