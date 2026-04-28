@@ -121,6 +121,7 @@ Route::group('/api/v1/user', function () {
     Route::post('/order/continue', [PaymentController::class, 'continuePay']);
     Route::post('/order/cancel', [PaymentController::class, 'cancel']);
     Route::get('/payment/methods', [PaymentController::class, 'methods']);
+    Route::get('/payment-methods', [PaymentController::class, 'methods']);
 })->middleware([UserAuthMiddleware::class]);
 
 // 管理端路由（需要管理员认证）

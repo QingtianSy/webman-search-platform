@@ -2,14 +2,13 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 
-import { useWalletStore } from '#/store/wallet';
-
 import {
   NAlert,
   NButton,
   NCard,
   NDivider,
   NInputNumber,
+  NQrCode,
   NRadio,
   NRadioGroup,
   NResult,
@@ -33,57 +32,58 @@ import {
   getPaymentMethodsApi,
   type PaymentApi,
 } from '#/api/user/payment';
+import { useWalletStore } from '#/store/wallet';
 
 const route = useRoute();
 const router = useRouter();
+const dialog = useDialog();
 const message = useMessage();
+const walletStore = useWalletStore();
 
-// 移动端断点：< 640px 时 NSteps 改成纵向，避免 3 列描述挤成 1 字 1 行
-// 用 matchMedia 侦听，比 window.resize 粒度合适，切横竖屏即时生效
 const isNarrow = ref(false);
 let mqRemove: (() => void) | null = null;
+
 function setupResponsive() {
   if (typeof window === 'undefined' || !window.matchMedia) return;
   const mq = window.matchMedia('(max-width: 640px)');
   isNarrow.value = mq.matches;
-  const handler = (e: MediaQueryListEvent) => {
-    isNarrow.value = e.matches;
+  const handler = (event: MediaQueryListEvent) => {
+    isNarrow.value = event.matches;
   };
   mq.addEventListener?.('change', handler);
   mqRemove = () => mq.removeEventListener?.('change', handler);
 }
-const dialog = useDialog();
-const walletStore = useWalletStore();
 
-// 步骤：0 填金额 / 1 扫码支付 / 2 结果
 const step = ref(0);
 
-// sessionStorage 持久化：支付中刷新不丢单
 const STORAGE_KEY = 'recharge:pending';
+
 interface PendingState {
-  orderId: number | string;
-  orderNo: string;
   amount: number;
+  orderId: null | number | string;
+  orderNo: string;
   payMethod: string;
   payUrl: string;
   qrUrl: string;
 }
+
 function savePending() {
-  if (!orderId.value) return;
-  const s: PendingState = {
+  if (!orderId.value && !orderNo.value) return;
+  const state: PendingState = {
+    amount: Number(amount.value ?? 0),
     orderId: orderId.value,
     orderNo: orderNo.value,
-    amount: Number(amount.value ?? 0),
     payMethod: selectedPayMethod.value,
     payUrl: payUrl.value,
     qrUrl: qrUrl.value,
   };
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
-    // 隐私模式或存储配额爆了，忽略——至少 in-memory 流程不受影响
+    // ignore sessionStorage failures
   }
 }
+
 function clearPending() {
   try {
     sessionStorage.removeItem(STORAGE_KEY);
@@ -91,79 +91,92 @@ function clearPending() {
     // ignore
   }
 }
+
 function readPending(): null | PendingState {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as PendingState;
+    return raw ? (JSON.parse(raw) as PendingState) : null;
   } catch {
     return null;
   }
 }
 
-// Step 1 数据
 const amount = ref<null | number>(null);
 const quickAmounts = [10, 30, 50, 100, 300, 500];
 const payMethods = ref<PaymentApi.Method[]>([]);
-const selectedPayMethod = ref<string>('');
+const selectedPayMethod = ref('');
 const methodsLoading = ref(false);
 
-// Step 2 数据
-const orderId = ref<number | string | null>(null);
-const orderNo = ref<string>('');
-const payUrl = ref<string>('');
-const qrUrl = ref<string>('');
+const orderId = ref<null | number | string>(null);
+const orderNo = ref('');
+const payUrl = ref('');
+const qrUrl = ref('');
 const creating = ref(false);
 const polling = ref(false);
 const pollTimer = ref<null | ReturnType<typeof setInterval>>(null);
 const pollStartAt = ref(0);
 const POLL_INTERVAL_MS = 3000;
-const POLL_TIMEOUT_MS = 10 * 60 * 1000; // 10min
+const POLL_TIMEOUT_MS = 10 * 60 * 1000;
 
-// Step 3 数据
 const resultStatus = ref<'failed' | 'pending' | 'success' | 'timeout'>('pending');
 const finalOrder = ref<null | OrderApi.Order>(null);
 
-// 校验：金额 1–50000，两位小数
 const amountValid = computed(() => {
-  const v = Number(amount.value ?? 0);
-  return v >= 1 && v <= 50_000;
+  const value = Number(amount.value ?? 0);
+  return value >= 1 && value <= 50_000;
 });
 
-const canSubmit = computed(
-  () =>
-    !creating.value && amountValid.value && selectedPayMethod.value.length > 0,
-);
+const canSubmit = computed(() => {
+  return !creating.value && amountValid.value && selectedPayMethod.value.length > 0;
+});
+
+const payMethodLabel = computed(() => {
+  return (
+    payMethods.value.find((item) => item.code === selectedPayMethod.value)?.name ??
+    selectedPayMethod.value
+  );
+});
+
+const qrImageUrl = computed(() => {
+  return qrUrl.value.startsWith('data:image') ? qrUrl.value : '';
+});
 
 async function loadMethods() {
   methodsLoading.value = true;
   try {
     payMethods.value = await getPaymentMethodsApi();
-    const first = payMethods.value.find((m) => m.enabled);
-    if (first) selectedPayMethod.value = first.code;
+    const currentEnabled = payMethods.value.find(
+      (item) => item.code === selectedPayMethod.value && item.enabled,
+    );
+    const firstEnabled = payMethods.value.find((item) => item.enabled);
+    if (!currentEnabled && firstEnabled) {
+      selectedPayMethod.value = firstEnabled.code;
+    }
   } finally {
     methodsLoading.value = false;
   }
 }
 
-function setQuickAmount(v: number) {
-  amount.value = v;
+function setQuickAmount(value: number) {
+  amount.value = value;
 }
 
 async function submitRecharge() {
   if (!canSubmit.value) return;
   creating.value = true;
   try {
-    const r = await createOrderApi({
+    const response = await createOrderApi({
       order_type: 'recharge',
       amount: amount.value!,
       pay_method: selectedPayMethod.value,
     });
-    orderId.value = r.order_id;
-    orderNo.value = r.out_trade_no;
-    payUrl.value = r.pay_url ?? '';
-    qrUrl.value = r.qr_code_url ?? '';
+    amount.value = Number(response.amount ?? amount.value ?? 0);
+    orderId.value = response.order_id ?? response.id ?? null;
+    orderNo.value = response.order_no || response.out_trade_no;
+    payUrl.value = response.pay_url ?? '';
+    qrUrl.value = response.qr_code_url ?? '';
     step.value = 1;
+    resultStatus.value = 'pending';
     savePending();
     startPolling();
   } catch {
@@ -177,9 +190,10 @@ function startPolling() {
   stopPolling();
   polling.value = true;
   pollStartAt.value = Date.now();
-  pollTimer.value = setInterval(pollOnce, POLL_INTERVAL_MS);
-  // 立刻查一次
-  pollOnce();
+  pollTimer.value = setInterval(() => {
+    void pollOnce();
+  }, POLL_INTERVAL_MS);
+  void pollOnce();
 }
 
 function stopPolling() {
@@ -191,8 +205,9 @@ function stopPolling() {
 }
 
 async function pollOnce() {
-  if (!orderId.value) return;
-  // 超时停
+  const orderKey = orderNo.value || orderId.value;
+  if (!orderKey) return;
+
   if (Date.now() - pollStartAt.value > POLL_TIMEOUT_MS) {
     stopPolling();
     resultStatus.value = 'timeout';
@@ -200,35 +215,43 @@ async function pollOnce() {
     step.value = 2;
     return;
   }
+
   try {
-    const d = await getOrderDetailApi(orderId.value);
-    if (!d) return;
-    finalOrder.value = d;
-    const s = String(d.status);
-    if (s === 'success' || s === '1' || s === '2') {
+    const detail = await getOrderDetailApi(orderKey);
+    if (!detail) return;
+
+    finalOrder.value = detail;
+    amount.value = Number(detail.amount ?? amount.value ?? 0);
+    orderId.value = detail.order_id ?? orderId.value;
+    orderNo.value = detail.order_no || detail.out_trade_no || orderNo.value;
+    payUrl.value = detail.pay_url ?? payUrl.value;
+    qrUrl.value = detail.qr_code_url ?? qrUrl.value;
+
+    const status = Number(detail.status);
+    if (status === 1 || detail.status_text === 'success') {
       stopPolling();
       resultStatus.value = 'success';
       walletStore.invalidate();
       clearPending();
       step.value = 2;
-    } else if (
-      s === 'failed' ||
-      s === 'cancelled' ||
-      s === 'expired' ||
-      s === '3' ||
-      s === '4' ||
-      s === '5'
-    ) {
+      return;
+    }
+
+    if (status === 2 || detail.status_text === 'cancelled') {
       stopPolling();
       resultStatus.value = 'failed';
       clearPending();
       step.value = 2;
+      return;
     }
+
+    savePending();
   } catch {
-    // 50001 由拦截器统一提示，这里暂停 30s 再恢复
     stopPolling();
     setTimeout(() => {
-      if (step.value === 1) startPolling();
+      if (step.value === 1) {
+        startPolling();
+      }
     }, 30_000);
   }
 }
@@ -240,9 +263,9 @@ async function cancelCurrent() {
   }
   try {
     await cancelOrderApi(orderNo.value);
-    message.success('已取消订单');
+    message.success('订单已取消');
   } catch {
-    // ignore
+    // ignore; page will reset locally either way
   }
   goBackStep0();
 }
@@ -265,10 +288,11 @@ async function retryPay() {
     return;
   }
   try {
-    const r = await continueOrderApi(orderNo.value);
-    orderId.value = r.order_id ?? orderId.value;
-    payUrl.value = r.pay_url ?? payUrl.value;
-    qrUrl.value = r.qr_code_url ?? qrUrl.value;
+    const response = await continueOrderApi(orderNo.value);
+    orderId.value = response.order_id ?? response.id ?? orderId.value;
+    orderNo.value = response.order_no || response.out_trade_no || orderNo.value;
+    payUrl.value = response.pay_url ?? payUrl.value;
+    qrUrl.value = response.qr_code_url ?? qrUrl.value;
     resultStatus.value = 'pending';
     step.value = 1;
     savePending();
@@ -287,29 +311,30 @@ function goBalanceLog() {
 }
 
 function openPayUrl() {
-  if (payUrl.value) window.open(payUrl.value, '_blank');
+  if (payUrl.value) {
+    window.open(payUrl.value, '_blank');
+  }
 }
 
-// 路由守卫：支付中离开二次确认
 onBeforeRouteLeave((_to, _from, next) => {
-  if (step.value === 1 && polling.value) {
-    dialog.warning({
-      title: '确定离开？',
-      content:
-        '订单尚未支付完成。您可以稍后在「订单记录」里继续支付，也可以直接取消。',
-      positiveText: '继续离开',
-      negativeText: '留在当前页',
-      onPositiveClick: () => {
-        stopPolling();
-        next();
-      },
-      onNegativeClick: () => {
-        next(false);
-      },
-    });
-  } else {
+  if (step.value !== 1 || !polling.value) {
     next();
+    return;
   }
+
+  dialog.warning({
+    title: '确定离开？',
+    content: '订单尚未完成支付。稍后你可以在支付记录里继续支付，也可以现在取消订单。',
+    positiveText: '继续离开',
+    negativeText: '留在当前页',
+    onPositiveClick: () => {
+      stopPolling();
+      next();
+    },
+    onNegativeClick: () => {
+      next(false);
+    },
+  });
 });
 
 onBeforeUnmount(() => {
@@ -319,23 +344,24 @@ onBeforeUnmount(() => {
 
 onMounted(() => {
   setupResponsive();
-  loadMethods();
-  // 优先级：URL query > sessionStorage pending > 默认 Step 0
-  const qId = route.query.order_id;
-  const qNo = route.query.order_no;
-  if (qId) {
-    orderId.value = String(qId);
-    orderNo.value = String(qNo ?? '');
+  void loadMethods();
+
+  const queryOrderId = route.query.order_id;
+  const queryOrderNo = route.query.order_no;
+  if (queryOrderId || queryOrderNo) {
+    orderId.value = queryOrderId ? String(queryOrderId) : null;
+    orderNo.value = queryOrderNo ? String(queryOrderNo) : '';
     step.value = 1;
     savePending();
     startPolling();
     return;
   }
+
   const pending = readPending();
-  if (pending?.orderId) {
+  if (pending?.orderId || pending?.orderNo) {
+    amount.value = pending.amount;
     orderId.value = pending.orderId;
     orderNo.value = pending.orderNo;
-    amount.value = pending.amount;
     selectedPayMethod.value = pending.payMethod;
     payUrl.value = pending.payUrl;
     qrUrl.value = pending.qrUrl;
@@ -348,17 +374,12 @@ onMounted(() => {
 <template>
   <div class="recharge-page p-6">
     <NCard :bordered="false" size="small">
-      <NSteps
-        :current="step + 1"
-        class="mb-4"
-        :vertical="isNarrow"
-      >
+      <NSteps :current="step + 1" class="mb-4" :vertical="isNarrow">
         <NStep title="填写金额" description="选择充值金额和支付方式" />
         <NStep title="扫码支付" description="扫描二维码完成支付" />
         <NStep title="支付完成" description="查看充值结果" />
       </NSteps>
 
-      <!-- Step 1 -->
       <div v-if="step === 0" class="step-body">
         <div class="field-label">充值金额（元）</div>
         <NInputNumber
@@ -371,13 +392,13 @@ onMounted(() => {
         />
         <div class="quick-amounts mt-2">
           <NButton
-            v-for="v in quickAmounts"
-            :key="v"
+            v-for="value in quickAmounts"
+            :key="value"
             size="small"
-            :type="amount === v ? 'primary' : 'default'"
-            @click="setQuickAmount(v)"
+            :type="amount === value ? 'primary' : 'default'"
+            @click="setQuickAmount(value)"
           >
-            ¥ {{ v }}
+            ¥ {{ value }}
           </NButton>
         </div>
 
@@ -396,13 +417,13 @@ onMounted(() => {
           <NRadioGroup v-else v-model:value="selectedPayMethod">
             <NSpace>
               <NRadio
-                v-for="m in payMethods"
-                :key="m.code"
-                :value="m.code"
-                :disabled="!m.enabled"
+                v-for="method in payMethods"
+                :key="method.code"
+                :value="method.code"
+                :disabled="!method.enabled"
               >
-                {{ m.name }}
-                <NTag v-if="!m.enabled" size="small" class="ml-2" round>
+                {{ method.name }}
+                <NTag v-if="!method.enabled" size="small" class="ml-2" round>
                   暂未开放
                 </NTag>
               </NRadio>
@@ -423,26 +444,31 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Step 2 -->
       <div v-else-if="step === 1" class="step-body text-center">
-        <div v-if="qrUrl" class="qr-wrap">
-          <img :src="qrUrl" alt="支付二维码" class="qr-img" />
+        <div v-if="qrImageUrl" class="qr-wrap">
+          <img :src="qrImageUrl" alt="支付二维码" class="qr-img" />
         </div>
-        <div v-else-if="payUrl" class="py-8">
-          <p class="mb-2">正在跳转收银台，如未自动打开请点击下方按钮。</p>
-          <NButton type="primary" @click="openPayUrl">打开支付页面</NButton>
+        <div v-else-if="payUrl" class="qr-wrap">
+          <NQrCode :value="payUrl" :size="220" />
         </div>
         <div v-else class="py-8">
           <NSpin size="large" />
-          <div class="mt-3 text-gray-500">等待支付渠道返回二维码…</div>
+          <div class="mt-3 text-gray-500">等待支付渠道返回可用二维码</div>
         </div>
 
         <div class="pay-tip mt-2">
-          请使用 <NTag size="small" type="info">{{ selectedPayMethod }}</NTag>
+          请使用
+          <NTag size="small" type="info">{{ payMethodLabel }}</NTag>
           扫描上方二维码完成支付
         </div>
         <div class="text-xs text-gray-400">
           订单号 {{ orderNo || '--' }}，订单金额 ¥ {{ Number(amount ?? 0).toFixed(2) }}
+        </div>
+
+        <div class="mt-4">
+          <NButton v-if="payUrl" type="primary" text @click="openPayUrl">
+            在新窗口打开收银台
+          </NButton>
         </div>
 
         <NDivider />
@@ -455,7 +481,6 @@ onMounted(() => {
         </NSpace>
       </div>
 
-      <!-- Step 3 -->
       <div v-else class="step-body">
         <NResult
           v-if="resultStatus === 'success'"
@@ -487,7 +512,7 @@ onMounted(() => {
           v-else
           status="warning"
           title="支付超时"
-          description="长时间未收到支付结果，请稍后在订单记录中继续支付"
+          description="长时间未收到支付结果，请稍后在支付记录中继续支付"
         >
           <template #footer>
             <NSpace>
@@ -507,61 +532,77 @@ onMounted(() => {
   margin: 0 auto;
 }
 
-/* 窄屏（<=640px）收敛：减小内边距、QR 缩到 180、快捷面额换行 */
 @media (max-width: 640px) {
   .recharge-page {
     padding: 12px !important;
   }
+
   .step-body {
     padding: 16px 0;
   }
+
   .qr-img {
     width: 180px;
     height: 180px;
   }
+
   .quick-amounts :deep(.n-button) {
     min-width: 72px;
   }
 }
+
 .step-body {
   padding: 24px 8px;
 }
+
 .field-label {
   font-size: 14px;
   color: #666;
   margin-bottom: 10px;
 }
+
 .quick-amounts {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
+
 .qr-wrap {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 16px;
   background: #fff;
   border: 1px solid #eee;
   border-radius: 8px;
+  min-width: 252px;
+  min-height: 252px;
 }
+
 .qr-img {
   width: 220px;
   height: 220px;
   display: block;
 }
+
 .pay-tip {
   font-size: 14px;
   color: #666;
   margin-top: 12px;
 }
+
 .text-xs {
   font-size: 12px;
 }
+
 .text-gray-500 {
   color: #666;
 }
+
 .text-gray-400 {
   color: #999;
 }
+
 .ml-2 {
   margin-left: 8px;
 }
