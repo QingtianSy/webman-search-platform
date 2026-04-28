@@ -17,14 +17,21 @@ export namespace ApiSourceApi {
     name: string;
     url: string;
     method: 'GET' | 'POST';
-    keyword_param: string; // 题干参数名
-    type_param?: string | null; // 类型可选参数名
-    extra_params?: Record<string, string> | string | null;
-    timeout: number; // 秒
-    sort?: number;
-    status: number; // 0 禁用 / 1 启用
-    response_type?: 'form' | 'json' | 'text';
-    answer_field?: string;
+    keyword_param: string;
+    keyword_position?: string;
+    type_param?: string | null;
+    type_position?: string;
+    option_delimiter?: string;
+    option_format?: string | null;
+    headers?: string | null;
+    extra_config?: string | null;
+    data_path?: string;
+    success_code_field?: string;
+    success_code_value?: string;
+    timeout: number;
+    sort_order?: number;
+    status: number;
+    remark?: string | null;
     created_at?: string;
     updated_at?: string;
   }
@@ -89,15 +96,13 @@ export async function updateApiSourceApi(
 ) {
   return requestClient.post<ApiSourceApi.Source>(
     '/user/api-source/update',
-    payload,
-    { params: { id } },
+    { ...payload, id },
   );
 }
 
-export async function deleteApiSourceApi(ids: number | number[]) {
-  const idsParam = Array.isArray(ids) ? ids.join(',') : String(ids);
+export async function deleteApiSourceApi(id: number) {
   return requestClient.post<void>('/user/api-source/delete', null, {
-    params: { ids: idsParam },
+    params: { id },
   });
 }
 
