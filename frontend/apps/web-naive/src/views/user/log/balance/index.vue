@@ -28,7 +28,7 @@ const route = useRoute();
 const router = useRouter();
 
 const filter = reactive({
-  type: undefined as number | undefined,
+  type: undefined as string | undefined,
   order_no: '',
   dateRange: null as [number, number] | null,
 });
@@ -37,8 +37,7 @@ const filter = reactive({
 function hydrateFromQuery() {
   const q = route.query;
   if (q.type !== undefined && q.type !== '') {
-    const n = Number(q.type);
-    if (!Number.isNaN(n)) filter.type = n;
+    filter.type = String(q.type);
   }
   if (typeof q.order_no === 'string') filter.order_no = q.order_no;
   const df = typeof q.date_from === 'string' ? q.date_from : '';
@@ -112,26 +111,31 @@ function openDetail(row: UserLogApi.BalanceLog) {
   drawerVisible.value = true;
 }
 
-function typeTag(type: number) {
-  switch (type) {
-    case 1:
-      return h(NTag, { type: 'success', size: 'small' }, () => '充值');
-    case 2:
-      return h(NTag, { type: 'warning', size: 'small' }, () => '消费');
-    case 3:
-      return h(NTag, { type: 'info', size: 'small' }, () => '退款');
-    case 4:
-      return h(NTag, { size: 'small' }, () => '调整');
-    default:
-      return h(NTag, { size: 'small' }, () => `type=${type}`);
-  }
+function typeTag(type: number | string) {
+  const key = String(type);
+  const map: Record<string, { label: string; tagType: 'default' | 'error' | 'info' | 'success' | 'warning' }> = {
+    '1': { label: '充值', tagType: 'success' },
+    '2': { label: '消费', tagType: 'warning' },
+    '3': { label: '退款', tagType: 'info' },
+    '4': { label: '调整', tagType: 'default' },
+    recharge: { label: '充值', tagType: 'success' },
+    consume: { label: '消费', tagType: 'warning' },
+    refund: { label: '退款', tagType: 'info' },
+    adjust: { label: '调整', tagType: 'default' },
+    admin_recharge: { label: '管理员充值', tagType: 'success' },
+    admin_deduct: { label: '管理员扣款', tagType: 'error' },
+  };
+  const entry = map[key] ?? { label: key, tagType: 'default' as const };
+  return h(NTag, { type: entry.tagType, size: 'small' }, () => entry.label);
 }
 
 function amountSign(row: UserLogApi.BalanceLog) {
-  // 1/充值、3/退款 为 +；2/消费 为 -；4/调整按符号
   const v = Number(row.amount);
-  if (row.type === 2) return { sign: '-', color: '#d03050', abs: v };
-  if (row.type === 1 || row.type === 3) return { sign: '+', color: '#18a058', abs: v };
+  const t = String(row.type);
+  const isDebit = t === '2' || t === 'consume' || t === 'admin_deduct';
+  const isCredit = t === '1' || t === '3' || t === 'recharge' || t === 'refund' || t === 'admin_recharge';
+  if (isDebit) return { sign: '-', color: '#d03050', abs: Math.abs(v) };
+  if (isCredit) return { sign: '+', color: '#18a058', abs: Math.abs(v) };
   return { sign: v >= 0 ? '+' : '-', color: v >= 0 ? '#18a058' : '#d03050', abs: Math.abs(v) };
 }
 
@@ -187,10 +191,12 @@ onMounted(() => {
           clearable
           style="width: 140px"
           :options="[
-            { label: '充值', value: 1 },
-            { label: '消费', value: 2 },
-            { label: '退款', value: 3 },
-            { label: '调整', value: 4 },
+            { label: '充值', value: 'recharge' },
+            { label: '消费', value: 'consume' },
+            { label: '退款', value: 'refund' },
+            { label: '调整', value: 'adjust' },
+            { label: '管理员充值', value: 'admin_recharge' },
+            { label: '管理员扣款', value: 'admin_deduct' },
           ]"
         />
         <NInput
