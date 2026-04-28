@@ -95,7 +95,8 @@ class PaymentController
         }
 
         try {
-            $payUrl = (new PaymentService())->createPayUrl($order);
+            $requestHost = $this->getRequestOrigin($request);
+            $payUrl = (new PaymentService())->createPayUrl($order, $requestHost);
         } catch (\Throwable $e) {
             error_log("[PaymentController] createPayUrl failed, cancelling order {$order['order_no']}: " . $e->getMessage());
             $pdo = MySqlClient::pdo();
@@ -147,7 +148,8 @@ class PaymentController
         $data = $this->serializeOrder($row);
         if ((int) ($row['status'] ?? 0) === 0) {
             try {
-                $payUrl = (new PaymentService())->createPayUrl($row);
+                $requestHost = $this->getRequestOrigin($request);
+                $payUrl = (new PaymentService())->createPayUrl($row, $requestHost);
                 $data['pay_url'] = $payUrl;
                 $data['qr_code_url'] = $payUrl;
             } catch (\Throwable $e) {
@@ -170,7 +172,8 @@ class PaymentController
         }
 
         try {
-            $payUrl = (new PaymentService())->createPayUrl($row);
+            $requestHost = $this->getRequestOrigin($request);
+            $payUrl = (new PaymentService())->createPayUrl($row, $requestHost);
         } catch (\Throwable $e) {
             error_log('[PaymentController] continuePay createPayUrl failed: ' . $e->getMessage());
             throw new BusinessException('支付链路异常，请稍后重试', 50001);
@@ -298,6 +301,24 @@ class PaymentController
     protected function isV2Sign(string $signType): bool
     {
         return in_array(strtoupper(trim($signType)), ['V2', 'RSA'], true);
+    }
+
+    protected function getRequestOrigin(Request $request): ?string
+    {
+        $origin = $request->header('origin');
+        if ($origin && filter_var($origin, FILTER_VALIDATE_URL)) {
+            return rtrim($origin, '/');
+        }
+        $referer = $request->header('referer');
+        if ($referer) {
+            $parsed = parse_url($referer);
+            if (!empty($parsed['scheme']) && !empty($parsed['host'])) {
+                $port = (!empty($parsed['port']) && !in_array($parsed['port'], [80, 443], true))
+                    ? ':' . $parsed['port'] : '';
+                return $parsed['scheme'] . '://' . $parsed['host'] . $port;
+            }
+        }
+        return null;
     }
 
     protected function findOwnedOrder(Request $request, int $userId): ?array

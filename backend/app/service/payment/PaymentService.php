@@ -6,7 +6,7 @@ use support\adapter\EpayClient;
 
 class PaymentService
 {
-    public function createPayUrl(array $order): string
+    public function createPayUrl(array $order, ?string $requestHost = null): string
     {
         $epay = new EpayClient();
         $name = $order['type'] == 2 ? '套餐购买' : '余额充值';
@@ -14,9 +14,9 @@ class PaymentService
             'type' => $order['pay_type'],
             'out_trade_no' => $order['order_no'],
             'notify_url' => $this->getNotifyUrl(),
-            'return_url' => $this->getReturnUrl(),
+            'return_url' => $this->getReturnUrl($requestHost),
             'name' => $name,
-            'money' => $order['amount'],
+            'money' => number_format((float) $order['amount'], 2, '.', ''),
         ];
         return $epay->getPayLink($params);
     }
@@ -30,8 +30,11 @@ class PaymentService
         return $host . '/callback/epay/notify';
     }
 
-    private function getReturnUrl(): string
+    private function getReturnUrl(?string $requestHost = null): string
     {
+        if ($requestHost !== null && $requestHost !== '') {
+            return rtrim($requestHost, '/') . '/callback/epay/return';
+        }
         $host = rtrim(getenv('APP_URL') ?: '', '/');
         if ($host === '') {
             throw new \RuntimeException('APP_URL 环境变量未配置，无法生成支付回跳地址');
