@@ -20,7 +20,7 @@ class EpayClient
         $cfg = self::loadConfig();
         $this->apiurl = rtrim($cfg['epay_apiurl'] ?? '', '/') . '/';
         $this->pid = $cfg['epay_pid'] ?? '';
-        $this->signType = strtoupper($cfg['epay_sign_type'] ?? 'MD5');
+        $this->signType = $this->normalizeSignType($cfg['epay_sign_type'] ?? 'v1');
         $this->key = $cfg['epay_key'] ?? '';
         $this->platformPublicKey = $cfg['epay_platform_public_key'] ?? '';
         $this->merchantPrivateKey = $cfg['epay_merchant_private_key'] ?? '';
@@ -28,10 +28,13 @@ class EpayClient
 
     public function isConfigured(): bool
     {
-        if ($this->apiurl === '/' || $this->pid === '' || $this->key === '') {
+        if ($this->apiurl === '/' || $this->pid === '') {
             return false;
         }
-        if ($this->signType === 'RSA' && ($this->merchantPrivateKey === '' || $this->platformPublicKey === '')) {
+        if ($this->isV2() && ($this->merchantPrivateKey === '' || $this->platformPublicKey === '')) {
+            return false;
+        }
+        if (!$this->isV2() && $this->key === '') {
             return false;
         }
         return true;
@@ -87,7 +90,7 @@ class EpayClient
             return false;
         }
 
-        if ($this->signType === 'RSA') {
+        if ($this->isV2()) {
             if (empty($arr['timestamp']) || abs(time() - (int)$arr['timestamp']) > 300) {
                 return false;
             }
@@ -100,7 +103,7 @@ class EpayClient
 
     public function queryOrder(string $tradeNo): array
     {
-        if ($this->signType === 'RSA') {
+        if ($this->isV2()) {
             return $this->execute('api/pay/query', ['trade_no' => $tradeNo]);
         }
         $params = ['act' => 'order', 'pid' => $this->pid, 'trade_no' => $tradeNo];
@@ -126,7 +129,7 @@ class EpayClient
         $response = $this->httpRequest($requrl, http_build_query($params));
         $arr = json_decode($response, true);
         if ($arr && ($arr['code'] ?? -1) == 0) {
-            if ($this->signType === 'RSA' && !$this->verify($arr)) {
+            if ($this->isV2() && !$this->verify($arr)) {
                 throw new \RuntimeException('返回数据验签失败');
             }
             return $arr;
@@ -136,7 +139,7 @@ class EpayClient
 
     private function getSubmitUrl(): string
     {
-        if ($this->signType === 'RSA') {
+        if ($this->isV2()) {
             return $this->apiurl . 'api/pay/submit';
         }
         return $this->apiurl . 'submit.php';
@@ -144,7 +147,7 @@ class EpayClient
 
     private function getApiPayPath(): string
     {
-        if ($this->signType === 'RSA') {
+        if ($this->isV2()) {
             return 'api/pay/create';
         }
         return 'mapi.php';
@@ -154,7 +157,7 @@ class EpayClient
     {
         $params['pid'] = $this->pid;
 
-        if ($this->signType === 'RSA') {
+        if ($this->isV2()) {
             $params['timestamp'] = (string)time();
             $params['sign'] = $this->rsaPrivateSign($this->getSignContent($params));
             $params['sign_type'] = 'RSA';
@@ -164,6 +167,17 @@ class EpayClient
         }
 
         return $params;
+    }
+
+    private function normalizeSignType(string $signType): string
+    {
+        $signType = strtoupper(trim($signType));
+        return in_array($signType, ['V2', 'RSA'], true) ? 'v2' : 'v1';
+    }
+
+    private function isV2(): bool
+    {
+        return $this->signType === 'v2';
     }
 
     private function getSignContent(array $params): string

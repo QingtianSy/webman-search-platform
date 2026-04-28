@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 // 管理端 · 支付配置。docs/07 §3.2.12。
-// 渠道 Tab（易支付为主；支付宝 / 微信槽位留 P3） · 敏感字段 mask · 测试支付
+// 彩虹易支付 · 支付方式开关 · 敏感字段 mask · 测试支付
 import { computed, onMounted, reactive, ref } from 'vue';
 
 import {
@@ -11,7 +11,9 @@ import {
   NFormItem,
   NInput,
   NInputNumber,
+  NSelect,
   NSpace,
+  NSwitch,
   NTabPane,
   NTabs,
   NTag,
@@ -37,20 +39,40 @@ interface FieldDef {
   key: string;
   label: string;
   channel: 'epay' | 'global';
-  type: 'number' | 'password' | 'string' | 'textarea';
+  type: 'boolean' | 'number' | 'password' | 'select' | 'string' | 'textarea';
   hint?: string;
   placeholder?: string;
 }
 
-const FIELDS: FieldDef[] = [
+const SIGN_TYPE_OPTIONS = [
+  { label: 'v1', value: 'v1' },
+  { label: 'v2', value: 'v2' },
+];
+
+const PAY_METHOD_FIELDS: FieldDef[] = [
+  { key: 'epay_alipay_enabled', label: '支付宝支付', channel: 'epay', type: 'boolean' },
+  { key: 'epay_wxpay_enabled', label: '微信支付', channel: 'epay', type: 'boolean' },
+  { key: 'epay_qqpay_enabled', label: 'QQ支付', channel: 'epay', type: 'boolean' },
+];
+
+const EPAY_FIELDS: FieldDef[] = [
   { key: 'epay_apiurl', label: '易支付接口地址', channel: 'epay', type: 'string', placeholder: 'https://pay.example.com/submit.php' },
   { key: 'epay_pid', label: '商户 PID', channel: 'epay', type: 'string' },
-  { key: 'epay_sign_type', label: '签名类型', channel: 'epay', type: 'string', hint: '常用:MD5 / RSA' },
+  { key: 'epay_sign_type', label: '签名类型', channel: 'epay', type: 'select' },
   { key: 'epay_key', label: '商户 Key', channel: 'epay', type: 'password', hint: '敏感，后端已脱敏，留空则保持原值' },
-  { key: 'epay_platform_public_key', label: '平台公钥', channel: 'epay', type: 'textarea', hint: '敏感(RSA)，留空保持原值' },
-  { key: 'epay_merchant_private_key', label: '商户私钥', channel: 'epay', type: 'textarea', hint: '敏感(RSA)，留空保持原值' },
+  { key: 'epay_platform_public_key', label: '平台公钥', channel: 'epay', type: 'textarea', hint: '敏感(v2)，留空保持原值' },
+  { key: 'epay_merchant_private_key', label: '商户私钥', channel: 'epay', type: 'textarea', hint: '敏感(v2)，留空保持原值' },
+];
+
+const GLOBAL_FIELDS: FieldDef[] = [
   { key: 'payment_min_amount', label: '最小金额', channel: 'global', type: 'number' },
   { key: 'payment_max_amount', label: '最大金额', channel: 'global', type: 'number' },
+];
+
+const FIELDS: FieldDef[] = [
+  ...EPAY_FIELDS,
+  ...PAY_METHOD_FIELDS,
+  ...GLOBAL_FIELDS,
 ];
 
 const loading = ref(false);
@@ -58,6 +80,19 @@ const saving = ref(false);
 const original = reactive<Record<string, string>>({});
 const current = reactive<Record<string, string>>({});
 const maskedMap = reactive<Record<string, boolean>>({});
+
+function normalizeSignType(value: string) {
+  const v = value.trim().toUpperCase();
+  return v === 'RSA' || v === 'V2' ? 'v2' : 'v1';
+}
+
+function boolValue(key: string) {
+  return ['1', 'true'].includes(String(current[key] ?? '').toLowerCase());
+}
+
+function setBoolValue(key: string, value: boolean) {
+  current[key] = value ? '1' : '0';
+}
 
 async function load() {
   loading.value = true;
@@ -73,13 +108,20 @@ async function load() {
         MASKED_KEYS.has(it.config_key) &&
         (v.includes('****') || v === '' || Boolean(it.masked));
       // 敏感字段 UI 里初始值清空，避免误把 **** 提交；提示"留空保持原值"
-      original[it.config_key] = isMasked ? '' : v;
-      current[it.config_key] = isMasked ? '' : v;
+      const normalized = it.config_key === 'epay_sign_type' ? normalizeSignType(v) : v;
+      original[it.config_key] = isMasked ? '' : normalized;
+      current[it.config_key] = isMasked ? '' : normalized;
       maskedMap[it.config_key] = isMasked;
     }
     for (const f of FIELDS) {
       if (!(f.key in current)) {
-        const fb = f.type === 'number' ? '0' : '';
+        const fb = f.type === 'number'
+          ? '0'
+          : f.type === 'boolean'
+            ? '1'
+            : f.key === 'epay_sign_type'
+              ? 'v1'
+              : '';
         original[f.key] = fb;
         current[f.key] = fb;
       }
@@ -102,10 +144,6 @@ function isDirty(key: string) {
   }
   return original[key] !== current[key];
 }
-
-const dirtyCount = computed(
-  () => FIELDS.filter((f) => isDirty(f.key)).length,
-);
 
 async function saveOne(key: string) {
   const val = current[key] ?? '';
@@ -131,7 +169,13 @@ async function saveOne(key: string) {
 }
 
 async function saveAll() {
-  const dirty = FIELDS.filter((f) => isDirty(f.key));
+  const dirty = editableFields.value
+    .filter((f) => isDirty(f.key))
+    .sort((a, b) => {
+      if (a.key === 'epay_sign_type') return 1;
+      if (b.key === 'epay_sign_type') return -1;
+      return 0;
+    });
   if (dirty.length === 0) {
     message.info('无改动');
     return;
@@ -161,8 +205,32 @@ function onReset(key: string) {
 }
 
 function onResetAll() {
-  for (const f of FIELDS) {
+  for (const f of editableFields.value) {
     current[f.key] = isSensitive(f.key) ? '' : (original[f.key] ?? '');
+  }
+}
+
+async function savePayMethodSwitches() {
+  const dirty = PAY_METHOD_FIELDS.filter((f) => isDirty(f.key));
+  if (dirty.length === 0) return;
+  saving.value = true;
+  try {
+    for (const f of dirty) {
+      const v = current[f.key] ?? '0';
+      await updatePaymentConfigApi(f.key, v);
+      original[f.key] = v;
+    }
+    message.success('支付方式开关已保存');
+  } catch {
+    message.error('支付方式开关保存失败');
+  } finally {
+    saving.value = false;
+  }
+}
+
+function resetPayMethodSwitches() {
+  for (const f of PAY_METHOD_FIELDS) {
+    current[f.key] = original[f.key] ?? '0';
   }
 }
 
@@ -207,9 +275,29 @@ async function onTestPay() {
 
 onMounted(load);
 
-const epayFields = computed(() => FIELDS.filter((f) => f.channel === 'epay'));
-const globalFields = computed(
-  () => FIELDS.filter((f) => f.channel === 'global'),
+const isV2Sign = computed(() => normalizeSignType(current.epay_sign_type ?? '') === 'v2');
+
+function isFieldVisible(f: FieldDef) {
+  if (f.key === 'epay_key') return !isV2Sign.value;
+  if (f.key === 'epay_platform_public_key' || f.key === 'epay_merchant_private_key') {
+    return isV2Sign.value;
+  }
+  return true;
+}
+
+const epayApiurlField = EPAY_FIELDS[0]!;
+const epayFields = computed(() =>
+  EPAY_FIELDS.filter((f) => f.key !== 'epay_apiurl').filter(isFieldVisible),
+);
+const globalFields = computed(() => GLOBAL_FIELDS);
+const editableFields = computed(
+  () => [epayApiurlField, ...PAY_METHOD_FIELDS, ...epayFields.value, ...globalFields.value],
+);
+const dirtyCount = computed(
+  () => editableFields.value.filter((f) => isDirty(f.key)).length,
+);
+const payMethodDirty = computed(() =>
+  PAY_METHOD_FIELDS.some((f) => isDirty(f.key)),
 );
 </script>
 
@@ -237,6 +325,90 @@ const globalFields = computed(
       <NTabs type="line" default-value="epay">
         <NTabPane name="epay" tab="彩虹易支付">
           <NForm label-placement="left" label-width="160px">
+            <NFormItem :label="epayApiurlField.label">
+              <div class="flex items-start gap-2 w-full">
+                <NInput
+                  v-model:value="current[epayApiurlField.key]"
+                  :placeholder="epayApiurlField.placeholder"
+                  style="width: 360px"
+                />
+                <NTag
+                  v-if="isDirty(epayApiurlField.key)"
+                  type="warning"
+                  size="tiny"
+                >
+                  改动
+                </NTag>
+                <div class="text-xs text-muted-foreground flex-1 pt-1">
+                  <div>key: <code>{{ epayApiurlField.key }}</code></div>
+                </div>
+                <div>
+                  <NButton
+                    v-if="isDirty(epayApiurlField.key)"
+                    size="tiny"
+                    @click="onReset(epayApiurlField.key)"
+                  >
+                    还原
+                  </NButton>
+                  <NButton
+                    v-if="isDirty(epayApiurlField.key)"
+                    size="tiny"
+                    type="primary"
+                    :loading="saving"
+                    @click="saveOne(epayApiurlField.key)"
+                  >
+                    保存
+                  </NButton>
+                </div>
+              </div>
+            </NFormItem>
+
+            <NFormItem label="支付方式开关">
+              <div class="flex items-center gap-4 w-full">
+                <NSpace>
+                  <div
+                    v-for="f in PAY_METHOD_FIELDS"
+                    :key="f.key"
+                    class="pay-method-switch"
+                  >
+                    <span>{{ f.label }}</span>
+                    <NSwitch
+                      :value="boolValue(f.key)"
+                      @update:value="(v) => setBoolValue(f.key, v)"
+                    />
+                    <NTag
+                      v-if="isDirty(f.key)"
+                      type="warning"
+                      size="tiny"
+                    >
+                      改动
+                    </NTag>
+                  </div>
+                </NSpace>
+                <div class="text-xs text-muted-foreground flex-1">
+                  关闭后用户端不可选择该支付方式
+                </div>
+                <div>
+                  <NButton
+                    v-if="payMethodDirty"
+                    size="tiny"
+                    @click="resetPayMethodSwitches"
+                  >
+                    还原
+                  </NButton>
+                  <NButton
+                    v-if="payMethodDirty"
+                    size="tiny"
+                    type="primary"
+                    :loading="saving"
+                    @click="savePayMethodSwitches"
+                  >
+                    保存
+                  </NButton>
+                </div>
+              </div>
+            </NFormItem>
+
             <NFormItem
               v-for="f in epayFields"
               :key="f.key"
@@ -271,6 +443,13 @@ const globalFields = computed(
                     :min="0"
                     style="width: 200px"
                     @update:value="(v) => (current[f.key] = String(v ?? 0))"
+                  />
+                </template>
+                <template v-else-if="f.type === 'select'">
+                  <NSelect
+                    v-model:value="current[f.key]"
+                    :options="SIGN_TYPE_OPTIONS"
+                    style="width: 200px"
                   />
                 </template>
                 <template v-else>
@@ -383,19 +562,16 @@ const globalFields = computed(
             </NFormItem>
           </NForm>
         </NTabPane>
-
-        <NTabPane name="alipay" tab="支付宝（P3）" disabled>
-          <NAlert type="info" :bordered="false">
-            支付宝官方渠道将在 P3 阶段接入
-          </NAlert>
-        </NTabPane>
-
-        <NTabPane name="wechat" tab="微信支付（P3）" disabled>
-          <NAlert type="info" :bordered="false">
-            微信官方渠道将在 P3 阶段接入
-          </NAlert>
-        </NTabPane>
       </NTabs>
     </NCard>
   </div>
 </template>
+
+<style scoped>
+.pay-method-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+</style>

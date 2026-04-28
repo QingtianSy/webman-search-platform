@@ -12,6 +12,9 @@ class PaymentConfigController
 {
     private const ALLOWED_KEYS = [
         'epay_apiurl',
+        'epay_alipay_enabled',
+        'epay_wxpay_enabled',
+        'epay_qqpay_enabled',
         'epay_pid',
         'epay_sign_type',
         'epay_key',
@@ -57,8 +60,16 @@ class PaymentConfigController
             return ApiResponse::error(40001, '该字段当前为脱敏展示，请填写完整新值后再保存');
         }
 
-        if ($key === 'epay_sign_type' && strtoupper($value) === 'RSA') {
-            // 切 RSA 前要确认密钥已配置。用非严格的 getByGroup 时，DB 故障 → 返回 []
+        if (in_array($key, ['epay_alipay_enabled', 'epay_wxpay_enabled', 'epay_qqpay_enabled'], true)) {
+            $value = in_array(strtolower((string) $value), ['1', 'true'], true) ? '1' : '0';
+        }
+
+        if ($key === 'epay_sign_type') {
+            $value = self::normalizeSignType((string) $value);
+        }
+
+        if ($key === 'epay_sign_type' && $value === 'v2') {
+            // 切 v2 前要确认密钥已配置。用非严格的 getByGroup 时，DB 故障 → 返回 []
             // → cfgMap 空 → 误报"请先配置密钥"，运维可能会重新粘贴导致原有密钥被覆盖。
             // 改走 Strict，DB 故障直接抛出，让运维知道是基础设施问题而非密钥缺失。
             try {
@@ -68,7 +79,7 @@ class PaymentConfigController
             }
             $cfgMap = array_column($rows, 'config_value', 'config_key');
             if (empty($cfgMap['epay_merchant_private_key']) || empty($cfgMap['epay_platform_public_key'])) {
-                return ApiResponse::error(40001, '切换到 RSA 签名前，请先配置商户私钥和平台公钥');
+                return ApiResponse::error(40001, '切换到 v2 签名前，请先配置商户私钥和平台公钥');
             }
         }
 
@@ -79,7 +90,7 @@ class PaymentConfigController
 
     /**
      * 支付配置连通性诊断。不创建真实订单、不动用金额，只校验：
-     *   1) 必填项是否齐全（apiurl/pid/key；RSA 多校验一对密钥）
+     *   1) 必填项是否齐全（apiurl/pid/key；v2 多校验一对密钥）
      *   2) apiurl 是否 HTTPS 可达（HEAD /mapi.php，超时 5s）
      * 用于管理员保存配置后的"自检按钮"，避免真下单踩雷。
      */
@@ -88,7 +99,7 @@ class PaymentConfigController
         EpayClient::clearConfigCache();
         $client = new EpayClient();
         if (!$client->isConfigured()) {
-            return ApiResponse::error(40001, '支付配置不完整：请检查 apiurl/pid/key 及 RSA 密钥对', [
+            return ApiResponse::error(40001, '支付配置不完整：请检查 apiurl/pid/key 及 v2 密钥对', [
                 'configured' => false,
             ]);
         }
@@ -100,7 +111,7 @@ class PaymentConfigController
         }
         $map = array_column($rows, 'config_value', 'config_key');
         $apiurl = rtrim((string) ($map['epay_apiurl'] ?? ''), '/') . '/';
-        $signType = strtoupper((string) ($map['epay_sign_type'] ?? 'MD5'));
+        $signType = self::normalizeSignType((string) ($map['epay_sign_type'] ?? 'v1'));
 
         $diagnostic = [
             'configured' => true,
@@ -138,5 +149,11 @@ class PaymentConfigController
         }
 
         return ApiResponse::success($diagnostic, '支付配置自检通过');
+    }
+
+    private static function normalizeSignType(string $value): string
+    {
+        $value = strtoupper(trim($value));
+        return in_array($value, ['V2', 'RSA'], true) ? 'v2' : 'v1';
     }
 }

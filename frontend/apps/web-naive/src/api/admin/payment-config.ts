@@ -7,7 +7,8 @@ import { requestClient } from '#/api/request';
  *   - POST /admin/payment-config/test-pay  🆕 Phase 2 末尾补
  *
  * ALLOWED_KEYS:
- *   epay_apiurl, epay_pid, epay_sign_type, epay_key,
+ *   epay_apiurl, epay_alipay_enabled, epay_wxpay_enabled, epay_qqpay_enabled,
+ *   epay_pid, epay_sign_type, epay_key,
  *   epay_platform_public_key, epay_merchant_private_key,
  *   payment_min_amount, payment_max_amount
  *

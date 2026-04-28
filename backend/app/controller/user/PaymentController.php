@@ -28,9 +28,17 @@ class PaymentController
             return ApiResponse::error(40001, '不支持的订单类型');
         }
 
-        if (!in_array($payType, ['alipay', 'wxpay', 'qqpay', 'bank'], true)) {
+        if (!in_array($payType, ['alipay', 'wxpay', 'qqpay'], true)) {
             return ApiResponse::error(40001, '不支持的支付方式');
         }
+
+        try {
+            $paymentConfigs = (new SystemConfigRepository())->getByGroupStrict('payment');
+        } catch (\Throwable $e) {
+            error_log('[PaymentController] read payment config failed: ' . $e->getMessage());
+            return ApiResponse::error(50001, '支付配置暂不可用，请稍后重试');
+        }
+        $cfgMap = array_column($paymentConfigs, 'config_value', 'config_key');
 
         $planSnapshot = null;
         if ($type === 2) {
@@ -57,13 +65,6 @@ class PaymentController
             ];
         } else {
             $amount = (string) $request->input('amount', '0');
-            try {
-                $paymentConfigs = (new SystemConfigRepository())->getByGroupStrict('payment');
-            } catch (\Throwable $e) {
-                error_log('[PaymentController] read payment config failed: ' . $e->getMessage());
-                return ApiResponse::error(50001, '支付配置暂不可用，请稍后重试');
-            }
-            $cfgMap = array_column($paymentConfigs, 'config_value', 'config_key');
             if (!isset($cfgMap['payment_min_amount'], $cfgMap['payment_max_amount'])) {
                 error_log('[PaymentController] payment_min_amount/payment_max_amount missing');
                 return ApiResponse::error(50001, '支付配置未初始化，请联系管理员');
@@ -80,8 +81,12 @@ class PaymentController
             return ApiResponse::error(50001, '支付服务未配置，请联系管理员');
         }
 
-        if (!(new EpayClient())->isConfigured()) {
+        if (!$this->isEpayConfigured($cfgMap) || !(new EpayClient())->isConfigured()) {
             return ApiResponse::error(50001, '支付网关未配置，请联系管理员');
+        }
+
+        if (!$this->isPayTypeEnabled($cfgMap, $payType)) {
+            return ApiResponse::error(40001, '该支付方式暂未开放');
         }
 
         $order = (new OrderService())->create($userId, $type, $amount, $payType, $planId, $planSnapshot);
@@ -127,8 +132,8 @@ class PaymentController
         }
 
         $kv = array_column($rows, 'config_value', 'config_key');
-        $epayReady = !empty($kv['epay_apiurl']) && !empty($kv['epay_pid']) && !empty($kv['epay_key']);
-        return ApiResponse::success($this->buildPayMethodList($epayReady));
+        $epayReady = $this->isEpayConfigured($kv);
+        return ApiResponse::success($this->buildPayMethodList($kv, $epayReady));
     }
 
     public function detail(Request $request)
@@ -247,19 +252,52 @@ class PaymentController
         return $aliases[$payType] ?? $payType;
     }
 
-    protected function buildPayMethodList(bool $enabled): array
+    protected function buildPayMethodList(array $config, bool $gatewayConfigured): array
     {
         $channels = [
-            ['code' => 'alipay', 'name' => '支付宝', 'icon' => 'alipay'],
-            ['code' => 'wxpay', 'name' => '微信支付', 'icon' => 'wechat'],
-            ['code' => 'qqpay', 'name' => 'QQ 钱包', 'icon' => 'qq'],
-            ['code' => 'bank', 'name' => '网银', 'icon' => 'bank'],
+            ['code' => 'alipay', 'name' => '支付宝支付', 'icon' => 'alipay', 'config_key' => 'epay_alipay_enabled'],
+            ['code' => 'wxpay', 'name' => '微信支付', 'icon' => 'wechat', 'config_key' => 'epay_wxpay_enabled'],
+            ['code' => 'qqpay', 'name' => 'QQ支付', 'icon' => 'qq', 'config_key' => 'epay_qqpay_enabled'],
         ];
 
-        return array_map(function (array $channel) use ($enabled) {
-            $channel['enabled'] = $enabled ? 1 : 0;
+        return array_map(function (array $channel) use ($config, $gatewayConfigured) {
+            $channel['enabled'] = ($gatewayConfigured && $this->isConfigEnabled($config, $channel['config_key'])) ? 1 : 0;
+            unset($channel['config_key']);
             return $channel;
         }, $channels);
+    }
+
+    protected function isPayTypeEnabled(array $config, string $payType): bool
+    {
+        $map = [
+            'alipay' => 'epay_alipay_enabled',
+            'wxpay' => 'epay_wxpay_enabled',
+            'qqpay' => 'epay_qqpay_enabled',
+        ];
+        return isset($map[$payType]) && $this->isConfigEnabled($config, $map[$payType]);
+    }
+
+    protected function isConfigEnabled(array $config, string $key): bool
+    {
+        return !array_key_exists($key, $config) || in_array(strtolower((string) $config[$key]), ['1', 'true'], true);
+    }
+
+    protected function isEpayConfigured(array $config): bool
+    {
+        if (empty($config['epay_apiurl']) || empty($config['epay_pid'])) {
+            return false;
+        }
+
+        if ($this->isV2Sign($config['epay_sign_type'] ?? 'v1')) {
+            return !empty($config['epay_platform_public_key']) && !empty($config['epay_merchant_private_key']);
+        }
+
+        return !empty($config['epay_key']);
+    }
+
+    protected function isV2Sign(string $signType): bool
+    {
+        return in_array(strtoupper(trim($signType)), ['V2', 'RSA'], true);
     }
 
     protected function findOwnedOrder(Request $request, int $userId): ?array

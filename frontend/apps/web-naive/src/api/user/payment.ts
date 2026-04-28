@@ -10,10 +10,9 @@ export namespace PaymentApi {
 }
 
 const MOCK_METHODS: PaymentApi.Method[] = [
-  { code: 'alipay', name: '支付宝', icon: 'logos:alipay', enabled: true },
+  { code: 'alipay', name: '支付宝支付', icon: 'logos:alipay', enabled: true },
   { code: 'wxpay', name: '微信支付', icon: 'logos:wechat', enabled: false },
-  { code: 'qqpay', name: 'QQ 钱包', icon: 'ri:qq-fill', enabled: false },
-  { code: 'bank', name: '网银', icon: 'mdi:bank-outline', enabled: false },
+  { code: 'qqpay', name: 'QQ支付', icon: 'ri:qq-fill', enabled: false },
 ];
 
 export async function getPaymentMethodsApi(): Promise<PaymentApi.Method[]> {

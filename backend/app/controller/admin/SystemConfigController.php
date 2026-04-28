@@ -11,7 +11,7 @@ use support\Request;
 class SystemConfigController
 {
     // 这些 key 必须通过各自专用入口修改，否则会绕过白名单/前置校验/运行时缓存失效：
-    //   epay_* / payment_min_amount / payment_max_amount → PaymentConfigController（RSA 前置校验 + EpayClient::clearConfigCache）
+    //   epay_* / payment_min_amount / payment_max_amount → PaymentConfigController（v2 前置校验 + EpayClient::clearConfigCache）
     //   collect_*                                       → CollectConfigController（白名单）
     //   doc_config                                      → 有 api_key 字段，需走脱敏后的专用展示/更新路径
     // 从通用入口改这些 key 会在 DB 上改成功但运行时仍吃旧缓存，形成"改了但不生效"的状态漂移。
