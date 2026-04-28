@@ -71,6 +71,30 @@ const pg = usePagination(20);
 const loading = ref(false);
 const rows = ref<UserLogApi.OperateLog[]>([]);
 
+const MODULE_LABEL: Record<string, string> = {
+  payment: '支付',
+  api_key: 'API密钥',
+  collect: '采集',
+  auth: '认证',
+  search: '搜索',
+  upload: '上传',
+};
+
+const ACTION_LABEL: Record<string, string> = {
+  create: '创建',
+  cancel: '取消',
+  continue: '继续',
+  toggle: '切换',
+  delete: '删除',
+  set_default: '设为默认',
+  regenerate: '重置',
+  submit: '提交',
+  login: '登录',
+  register: '注册',
+  change_password: '修改密码',
+  export: '导出',
+};
+
 async function load() {
   loading.value = true;
   try {
@@ -141,8 +165,8 @@ function openDetail(row: UserLogApi.OperateLog) {
 }
 
 const columns = computed<DataTableColumns<UserLogApi.OperateLog>>(() => [
-  { title: '模块', key: 'module', width: 120 },
-  { title: '动作', key: 'action', width: 140 },
+  { title: '模块', key: 'module', width: 120, render: (r) => MODULE_LABEL[r.module] ?? r.module },
+  { title: '动作', key: 'action', width: 140, render: (r) => ACTION_LABEL[r.action] ?? r.action },
   { title: '内容', key: 'content', ellipsis: { tooltip: true } },
   { title: 'IP', key: 'ip', width: 140 },
   { title: '时间', key: 'created_at', width: 180 },
@@ -225,8 +249,8 @@ onMounted(() => {
     <NDrawer v-model:show="drawerVisible" :width="640">
       <NDrawerContent title="操作详情" closable>
         <NDescriptions v-if="detail" :column="1" bordered size="small">
-          <NDescriptionsItem label="模块">{{ detail.module }}</NDescriptionsItem>
-          <NDescriptionsItem label="动作">{{ detail.action }}</NDescriptionsItem>
+          <NDescriptionsItem label="模块">{{ MODULE_LABEL[detail.module] ?? detail.module }}</NDescriptionsItem>
+          <NDescriptionsItem label="动作">{{ ACTION_LABEL[detail.action] ?? detail.action }}</NDescriptionsItem>
           <NDescriptionsItem label="IP">{{ detail.ip ?? '-' }}</NDescriptionsItem>
           <NDescriptionsItem label="时间">{{ detail.created_at }}</NDescriptionsItem>
         </NDescriptions>
